@@ -270,3 +270,6 @@ build*/
 
 # Paper PDFs - too large for git, tracked separately in docs/papers/README.md
 docs/papers/*.pdf
+
+# Plan files - internal planning, not committed to public repo
+plan/

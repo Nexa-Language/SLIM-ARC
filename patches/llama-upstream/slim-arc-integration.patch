@@ -54,3 +54,39 @@ index 220240e..fc9d865 100644
      auto status = ggml_backend_sched_graph_compute_async(sched.get(), gf);
      if (status != GGML_STATUS_SUCCESS) {
          LLAMA_LOG_ERROR("%s: ggml_backend_sched_graph_compute_async failed with error %d\n", __func__, status);
+diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
+index 474cabd..4aa7abb 100644
+--- a/src/llama-model-loader.cpp
++++ b/src/llama-model-loader.cpp
+@@ -1,3 +1,5 @@
++#include "slim-arc-prefetch.h"
++
+ #include "llama-model-loader.h"
+ 
+ #include "ggml-alloc.h"
+@@ -1363,6 +1365,25 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
+     for (const auto & it : weights_map) {
+         size_data += ggml_nbytes(it.second.tensor);
+     }
++
++    // SLIM-ARC: initialize global prefetch scheduler and register tensors.
++    // Each weight's data lives in the mmap region at (mapping->addr + offs).
++    // We register (addr, size, layer) so the scheduler can issue async
++    // madvise(WILLNEED) for future layers during graph_compute.
++    if (use_mmap && !mappings.empty()) {
++        static slim_arc::prefetch_scheduler s_scheduler(2 /*n_threads*/, 3 /*window*/);
++        slim_arc::set_global_prefetch_scheduler(&s_scheduler);
++        for (const auto & it : weights_map) {
++            const auto & w = it.second;
++            if (w.idx >= mappings.size()) continue;
++            void * base = mappings[w.idx]->addr();
++            if (!base) continue;
++            void * tensor_addr = (uint8_t *) base + w.offs;
++            int layer = slim_arc::tensor_layer_from_name(it.first.c_str());
++            s_scheduler.register_tensor(it.first.c_str(), tensor_addr,
++                                        ggml_nbytes(w.tensor), layer);
++        }
++    }
+ }
+ 
+ void llama_model_loader::get_mapping_range(size_t * first, size_t * last, void ** addr, int idx, ggml_context * ctx) const {

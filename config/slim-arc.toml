@@ -1,0 +1,42 @@
+# SLIM-ARC Configuration
+# Three-tier cgroups v2 environment for memory-constrained LLM inference.
+
+[tiers.low]
+memory_bytes = 8589934592    # 8 GB
+cpu_cores    = "0-3"
+description  = "Simulates mid-range mobile/embedded device"
+
+[tiers.mid]
+memory_bytes = 12884901888   # 12 GB
+cpu_cores    = "0-5"
+description  = "Simulates high-end mobile / lightweight PC"
+
+[tiers.high]
+memory_bytes = 17179869184  # 16 GB
+cpu_cores    = "0-7"
+description  = "Simulates modern PC / edge server"
+
+[models.dense]
+name        = "Qwen3-4B"
+gguf_path   = "data/models/Qwen3-4B-Q4_K_M.gguf"
+hf_repo     = "Qwen/Qwen3-4B-GGUF"
+quant       = "Q4_K_M"
+weight_size = "2.32 GiB"
+
+[models.moe]
+name        = "Qwen3-Next-A3B"
+gguf_path   = "data/models/Qwen3-Next-A3B-Q4_K_M.gguf"
+hf_repo     = "Qwen/Qwen3-Next-A3B-GGUF"
+quant       = "Q4_K_M"
+weight_size = "TBD"
+
+[prefetch]
+n_threads        = 2     # async prefetch worker threads
+window          = 3     # lookahead layers
+madvise_enabled = true  # use posix_madvise(WILLNEED)
+
+[benchmarks]
+wikitext_103 = "data/benchmarks/wikitext-103/"
+hellaswag    = "data/benchmarks/hellaswag/"
+c4           = "data/benchmarks/c4/"
+long_context = [16384, 32768]
