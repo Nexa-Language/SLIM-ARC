@@ -264,6 +264,9 @@ plan/*.bak
 # we track only the paper list in docs/papers/README.md.
 docs/papers/FlexInfer/
 docs/papers/llama.cpp/
+src/flexinfer/
+src/llama-upstream/
+build*/
 
 # Paper PDFs - too large for git, tracked separately in docs/papers/README.md
 docs/papers/*.pdf
