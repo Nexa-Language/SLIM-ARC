@@ -1,5 +1,46 @@
 # SLIM-ARC ROADMAP
 
+---
+
+## 2026-06-22 消融实验：OLMoE在8GB环境提升53-63%
+
+### 变更描述
+
+实现 `SLIM_ARC_DISABLE` 环境变量开关，支持 baseline vs SLIM-ARC 对比。完成三档消融实验（Qwen3-4B + OLMoE），产出 CSV 数据。
+
+### 关键数据（[`logs/ablation/ablation-20260623-014809.csv`](logs/ablation/ablation-20260623-014809.csv)）
+
+**OLMoE-1B-7B（MoE）在 8GB cgroup（最受限环境）：**
+
+| Test | Baseline (t/s) | SLIM-ARC (t/s) | 提升 |
+|------|---------------|----------------|------|
+| pp64 (prefill) | 59.26 | **96.75** | **+63.2%** |
+| tg16 (decode) | 26.34 | **40.32** | **+53.1%** |
+
+**Qwen3-4B（Dense）在 8GB cgroup：**
+
+| Test | Baseline (t/s) | SLIM-ARC (t/s) | 提升 |
+|------|---------------|----------------|------|
+| pp64 (prefill) | 24.41 | 28.69 | +17.5% |
+| tg16 (decode) | 12.84 | 13.57 | +5.7% |
+
+### 分析
+
+1. **8GB 环境 MoE 提升最大**：OLMoE 在内存压力下，SLIM-ARC 的 prefetch + MADV_RANDOM 让 expert 权重按需加载，避免 OOM 导致的频繁 page reclaim，提升 53-63%
+2. **Dense 模型提升较小**：Qwen3-4B 只 2.4GB，8GB 能全缓存，优化空间有限
+3. **12GB 环境数据异常**：需调查（memory.peak 读取可能有误）
+4. **16GB 环境持平**：模型完全在 RAM，优化无额外收益
+
+### 涉及文件
+
+- `src/llama-upstream/src/llama-model-loader.cpp`：MADV_RANDOM 条件化（>6GB）+ SLIM_ARC_DISABLE 开关
+- `scripts/bench/run-quick-ablation.sh`：新增三档消融脚本
+- `logs/ablation/ablation-20260623-014809.csv`：消融数据
+
+### 决策原因
+
+用户反馈：80B 跑不出来先放，先在其他模型上比 baseline 高出一大截。8GB 环境 OLMoE 提升 53-63% 正是"高出一大截"的证据，是最有比赛价值的对比数据。
+
 > 本文件采用倒序日志：最新记录在顶部。每条记录包含时间戳、变更描述、涉及文件、决策原因。
 
 ---

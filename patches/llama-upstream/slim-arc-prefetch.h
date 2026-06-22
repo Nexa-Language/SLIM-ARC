@@ -16,6 +16,7 @@
 #include <functional>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 namespace slim_arc {
@@ -40,6 +41,19 @@ class prefetch_scheduler {
 
     // Register a tensor for potential prefetch. Called during model load.
     void register_tensor(const char * name, void * addr, size_t size, int layer);
+
+    // SLIM-ARC Phase 2a: Register an MoE expert tensor (3D merged: [dim, dim, n_experts]).
+    // Stores per-expert address ranges for selective prefetch.
+    // n_experts: number of experts merged in this tensor
+    void register_expert_tensor(const char * name, void * addr, size_t total_size,
+                                int layer, int n_experts);
+
+    // SLIM-ARC Phase 2a: Selectively prefetch specific experts in a layer.
+    // expert_ids: indices of experts to prefetch (top-k from router)
+    // n_experts: length of expert_ids array
+    // This issues madvise(WILLNEED) for only the specified expert sub-regions,
+    // reducing I/O bandwidth by ~(1 - k/n_experts) for MoE models.
+    void prefetch_experts(int layer, const int * expert_ids, int n_experts);
 
     // Notify that we are about to compute layer `current_layer`.
     // This triggers async madvise(WILLNEED) for layers
@@ -97,6 +111,16 @@ class prefetch_scheduler {
 
     // tensor registry indexed by layer
     std::vector<std::vector<tensor_prefetch_info>> tensors_by_layer_;
+
+    // SLIM-ARC Phase 2a: expert tensor registry for selective prefetch
+    struct expert_tensor_info {
+        void * base_addr;      // start of the 3D expert tensor
+        size_t total_size;     // total size of all experts
+        int    n_experts;      // number of experts merged
+        size_t per_expert_size; // total_size / n_experts
+    };
+    // Key: layer -> list of expert tensors (gate_exps, up_exps, down_exps)
+    std::unordered_map<int, std::vector<expert_tensor_info>> expert_tensors_;
 };
 
 // Global singleton (set by llama_context during init)

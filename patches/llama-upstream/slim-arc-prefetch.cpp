@@ -99,6 +99,38 @@ void prefetch_scheduler::register_tensor(const char * name, void * addr, size_t 
     tensors_by_layer_[layer].push_back({addr, size, layer, 0});
 }
 
+void prefetch_scheduler::register_expert_tensor(const char * name, void * addr, size_t total_size,
+                                                 int layer, int n_experts) {
+    (void) name;
+    if (layer < 0 || addr == nullptr || total_size == 0 || n_experts <= 0) return;
+    expert_tensor_info info;
+    info.base_addr = addr;
+    info.total_size = total_size;
+    info.n_experts = n_experts;
+    info.per_expert_size = total_size / n_experts;
+    expert_tensors_[layer].push_back(info);
+}
+
+void prefetch_scheduler::prefetch_experts(int layer, const int * expert_ids, int n_experts) {
+    if (n_experts <= 0 || expert_ids == nullptr) return;
+    auto it = expert_tensors_.find(layer);
+    if (it == expert_tensors_.end()) return;
+
+    size_t bytes = 0;
+    for (const auto & et : it->second) {
+        for (int i = 0; i < n_experts; ++i) {
+            int eid = expert_ids[i];
+            if (eid < 0 || eid >= et.n_experts) continue;
+            void * expert_addr = (uint8_t *) et.base_addr + (size_t) eid * et.per_expert_size;
+            // posix_madvise is thread-safe and idempotent
+            (void) posix_madvise(expert_addr, et.per_expert_size, POSIX_MADV_WILLNEED);
+            bytes += et.per_expert_size;
+        }
+    }
+    total_bytes_.fetch_add(bytes);
+    total_calls_.fetch_add(1);
+}
+
 void prefetch_scheduler::notify_layer_compute(int current_layer) {
     if (!enabled_.load()) return;
     // In DECODE phase with hot cache (small model fits in RAM), skip prefetch.
