@@ -1,17 +1,5 @@
-diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index d15ccfd..1a6b3ec 100644
---- a/src/CMakeLists.txt
-+++ b/src/CMakeLists.txt
-@@ -36,6 +36,7 @@ add_library(llama
-             llama-quant.cpp
-             llama-sampler.cpp
-             llama-vocab.cpp
-+            slim-arc-prefetch.cpp
-             unicode-data.cpp
-             unicode.cpp
-             unicode.h
 diff --git a/src/llama-context.cpp b/src/llama-context.cpp
-index 220240e..fc9d865 100644
+index 220240e..542684f 100644
 --- a/src/llama-context.cpp
 +++ b/src/llama-context.cpp
 @@ -10,9 +10,11 @@
@@ -26,34 +14,50 @@ index 220240e..fc9d865 100644
  #include <cmath>
  #include <cstring>
  #include <limits>
-@@ -2437,6 +2439,27 @@ ggml_status llama_context::graph_compute(
+@@ -2437,6 +2439,31 @@ ggml_status llama_context::graph_compute(
          set_n_threads_fn.second(set_n_threads_fn.first, n_threads);
      }
  
-+    // SLIM-ARC: notify prefetch scheduler about the current layer being computed.
-+    // We infer the "current layer" from the graph nodes by finding the minimum
-+    // blk.N layer index in tensor names. This triggers async madvise(WILLNEED)
-+    // for future layers.
-+    if (auto * s = slim_arc::get_global_prefetch_scheduler()) {
-+        int min_layer = INT_MAX;
-+        int n_nodes = ggml_graph_n_nodes(gf);
-+        for (int i = 0; i < n_nodes; ++i) {
-+            struct ggml_tensor * t = ggml_graph_node(gf, i);
-+            if (t && t->name) {
-+                int layer = slim_arc::tensor_layer_from_name(t->name);
-+                if (layer >= 0 && layer < min_layer) {
-+                    min_layer = layer;
++    // SLIM-ARC: Phase 2c - Prefill/Decode aware dynamic prefetch
++    // Only do prefetch during Prefill (batched) phase where I/O can be hidden.
++    // During Decode (single token), skip all scheduler overhead - the data
++    // is already in page cache from the initial mmap madvise.
++    if (batched) {
++        if (auto * s = slim_arc::get_global_prefetch_scheduler()) {
++            s->set_phase(slim_arc::compute_phase::PREFILL);
++
++            int min_layer = INT_MAX;
++            int n_nodes = ggml_graph_n_nodes(gf);
++            for (int i = 0; i < n_nodes; ++i) {
++                struct ggml_tensor * t = ggml_graph_node(gf, i);
++                if (t && t->name) {
++                    int layer = slim_arc::tensor_layer_from_name(t->name);
++                    if (layer >= 0 && layer < min_layer) {
++                        min_layer = layer;
++                    }
 +                }
 +            }
-+        }
-+        if (min_layer != INT_MAX) {
-+            s->notify_layer_compute(min_layer);
++            if (min_layer != INT_MAX) {
++                s->notify_layer_compute(min_layer);
++            }
 +        }
 +    }
 +
      auto status = ggml_backend_sched_graph_compute_async(sched.get(), gf);
      if (status != GGML_STATUS_SUCCESS) {
          LLAMA_LOG_ERROR("%s: ggml_backend_sched_graph_compute_async failed with error %d\n", __func__, status);
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index d15ccfd..1a6b3ec 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -36,6 +36,7 @@ add_library(llama
+             llama-quant.cpp
+             llama-sampler.cpp
+             llama-vocab.cpp
++            slim-arc-prefetch.cpp
+             unicode-data.cpp
+             unicode.cpp
+             unicode.h
 diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
 index 474cabd..4aa7abb 100644
 --- a/src/llama-model-loader.cpp

@@ -34,11 +34,49 @@ int tensor_layer_from_name(const char * name) {
 }
 
 prefetch_scheduler::prefetch_scheduler(int n_threads, int window)
-    : n_threads_(std::max(1, n_threads)), window_(std::max(1, window)) {
+    : n_threads_(std::max(1, n_threads)),
+      window_prefill_(std::max(1, window + 1)),  // prefill: larger window (compute-bound)
+      window_decode_(1) {                         // decode: minimal window (memory-bound, avoid overhead)
     workers_.reserve(n_threads_);
     for (int i = 0; i < n_threads_; ++i) {
         workers_.emplace_back([this] { worker_loop(); });
     }
+}
+
+void prefetch_scheduler::set_phase(compute_phase phase) {
+    phase_.store(phase);
+    effective_window_.store(compute_effective_window());
+}
+
+void prefetch_scheduler::set_memory_budget(size_t budget_bytes) {
+    memory_budget_.store(budget_bytes);
+    effective_window_.store(compute_effective_window());
+}
+
+int prefetch_scheduler::compute_effective_window() const {
+    auto phase = phase_.load();
+    int w = (phase == compute_phase::PREFILL) ? window_prefill_ : window_decode_;
+
+    // If memory budget is set, limit window to fit budget
+    size_t budget = memory_budget_.load();
+    if (budget > 0 && !tensors_by_layer_.empty()) {
+        // Estimate average layer size
+        size_t total = 0;
+        int n = 0;
+        for (const auto & layer_tensors : tensors_by_layer_) {
+            for (const auto & t : layer_tensors) {
+                total += t.size;
+                ++n;
+            }
+        }
+        if (n > 0) {
+            size_t avg_layer = total / tensors_by_layer_.size();
+            int max_w = (int)(budget / avg_layer);
+            if (max_w < 1) max_w = 1;
+            if (w > max_w) w = max_w;
+        }
+    }
+    return w;
 }
 
 prefetch_scheduler::~prefetch_scheduler() {
@@ -53,6 +91,7 @@ prefetch_scheduler::~prefetch_scheduler() {
 }
 
 void prefetch_scheduler::register_tensor(const char * name, void * addr, size_t size, int layer) {
+    (void) name; // name not stored currently, used for layer extraction upstream
     if (layer < 0 || addr == nullptr || size == 0) return;
     if ((size_t)layer >= tensors_by_layer_.size()) {
         tensors_by_layer_.resize(layer + 1);
@@ -62,6 +101,10 @@ void prefetch_scheduler::register_tensor(const char * name, void * addr, size_t 
 
 void prefetch_scheduler::notify_layer_compute(int current_layer) {
     if (!enabled_.load()) return;
+    // In DECODE phase, skip prefetch to avoid madvise overhead on hot cache.
+    // Decode is memory-bound but per-token; madvise syscall overhead dominates
+    // when data is already in page cache.
+    if (phase_.load() == compute_phase::DECODE) return;
     {
         std::lock_guard<std::mutex> lk(mtx_);
         target_layer_     = current_layer;
@@ -86,9 +129,11 @@ void prefetch_scheduler::worker_loop() {
 
         current_layer_.store(target_layer);
 
-        // Prefetch layers [target+1, target+window]
+        // Prefetch layers [target+1, target+effective_window]
+        // Window adapts to Prefill (larger) vs Decode (smaller)
+        int eff_window = effective_window_.load();
         size_t bytes_this_round = 0;
-        for (int w = 1; w <= window_; ++w) {
+        for (int w = 1; w <= eff_window; ++w) {
             int layer = target_layer + w;
             if (layer < 0 || (size_t)layer >= tensors_by_layer_.size()) continue;
             for (const auto & t : tensors_by_layer_[layer]) {

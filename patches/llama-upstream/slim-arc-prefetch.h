@@ -20,6 +20,12 @@
 
 namespace slim_arc {
 
+enum class compute_phase {
+    PREFILL,  // compute-bound: large batch, I/O can be hidden
+    DECODE,   // memory-bound: small batch, I/O latency critical
+    UNKNOWN,
+};
+
 struct tensor_prefetch_info {
     void *   addr;      // mmap address of tensor data
     size_t   size;      // tensor data size in bytes
@@ -40,28 +46,42 @@ class prefetch_scheduler {
     // [current_layer+1, current_layer+window].
     void notify_layer_compute(int current_layer);
 
+    // Set current compute phase (Prefill vs Decode).
+    // In Prefill, we use a larger window (compute-bound, I/O hidden).
+    // In Decode, we use a smaller window (memory-bound, precise prefetch).
+    void set_phase(compute_phase phase);
+
+    // Set memory budget in bytes. When exceeded, reduce window.
+    void set_memory_budget(size_t budget_bytes);
+
     // Disable prefetch (e.g., when memory budget exceeded).
     void set_enabled(bool enabled) { enabled_.store(enabled); }
 
     // Collect statistics
     size_t total_prefetched_bytes() const { return total_bytes_.load(); }
     int    total_prefetch_calls()   const { return total_calls_.load(); }
+    int    effective_window()       const { return effective_window_.load(); }
 
   private:
     void worker_loop();
+    int  compute_effective_window() const;
 
     int n_threads_;
-    int window_;
-    std::atomic<bool>       enabled_{true};
-    std::atomic<bool>       stop_{false};
-    std::atomic<int>        current_layer_{-1};
-    std::atomic<uint64_t>   signature_{0};
-    std::atomic<size_t>     total_bytes_{0};
-    std::atomic<int>        total_calls_{0};
+    int window_prefill_;  // larger window for prefill
+    int window_decode_;   // smaller window for decode
+    std::atomic<int>      effective_window_{3};
+    std::atomic<bool>      enabled_{true};
+    std::atomic<bool>      stop_{false};
+    std::atomic<int>       current_layer_{-1};
+    std::atomic<uint64_t>  signature_{0};
+    std::atomic<size_t>    total_bytes_{0};
+    std::atomic<int>       total_calls_{0};
+    std::atomic<compute_phase> phase_{compute_phase::UNKNOWN};
+    std::atomic<size_t>    memory_budget_{0};
 
     std::vector<std::thread>          workers_;
-    std::mutex                        mtx_;
-    std::condition_variable           cv_;
+    std::mutex                       mtx_;
+    std::condition_variable          cv_;
     int                               target_layer_{-1};
     uint64_t                          target_signature_{0};
 
