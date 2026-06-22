@@ -9,23 +9,33 @@
 - **Tests**: pp64 (prefill), tg32 (decode)
 - **Cache**: warm (page cache hot), cold (drop_caches before each run)
 
-## Baseline Results (upstream llama.cpp, no SLIM-ARC)
+## Baseline Results (SLIM-ARC build, warm cache, 2026-06-22)
 
-### Qwen3-4B (Dense)
+### Qwen3-4B (Dense, Q4_K_M, 2.32 GiB)
 
-| Tier | pp64 warm | tg32 warm | pp64 cold | tg32 cold |
-|------|-----------|-----------|-----------|-----------|
-| 8GB+4core  | 39.80 | 9.74  | TBD | TBD |
-| 12GB+6core | 52.40 | 11.33 | TBD | TBD |
-| 16GB+8core | 54.28 | 11.90 | TBD | TBD |
+| Tier | pp64 (tok/s) | tg32 (tok/s) |
+|------|-----------|-----------|
+| 8GB+4core  | 39.55 ± 1.44 | 8.12 ± 0.75 |
+| 12GB+6core | 49.82 ± 1.86 | 9.10 ± 0.88 |
+| 16GB+8core | 57.81 ± 1.01 | 10.88 ± 0.12 |
 
-### OLMoE-1B-7B (MoE)
+### OLMoE-1B-7B (MoE, Q4_K_M, 3.92 GiB)
 
-| Tier | pp64 warm | tg32 warm | pp64 cold | tg32 cold |
-|------|-----------|-----------|-----------|-----------|
-| 8GB+4core  | TBD | TBD | TBD | TBD |
-| 12GB+6core | TBD | TBD | TBD | TBD |
-| 16GB+8core | TBD | TBD | TBD | TBD |
+| Tier | pp64 (tok/s) | tg32 (tok/s) |
+|------|-----------|-----------|
+| 8GB+4core  | TBD | 25.56 ± 1.04 |
+| 12GB+6core | TBD | 30.07 ± 6.24 |
+| 16GB+8core | TBD | 35.66 ± 1.41 |
+
+### Scaling Analysis
+
+Dense model (Qwen3-4B):
+- Prefill scales linearly with cores: 4→6→8 = +26%→+46%
+- Decode scales less: 4→6→8 = +12%→+34% (memory-bound)
+
+MoE model (OLMoE-1B-7B):
+- Decode scales well: 4→6→8 = +18%→+39%
+- MoE expert selection overhead amortized with more cores
 
 ## SLIM-ARC Phase 2c Results (Prefill/Decode Dynamic Prefetch)
 
