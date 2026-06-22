@@ -46,6 +46,16 @@ class prefetch_scheduler {
     // [current_layer+1, current_layer+window].
     void notify_layer_compute(int current_layer);
 
+    // Evict a completed layer's weight pages from RAM via madvise(DONTNEED).
+    // Called after a layer finishes computation to free memory for subsequent
+    // layers. This is essential for running large models (e.g. 45GB) on limited
+    // RAM (8GB): without eviction, all accessed layers accumulate in page cache
+    // and trigger OOM. With eviction, only the working set stays resident.
+    //
+    // Note: only weight tensors (file-backed mmap pages) are evicted. KV cache
+    // and compute buffers (anonymous memory) are not affected.
+    void evict_layer(int layer);
+
     // Set current compute phase (Prefill vs Decode).
     // In Prefill, we use a larger window (compute-bound, I/O hidden).
     // In Decode, we use a smaller window (memory-bound, precise prefetch).

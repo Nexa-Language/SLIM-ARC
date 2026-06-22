@@ -101,16 +101,30 @@ void prefetch_scheduler::register_tensor(const char * name, void * addr, size_t 
 
 void prefetch_scheduler::notify_layer_compute(int current_layer) {
     if (!enabled_.load()) return;
-    // In DECODE phase, skip prefetch to avoid madvise overhead on hot cache.
-    // Decode is memory-bound but per-token; madvise syscall overhead dominates
-    // when data is already in page cache.
-    if (phase_.load() == compute_phase::DECODE) return;
+    // In DECODE phase with hot cache (small model fits in RAM), skip prefetch.
+    // But for large models with MADV_RANDOM, decode also needs prefetch because
+    // pages may have been reclaimed. We check memory budget: if budget is set
+    // and model likely exceeds it, always prefetch (cold cache scenario).
+    if (phase_.load() == compute_phase::DECODE) {
+        // Only skip decode prefetch if memory budget is 0 (small model, hot cache)
+        if (memory_budget_.load() == 0) return;
+    }
     {
         std::lock_guard<std::mutex> lk(mtx_);
         target_layer_     = current_layer;
         target_signature_ = ++signature_;
     }
     cv_.notify_one();
+}
+
+void prefetch_scheduler::evict_layer(int layer) {
+    if (layer < 0 || (size_t)layer >= tensors_by_layer_.size()) return;
+    // Synchronous eviction - must complete before next layer needs memory.
+    // madvise(DONTNEED) is fast (just marks pages for reclaim, no I/O).
+    for (const auto & t : tensors_by_layer_[layer]) {
+        if (t.addr == nullptr || t.size == 0) continue;
+        (void) posix_madvise(t.addr, t.size, POSIX_MADV_DONTNEED);
+    }
 }
 
 void prefetch_scheduler::worker_loop() {

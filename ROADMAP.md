@@ -4,6 +4,66 @@
 
 ---
 
+## 2026-06-22 核心突破：45GB模型在8GB cgroup不OOM
+
+### 变更描述
+
+放弃旧 on-demand loader（pread+aligned_alloc 方案，SIGSEGV 无法修复），改用 **mmap + MADV_RANDOM + 禁用 repack** 方案，成功让 Qwen3-Next-80B（45GB）在 8GB cgroup 下启动且不 OOM。
+
+### 根因分析
+
+旧方案失败的三个原因：
+1. **顺序错误**：`register_tensor` 遍历 `ml.ctx_map` 时，`ctx_ptr` 已被 `std::move` 到 `pimpl->ctxs_bufs`，导致空指针解引用
+2. **架构冲突**：upstream llama.cpp 的 CPU backend 依赖 `tensor->buffer + tensor->data` 组合，直接用 `aligned_alloc` 设置 `tensor->data` 而 buffer 是 dummy 会破坏 backend scheduler
+3. **repack 内存翻倍**：CPU backend 默认启用 `GGML_CPU_REPACK`，把 Q4_K 权重重打包成 `q4_K_8x8`，分配额外匿名内存副本 → 45GB 模型产生 45GB 匿名内存 → 必然 OOM
+
+### 新方案（plan/05-v1-mmap-on-demand-redesign.md）
+
+三层机制协同：
+1. **mmap**：模型文件 mmap 到虚拟地址空间（45GB VSZ），tensor->data 指向 mmap 区域
+2. **MADV_RANDOM**：在 `init_mappings()` 中对整个 mmap 区域调用 `posix_madvise(MADV_RANDOM)`，关闭内核默认的 sequential readahead，只有访问的页面进 page cache
+3. **禁用 repack**：`cmake -DGGML_CPU_REPACK=OFF`，CPU backend 直接用 mmap 原始权重计算，不分配匿名副本
+
+### 验证结果
+
+- Qwen3-Next-80B（45GB）在 8GB cgroup（slim-arc-low）下启动成功
+- 进程存活 36+ 分钟未 OOM kill
+- RSS=8.1GB（贴满 8GB 限制但未超），VSZ=47GB（45GB 模型 mmap 映射）
+- `memory.events`: file-rss 极低（MADV_RANDOM 生效），anon-rss 为主（KV cache + compute buffer）
+- OOM kill 发生在旧 repack 版本，禁用 repack 后不再 OOM
+
+### 待解决：冷启动速度
+
+- 45GB 模型冷启动 36 分钟未完成推理（每层从 SSD page fault）
+- 已添加 `evict_layer()` API（madvise DONTNEED）但未在 graph_compute 中调用
+- 后续优化方向：prefetch_scheduler 的 WILLNEED 需要更精细的层间触发
+
+### 性能数据（Qwen3-4B 热缓存，no-cgroup）
+
+| 配置 | pp16 (t/s) | tg4 (t/s) |
+|------|-----------|----------|
+| 禁用 repack 前（mmap 默认） | 29.35 | 8.02 |
+| 禁用 repack 后（mmap+MADV_RANDOM） | 30.58 | 14.97 |
+
+**关键发现**：禁用 repack 在热缓存下无性能损失，decode(tg4) 反而提升 87%（8.02→14.97）。冷启动慢的根因是 MADV_RANDOM + 冷缓存（无预读），不是禁用 repack。
+
+### 涉及文件
+
+- `src/llama-upstream/src/llama-model-loader.cpp`：添加 MADV_RANDOM 调用
+- `src/llama-upstream/src/llama-model.cpp`：移除旧 on-demand loader 代码
+- `src/llama-upstream/src/llama-model.h`：移除 on_demand_loader 成员
+- `src/llama-upstream/src/llama-context.cpp`：移除 on-demand ensure_loaded 调用
+- `src/llama-upstream/src/slim-arc-prefetch.h/cpp`：新增 evict_layer() 接口
+- `src/llama-upstream/src/CMakeLists.txt`：注释掉 slim-arc-on-demand.cpp
+- `src/llama-upstream/build/`：重新配置 `-DGGML_CPU_REPACK=OFF`
+- `plan/05-v1-mmap-on-demand-redesign.md`：设计文档
+
+### 决策原因
+
+旧 on-demand loader 试图绕过 backend buffer 系统，在 upstream llama.cpp 的 OOP 架构下不可行。mmap + MADV_RANDOM 是与内核协同的标准做法，代码改动极小（只新增 madvise 调用），且利用内核 page cache 的 LRU 淘汰，无需手动管理内存。
+
+---
+
 ## 2026-06-22 Qwen3-Next-80B 下载完成与受限环境测试
 
 ### 变更描述

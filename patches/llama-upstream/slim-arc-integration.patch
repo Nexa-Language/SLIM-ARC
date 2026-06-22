@@ -1,20 +1,23 @@
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
-index d15ccfd..3d9874f 100644
+index d15ccfd..6e6f909 100644
 --- a/src/CMakeLists.txt
 +++ b/src/CMakeLists.txt
-@@ -36,6 +36,10 @@ add_library(llama
+@@ -36,6 +36,13 @@ add_library(llama
              llama-quant.cpp
              llama-sampler.cpp
              llama-vocab.cpp
 +            slim-arc-prefetch.cpp
-+            slim-arc-on-demand.cpp
++            # SLIM-ARC: on-demand loader disabled in favor of mmap+MADV_RANDOM
++            # approach (plan/05-v1-mmap-on-demand-redesign.md). Kept in patches/
++            # for ablation comparison.
++            # slim-arc-on-demand.cpp
 +            slim-arc-kv-eviction.cpp
 +            slim-arc-unified-scheduler.cpp
              unicode-data.cpp
              unicode.cpp
              unicode.h
 diff --git a/src/llama-context.cpp b/src/llama-context.cpp
-index 220240e..4923503 100644
+index 220240e..0d93967 100644
 --- a/src/llama-context.cpp
 +++ b/src/llama-context.cpp
 @@ -10,9 +10,11 @@
@@ -29,47 +32,49 @@ index 220240e..4923503 100644
  #include <cmath>
  #include <cstring>
  #include <limits>
-@@ -2437,13 +2439,53 @@ ggml_status llama_context::graph_compute(
+@@ -2437,12 +2439,65 @@ ggml_status llama_context::graph_compute(
          set_n_threads_fn.second(set_n_threads_fn.first, n_threads);
      }
  
-+    // SLIM-ARC: Phase 2c - Prefill/Decode aware dynamic prefetch
-+    // Only do prefetch during Prefill (batched) phase where I/O can be hidden.
-+    // During Decode (single token), skip all scheduler overhead - the data
-+    // is already in page cache from the initial mmap madvise.
-+    if (batched) {
-+        if (auto * s = slim_arc::get_global_prefetch_scheduler()) {
-+            s->set_phase(slim_arc::compute_phase::PREFILL);
++    // SLIM-ARC: Prefetch weight tensors referenced in the compute graph.
++    //
++    // Since MADV_RANDOM is set on the mmap region (to prevent kernel
++    // readahead from OOM'ing on large models), we must explicitly issue
++    // madvise(WILLNEED) for tensors about to be used, so the kernel can
++    // start async readahead. Without this, every tensor access is a
++    // synchronous page fault (4KB at a time) → extremely slow.
++    //
++    // We walk graph nodes and their src[] to find weight tensors (those
++    // with buffer != NULL and data pointing into mmap), and issue WILLNEED
++    // for each. The prefetch_scheduler handles dedup and async dispatch.
++    if (auto * s = slim_arc::get_global_prefetch_scheduler()) {
++        s->set_phase(batched ? slim_arc::compute_phase::PREFILL
++                             : slim_arc::compute_phase::DECODE);
 +
-+            int min_layer = INT_MAX;
-+            int n_nodes = ggml_graph_n_nodes(gf);
-+            for (int i = 0; i < n_nodes; ++i) {
-+                struct ggml_tensor * t = ggml_graph_node(gf, i);
-+                if (t && t->name) {
-+                    int layer = slim_arc::tensor_layer_from_name(t->name);
-+                    if (layer >= 0 && layer < min_layer) {
-+                        min_layer = layer;
-+                    }
-+                }
-+            }
-+            if (min_layer != INT_MAX) {
-+                s->notify_layer_compute(min_layer);
-+            }
-+        }
-+    }
-+
-+    // SLIM-ARC: Before computing, ensure all weight tensors referenced in the
-+    // graph have their data loaded from SSD (on-demand loading for large models)
-+    if (model.use_on_demand && model.on_demand_loader) {
-+        // Walk graph nodes and their src[] to find weight tensors (data == NULL)
++        // Collect unique layers referenced in the graph
++        int min_layer = INT_MAX;
++        int max_layer = -1;
 +        int n_nodes = ggml_graph_n_nodes(gf);
 +        for (int i = 0; i < n_nodes; ++i) {
-+            struct ggml_tensor * node = ggml_graph_node(gf, i);
-+            if (!node) continue;
-+            for (int j = 0; j < GGML_MAX_SRC; ++j) {
-+                struct ggml_tensor * src = node->src[j];
-+                if (src && src->data == nullptr && src->buffer != nullptr) {
-+                    model.on_demand_loader->ensure_loaded(src);
++            struct ggml_tensor * t = ggml_graph_node(gf, i);
++            if (t && t->name) {
++                int layer = slim_arc::tensor_layer_from_name(t->name);
++                if (layer >= 0) {
++                    if (layer < min_layer) min_layer = layer;
++                    if (layer > max_layer) max_layer = layer;
++                }
++            }
++        }
++        // Trigger prefetch for the range of layers in this graph.
++        // notify_layer_compute(min_layer) will prefetch [min_layer+1, +window].
++        // For decode (all layers needed), also prefetch layers explicitly.
++        if (min_layer != INT_MAX) {
++            s->notify_layer_compute(min_layer);
++            // During decode, all layers [min..max] are needed each step.
++            // Issue WILLNEED for layers beyond the scheduler's window.
++            if (!batched && max_layer > min_layer) {
++                for (int l = min_layer + s->effective_window() + 1; l <= max_layer; ++l) {
++                    s->notify_layer_compute(l);
 +                }
 +            }
 +        }
@@ -81,12 +86,21 @@ index 220240e..4923503 100644
      }
  
 -    // fprintf(stderr, "splits: %d\n", ggml_backend_sched_get_n_splits(sched));
--
++    // SLIM-ARC: Layer eviction via madvise(DONTNEED) is intentionally NOT
++    // triggered here. Upstream llama.cpp builds the entire forward graph per
++    // ubatch, so by the time graph_compute returns, all layers in this ubatch
++    // have been used. Evicting would force re-loading on the next ubatch.
++    //
++    // Instead, we rely on the kernel's LRU page reclaim for mmap file-backed
++    // pages (enabled by MADV_RANDOM in init_mappings). This keeps the working
++    // set resident and evicts cold pages automatically under memory pressure.
++    // The explicit evict_layer() API is available for future fine-grained
++    // per-layer eviction in Phase 2b (KV cache tiering).
+ 
      return status;
  }
- 
 diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
-index 474cabd..4aa7abb 100644
+index 474cabd..85fd2f0 100644
 --- a/src/llama-model-loader.cpp
 +++ b/src/llama-model-loader.cpp
 @@ -1,3 +1,5 @@
@@ -95,7 +109,40 @@ index 474cabd..4aa7abb 100644
  #include "llama-model-loader.h"
  
  #include "ggml-alloc.h"
-@@ -1363,6 +1365,25 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
+@@ -12,6 +14,7 @@
+ #include <cstring>
+ #include <future>
+ #include <regex>
++#include <sys/mman.h>  // SLIM-ARC: posix_madvise for MADV_RANDOM
+ 
+ static const size_t kiB = 1024;
+ static const size_t MiB = 1024*kiB;
+@@ -1350,6 +1353,24 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
+ 
+             std::unique_ptr<llama_mmap> mapping = std::make_unique<llama_mmap>(file.get(), prefetch ? -1 : 0, is_numa);
+             mmaps_used.emplace_back(mapping->size(), 0);
++
++            // SLIM-ARC: Disable kernel sequential readahead.
++            //
++            // For large models (e.g. Qwen3-Next-80B at 45GB), the kernel's default
++            // mmap readahead policy triggers aggressive sequential prefetch that can
++            // exhaust RAM on memory-constrained edge devices (8-16GB). By setting
++            // MADV_RANDOM, pages are only loaded on explicit access (demand paging),
++            // and we take over prefetch policy via the prefetch_scheduler
++            // (madvise(WILLNEED) on future layers).
++            //
++            // This is the CORE mechanism that allows a 45GB model to run on 8GB RAM:
++            //   - Without MADV_RANDOM: kernel reads ahead ~2MB per fault → OOM
++            //   - With MADV_RANDOM:    only accessed pages enter RAM
++            //   - With WILLNEED:       we prefetch layers ahead of computation
++            if (mapping->addr() && mapping->size() > 0) {
++                (void) posix_madvise(mapping->addr(), mapping->size(), POSIX_MADV_RANDOM);
++            }
++
+             if (mlock_mmaps) {
+                 std::unique_ptr<llama_mlock> mlock_mmap(new llama_mlock());
+                 mlock_mmap->init(mapping->addr());
+@@ -1363,6 +1384,36 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
      for (const auto & it : weights_map) {
          size_data += ggml_nbytes(it.second.tensor);
      }
@@ -107,6 +154,17 @@ index 474cabd..4aa7abb 100644
 +    if (use_mmap && !mappings.empty()) {
 +        static slim_arc::prefetch_scheduler s_scheduler(2 /*n_threads*/, 3 /*window*/);
 +        slim_arc::set_global_prefetch_scheduler(&s_scheduler);
++
++        // SLIM-ARC: Set memory budget based on total tensor size.
++        // If total weights exceed ~6GB (8GB cgroup minus KV cache + compute),
++        // enable aggressive prefetch even in decode phase (cold cache scenario).
++        size_t total_weight_size = 0;
++        for (const auto & it : weights_map) {
++            total_weight_size += ggml_nbytes(it.second.tensor);
++        }
++        // Budget = 6GB (conservative for 8GB cgroup). Above this, decode prefetch enabled.
++        s_scheduler.set_memory_budget(total_weight_size > (6ULL << 30) ? total_weight_size : 0);
++
 +        for (const auto & it : weights_map) {
 +            const auto & w = it.second;
 +            if (w.idx >= mappings.size()) continue;
@@ -122,120 +180,37 @@ index 474cabd..4aa7abb 100644
  
  void llama_model_loader::get_mapping_range(size_t * first, size_t * last, void ** addr, int idx, ggml_context * ctx) const {
 diff --git a/src/llama-model.cpp b/src/llama-model.cpp
-index d041a9c..ac36384 100644
+index d041a9c..a8a3953 100644
 --- a/src/llama-model.cpp
 +++ b/src/llama-model.cpp
-@@ -8,6 +8,8 @@
+@@ -8,6 +8,9 @@
  #include "llama-cparams.h"
  #include "llama-model-loader.h"
  
 +#include <unistd.h>
++#include "ggml-alloc.h"
 +
  #include "llama-kv-cache.h"
  #include "llama-kv-cache-iswa.h"
  #include "llama-kv-cache-dsa.h"
-@@ -1547,6 +1549,18 @@ bool llama_model_base::load_tensors(llama_model_loader & ml) {
-                 for (ggml_tensor * t = ggml_get_first_tensor(ctx); t != nullptr; t = ggml_get_next_tensor(ctx, t)) {
-                     t->buffer = buf; // set dummy buffer for weights so that the backend scheduler won't try to allocate them
-                 }
-+            } else if (use_on_demand) {
-+                // SLIM-ARC: Allocate a small buffer for on-demand loading.
-+                // We set no_alloc=true so ggml doesn't try to allocate 45GB.
-+                // Instead, we manually allocate a small buffer and use
-+                // ggml_backend_tensor_set to fill tensor data on-demand.
-+                ggml_set_no_alloc(ctx, true);
-+                buf = ggml_backend_buft_alloc_buffer(buft, 0); // dummy buffer
-+                for (ggml_tensor * t = ggml_get_first_tensor(ctx); t != nullptr; t = ggml_get_next_tensor(ctx, t)) {
-+                    t->buffer = buf;
-+                    // tensor->data stays NULL - will be set by on_demand_loader
-+                }
-+                ggml_set_no_alloc(ctx, false);
-             } else {
-                 buf = ggml_backend_alloc_ctx_tensors_from_buft(ctx, buft); // real buffer
-             }
-@@ -1604,6 +1618,62 @@ bool llama_model_base::load_tensors(llama_model_loader & ml) {
+@@ -1604,6 +1607,12 @@ bool llama_model_base::load_tensors(llama_model_loader & ml) {
          return true;
      }
  
-+    // SLIM-ARC: On-demand loading for large models that exceed RAM budget
-+    // If model size exceeds a threshold (e.g. 4GB), use on-demand loading
-+    // instead of loading everything into memory at once.
-+    {
-+        size_t model_size = ml.n_bytes;
-+        size_t ram_budget = 4ULL * 1024 * 1024 * 1024; // 4GB default budget for weights
-+
-+        // Check if we should use on-demand loading
-+        if (model_size > ram_budget && !ml.use_mmap) {
-+            LLAMA_LOG_INFO("%s: SLIM-ARC on-demand loading enabled (model=%.1f GiB, budget=%.1f GiB)\n",
-+                __func__, model_size / 1024.0 / 1024.0 / 1024.0, ram_budget / 1024.0 / 1024.0 / 1024.0);
-+
-+            use_on_demand = true;
-+
-+            // Get the model file path from the loader
-+            std::string model_path;
-+            if (!ml.files.empty() && ml.files[0]) {
-+                // We need the file path - get it from the file descriptor
-+                char proc_path[256];
-+                snprintf(proc_path, sizeof(proc_path), "/proc/self/fd/%d", ml.files[0]->file_id());
-+                char real_path[4096];
-+                ssize_t n = readlink(proc_path, real_path, sizeof(real_path) - 1);
-+                if (n > 0) {
-+                    real_path[n] = '\0';
-+                    model_path = real_path;
-+                }
-+            }
-+
-+            if (!model_path.empty()) {
-+                on_demand_loader = std::make_unique<slim_arc::on_demand_loader>(model_path, ram_budget);
-+
-+                // Register all tensors with the on-demand loader
-+                for (auto & [buft, ctx_ptr] : ml.ctx_map) {
-+                    ggml_context * ctx = ctx_ptr.get();
-+                    for (ggml_tensor * t = ggml_get_first_tensor(ctx); t != nullptr; t = ggml_get_next_tensor(ctx, t)) {
-+                        const auto * weight = ml.get_weight(ggml_get_name(t));
-+                        if (weight) {
-+                            on_demand_loader->register_tensor(ggml_get_name(t), t, weight->offs, ggml_nbytes(t));
-+                        }
-+                    }
-+                }
-+
-+                LLAMA_LOG_INFO("%s: SLIM-ARC on-demand loading: %zu tensors registered\n",
-+                    __func__, on_demand_loader->current_memory_usage());
-+
-+                // Pre-load layer 0 so the model can start inference
-+                on_demand_loader->ensure_layer_loaded(0);
-+                on_demand_loader->prefetch_layers(0, 3);
-+
-+                return true;
-+            }
-+        }
-+    }
-+
-+    // SLIM-ARC END: On-demand loading
++    // SLIM-ARC: On-demand loading is handled via mmap + madvise (MADV_RANDOM)
++    // in llama-model-loader.cpp's init_mappings(). The kernel's demand paging
++    // ensures only accessed pages enter RAM, while the prefetch_scheduler
++    // issues madvise(WILLNEED) to overlap I/O with computation.
++    // See plan/05-v1-mmap-on-demand-redesign.md for design details.
 +
      // load tensor data
      for (auto & [ctx, buf_map] : ctx_buf_maps) {
          if (!ml.load_all_data(ctx, buf_map, use_mlock ? &pimpl->mlock_mmaps : NULL, params.progress_callback, params.progress_callback_user_data)) {
 diff --git a/src/llama-model.h b/src/llama-model.h
-index f4718f6..707853d 100644
+index f4718f6..3bcbba6 100644
 --- a/src/llama-model.h
 +++ b/src/llama-model.h
-@@ -1,3 +1,5 @@
-+#include "slim-arc-on-demand.h"
-+
- #pragma once
- 
- #include "llama.h"
-@@ -654,11 +656,16 @@ struct llama_model {
-     virtual void load_arch_tensors(llama_model_loader & ml) = 0;
-     virtual std::unique_ptr<llm_graph_context> build_arch_graph(const llm_graph_params & params) const = 0;
- 
-+    // SLIM-ARC: on-demand loader for running large models on limited RAM
-+    std::unique_ptr<slim_arc::on_demand_loader> on_demand_loader;
-+    bool use_on_demand = false;
-+
- protected:
-     llama_model_params params;
+@@ -659,6 +659,7 @@ protected:
  
      struct impl;
      std::unique_ptr<impl> pimpl;
