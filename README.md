@@ -10,7 +10,7 @@ SLIM-ARC 是一个面向端侧设备的 LLM 推理优化框架，在受限内存
 
 **赛题**: [内存受限环境的大语言模型推理优化问题](docs/official/赛题.txt)（Proj 59，南开大学宫晓利老师维护）
 
-**核心思路**: 基于 [FlexInfer](docs/papers/FlexInfer/) (EuroMLSys 2025) 的权重卸载框架，融合 KV Cache 异步换页、MoE 专家预测预取、Tile 级微流水线等技术，构建统一 I/O 带宽预算调度器，实现"协同 > 单点之和"的性能提升。
+**核心思路**: 基于 upstream [llama.cpp](https://github.com/ggml-org/llama.cpp)，通过 mmap + madvise 内核协同实现按需加载，融合 KV Cache 异步换页、MoE 专家预测预取、统一 I/O 调度器等技术，让 45GB 模型在 8GB RAM 下运行且 decode 速度提升 343%。
 
 ## 核心 Insight
 
@@ -62,10 +62,29 @@ SLIM-ARC 的核心贡献是**统一调度**这三类 I/O 需求。
 
 ### 模型
 
-| 类型 | 模型 | 量化 | 权重大小 |
-|------|------|------|---------|
-| Dense | Qwen3-4B | Q4_K_M | ~2.5 GB |
-| MoE | Qwen3-Next-A3B | Q4_K_M | ~1.8 GB（3B 总参/稀疏激活） |
+| 类型 | 模型 | 量化 | 权重大小 | 专家 |
+|------|------|------|---------|------|
+| Dense | Qwen3-4B | Q4_K_M | 2.4 GB | - |
+| MoE (小) | OLMoE-1B-7B | Q4_K_M | 3.9 GB | 64 experts, active 8 |
+| MoE (大) | Qwen3-Next-80B-A3B | Q4_K_M | 45 GB | 512 experts, active 10 |
+
+## 实验结果
+
+### 核心成果：Qwen3-Next-80B (45GB) 在 8GB 环境
+
+| 指标 | Baseline | SLIM-ARC | 提升 |
+|------|---------|---------|------|
+| prefill (pp4 t/s) | 0.17 | 0.20 | +17.6% |
+| **decode (tg1 t/s)** | **0.07** | **0.31** | **+343% (4.4×)** |
+
+### Dense/MoE 小模型在 8GB 环境
+
+| 模型 | 指标 | Baseline | SLIM-ARC | 提升 |
+|------|------|---------|---------|------|
+| Qwen3-4B | decode (tg16) | 6.36 | 7.54 | +18.6% |
+| OLMoE | prefill (pp64) | 88.27 | 95.99 | +8.7% |
+
+详见 [消融实验报告](reports/phase4-ablation-summary.md)。
 
 ## 快速开始
 
@@ -73,17 +92,17 @@ SLIM-ARC 的核心贡献是**统一调度**这三类 I/O 需求。
 # 1. 搭建受限环境
 sudo bash scripts/env/setup-cgroups.sh
 
-# 2. 构建 FlexInfer
-cd src/flexinfer && bash build-host.sh
+# 2. 构建 upstream llama.cpp（禁用 repack 避免 OOM）
+cd src/llama-upstream/build
+cmake -DGGML_CPU_REPACK=OFF ..
+cmake --build . --target llama-bench -j$(nproc)
 
-# 3. 转换模型（需 4096 对齐）
-bash scripts/convert-models.sh
+# 3. 运行消融对比（baseline vs SLIM-ARC，三档自动切换）
+bash scripts/bench/run-quick-ablation.sh
 
-# 4. 运行 baseline
-bash scripts/bench/run-baseline.sh
-
-# 5. 运行 SLIM-ARC 优化版
-bash scripts/bench/run-slim-arc.sh
+# 4. 80B 在 8GB 环境测试
+sudo cgexec -g memory,cpu:slim-arc-low env LD_LIBRARY_PATH=src/llama-upstream/build/bin \
+  src/llama-upstream/build/bin/llama-bench -m data/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf -t 4 -p 4 -n 1 -mmp 1
 ```
 
 ## 项目结构
