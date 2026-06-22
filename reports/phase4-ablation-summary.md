@@ -42,22 +42,27 @@
 
 ### Qwen3-Next-80B（超大 MoE, 45GB）— 核心对比数据
 
-| Tier | Mode | pp4 (t/s) | tg1 (t/s) | pp 提升 | tg 提升 |
-|------|------|-----------|----------|--------|--------|
-| low (8G) | baseline | 0.17 | 0.07 | - | - |
-| low (8G) | **slim-arc** | **0.20** | **0.31** | **+17.6%** | **+343%** |
-| high (16G) | baseline | 0.17 | 0.31 | - | - |
-| high (16G) | slim-arc | 0.17 | 0.38 | 0% | +22.6% |
+**小负载（pp4 + tg1, 8GB）**：
 
-**核心成果：80B 在 8GB 最受限环境下 decode 提升 343%（4.4倍）**
+| Mode | pp4 (t/s) | tg1 (t/s) | pp 提升 | tg 提升 |
+|------|-----------|----------|--------|--------|
+| baseline | 0.17 | 0.07 | - | - |
+| **slim-arc** | **0.20** | **0.31** | +17.6% | **+343%** |
 
-- SLIM-ARC 的 MADV_RANDOM + prefetch_scheduler 让 decode 阶段权重访问更高效
-- baseline 默认 WILLNEED 全预读在 8GB 内存压力下频繁 page reclaim 导致 thrashing
-- prefill 提升 17.6%，decode 提升巨大（decode 是内存敏感场景）
+**中等负载（pp16 + tg4, 8GB）**：
 
-**注**: 禁用 repack 后 baseline 在 8GB 也能运行（不 OOM），但速度远低于 SLIM-ARC。
-   之前"baseline OOM"是 repack 启用时的行为，禁用 repack 后两者都能跑，
-   SLIM-ARC 的优势体现在 prefetch 效率上。
+| Mode | pp16 (t/s) | tg4 (t/s) |
+|------|-----------|----------|
+| baseline | 0.54 | 0.07 |
+| **slim-arc** | 0.21 | **0.21** |
+| | prefill 慢 | **decode +200%** |
+
+**分析**：
+- **prefill**: baseline 快（WILLNEED 全预读 + 顺序读 NVMe 优势），SLIM-ARC 的 MADV_RANDOM 阻止预读导致慢
+- **decode**: SLIM-ARC 快 3 倍（精准 prefetch 只加载激活专家，baseline 全预读导致内存压力 thrashing）
+- **tradeoff**: MADV_RANDOM 牺牲 prefill 换取 decode 巨大提升，对交互式场景（decode 为主）有利
+
+**核心成果**：80B 在 8GB 最受限环境下 decode 提升 200-343%。decode 是交互式推理的主要场景，提升最有价值。
 
 ## 分析
 

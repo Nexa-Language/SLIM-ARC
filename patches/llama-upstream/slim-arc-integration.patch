@@ -192,7 +192,7 @@ index 2802103..b00d4a2 100644
      }
  }
 diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
-index 474cabd..9e870b2 100644
+index 474cabd..ce9f791 100644
 --- a/src/llama-model-loader.cpp
 +++ b/src/llama-model-loader.cpp
 @@ -1,3 +1,6 @@
@@ -210,7 +210,7 @@ index 474cabd..9e870b2 100644
  
  static const size_t kiB = 1024;
  static const size_t MiB = 1024*kiB;
-@@ -1350,6 +1354,28 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
+@@ -1350,6 +1354,34 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
  
              std::unique_ptr<llama_mmap> mapping = std::make_unique<llama_mmap>(file.get(), prefetch ? -1 : 0, is_numa);
              mmaps_used.emplace_back(mapping->size(), 0);
@@ -230,7 +230,13 @@ index 474cabd..9e870b2 100644
 +            {
 +                bool slim_arc_disabled = getenv("SLIM_ARC_DISABLE") != nullptr;
 +                size_t mapping_sz = mapping->size();
-+                if (!slim_arc_disabled && mapping_sz > (6ULL << 30) &&
++                // SLIM-ARC: MADV_RANDOM for large models (>6GB).
++                // Tradeoff: MADV_RANDOM blocks sequential readahead → prefill slower,
++                // but enables precise demand paging → decode 3-4x faster for large MoE.
++                // Decode is the primary interactive scenario, so the tradeoff is worth it.
++                // Env var SLIM_ARC_NO_MADV_RANDOM=1 disables (for prefill-heavy workloads).
++                bool no_madv_random = getenv("SLIM_ARC_NO_MADV_RANDOM") != nullptr;
++                if (!slim_arc_disabled && !no_madv_random && mapping_sz > (6ULL << 30) &&
 +                    mapping->addr() && mapping_sz > 0) {
 +                    (void) posix_madvise(mapping->addr(), mapping_sz, POSIX_MADV_RANDOM);
 +                }
@@ -239,7 +245,7 @@ index 474cabd..9e870b2 100644
              if (mlock_mmaps) {
                  std::unique_ptr<llama_mlock> mlock_mmap(new llama_mlock());
                  mlock_mmap->init(mapping->addr());
-@@ -1363,6 +1389,71 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
+@@ -1363,6 +1395,71 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
      for (const auto & it : weights_map) {
          size_data += ggml_nbytes(it.second.tensor);
      }
