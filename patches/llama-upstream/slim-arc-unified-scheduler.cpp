@@ -7,6 +7,13 @@
 
 namespace slim_arc {
 
+namespace {
+unified_io_scheduler * g_unified_scheduler = nullptr;
+}
+
+unified_io_scheduler * get_global_unified_scheduler() { return g_unified_scheduler; }
+void set_global_unified_scheduler(unified_io_scheduler * s) { g_unified_scheduler = s; }
+
 // Static weight ratio table initialization
 constexpr double unified_io_scheduler::WEIGHT_RATIOS[5][3];
 

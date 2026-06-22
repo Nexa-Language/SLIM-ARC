@@ -1,109 +1,90 @@
-# Phase 2d: Tile-Level Pipeline + Fused Dequantization
+# Phase 2d: Tile 级微流水线 + 融合反量化
 
-## Overview
+## 1. 背景与动机
 
-SLIM-ARC Phase 2d implements tile-level pipelining and fused
-dequantization to improve CPU cache hit rates and reduce memory
-bandwidth consumption during computation.
+传统张量级加载：整个权重 tensor 加载完才开始计算。对于大 tensor（如 4096×4096 权重），需要等整个 tensor 在 RAM 才能开始 GEMM。
 
-## Motivation
+Tile 级流水线：把 tensor 切分成 Tile（对齐 CPU L2/L3 cache 行），I/O 线程读 Tile-N 时计算线程处理 Tile-N-1，实现 I/O-计算重叠。
 
-Current tensor-level prefetch loads entire weight tensors (e.g., 60 MiB
-per layer for Qwen3-4B) before computation begins. This causes:
-1. **Cache flushing**: Large tensors evict useful data from L2/L3 cache
-2. **Memory bandwidth waste**: Dequantized tensors written back to RAM
-3. **Pipeline stalls**: Compute waits for entire tensor to load
+## 2. 当前方案的 Tile 特性
 
-## Design
+SLIM-ARC 的 mmap + MADV_RANDOM 方案**天然具备 Tile 级特性**：
+- 内核 page fault 按 4KB page 粒度（类似 Tile）
+- `madvise(WILLNEED)` 触发异步预读，内核在后台读 page
+- 计算线程访问已加载的 page 时，I/O 线程在加载后续 page
+- 这就是隐式的 Tile 级流水线（Tile = 4KB page）
 
-### Tile-Level Pipeline
+## 3. 显式 Tile 流水线设计（待实现）
 
-```
-Traditional (tensor-level):
-  Load W_Q (60 MiB) → Compute Q → Load W_K (60 MiB) → Compute K → ...
-
-Tile-level (block pipeline):
-  Load Tile[0] of W_Q → Compute Tile[0]
-       Load Tile[1] of W_Q → Compute Tile[1]    (overlap)
-            Load Tile[2] of W_Q → Compute Tile[2] (overlap)
-  ...
-```
-
-### Tile Size Selection
-
-```python
-def select_tile_size(cpu_cache, tensor_shape, dtype):
-    L2_size = cpu_cache.l2  # e.g., 2 MiB for i9-13900H
-    element_size = dtype.element_size  # e.g., 0.5 bytes for Q4_K
-
-    # Target: tile fits in L2 with room for input/output
-    target_tile = L2_size * 0.5  # use 50% of L2
-    tile_elements = target_tile / element_size
-
-    # Align to block boundary (Q4_K: 256 elements)
-    tile_elements = (tile_elements // 256) * 256
-
-    return tile_elements
-```
-
-For i9-13900H (L2=2MiB, Q4_K):
-- Tile size: ~1 MiB = 2M elements
-- Tensor split: 60 MiB / 1 MiB = 60 tiles
-
-### Fused Dequantization
+### 3.1 Tile 切分策略
 
 ```
-Traditional:
-  SSD → [Load Q4_K tile] → RAM → [Dequant to F16] → RAM → [MatMul] → Output
+权重 tensor [M, N] 切分为 Tile [T_M, T_N]:
+- T_M = 64 (对齐 AVX-512 行)
+- T_N = 256 (对齐 L2 cache 行)
+- 每 Tile: 64 × 256 × sizeof(Q4_K_block) = 2MB (L3 cache 友好)
 
-Fused:
-  SSD → [Load Q4_K tile] → L2 Cache → [Dequant + MatMul fused] → Output
+切分后:
+| Tile[0,0] | Tile[0,1] | ... | Tile[0, N/T_N-1] |
+| Tile[1,0] | Tile[1,1] | ... | ...              |
+| ...                                                |
 ```
 
-The dequantization happens in-register, never writing the F16 intermediate
-to memory. This eliminates the "double bandwidth" problem.
+### 3.2 流水线调度
 
-### Implementation
+```
+时间轴:
+  I/O线程:  [读 Tile 0] [读 Tile 1] [读 Tile 2] ...
+  计算线程:              [算 Tile 0] [算 Tile 1] [算 Tile 2] ...
+
+overlap = min(I/O_time, compute_time) / max(I/O_time, compute_time)
+```
+
+### 3.3 融合反量化
+
+Q4_K 权重计算时需要先反量化成 F32 再做 GEMM。传统方式：反量化整个 tensor → GEMM。融合方式：逐 Tile 反量化 → GEMM → 丢弃。
 
 ```cpp
-void tiled_compute(const ggml_tensor * weight, const ggml_tensor * input,
-                   ggml_tensor * output, int tile_size) {
-    int n_tiles = weight->ne[0] / tile_size;
+for (tile_i = 0; tile_i < n_tiles; ++tile_i) {
+    // 异步预取下一个 Tile
+    if (tile_i + 1 < n_tiles)
+        madvise(tile_addr[tile_i+1], tile_size, WILLNEED);
 
-    for (int t = 0; t < n_tiles; ++t) {
-        // 1. Prefetch next tile (async I/O)
-        if (t + 1 < n_tiles) {
-            prefetch_scheduler.notify_tile(weight, t + 1, tile_size);
-        }
+    // 反量化 + GEMM 当前 Tile
+    dequantize_q4_k(tile_data, temp_f32, tile_m, tile_n);
+    gemm_f32(temp_f32, activation, output);
 
-        // 2. Dequantize + compute current tile (fused)
-        fused_dequant_matmul(
-            get_tile_ptr(weight, t, tile_size),  // Q4_K data in L2
-            input,
-            get_output_tile_ptr(output, t),
-            tile_size
-        );
-    }
+    // 释放当前 Tile（mmap 页可被回收）
+    madvise(tile_addr[tile_i], tile_size, DONTNEED);
 }
 ```
 
-### Expected Benefits
+## 4. 与当前 mmap 方案的关系
 
-| Metric | Tensor-level | Tile-level | Improvement |
-|--------|-------------|-----------|------------|
-| L2 hit rate | ~20% | ~80% | +300% |
-| Memory bandwidth | 2x (dequant+compute) | 1x (fused) | -50% |
-| Pipeline overlap | None (load all → compute all) | Full (load t+1 while compute t) | Yes |
+当前方案已通过 `madvise(WILLNEED)` 实现了**隐式 Tile 流水线**：
+1. `prefetch_scheduler` 在计算 layer N 时预取 layer N+1..N+window（相当于读 Tile-N+1）
+2. 内核 page cache 实现 L2/L3 友好的 4KB page 粒度
+3. MADV_RANDOM 避免预读过多（精确按需）
 
-## Risks
+显式 Tile 流水线（切分 tensor + 手动双缓冲）的额外收益有限，且需要修改 ggml GEMM 内核，复杂度高。
 
-- Tile size tuning is CPU-specific (L2/L3 cache size varies)
-- Fused dequant kernel requires custom ggml ops
-- Small tiles increase loop overhead
+## 5. 实现路线图
 
-## Evaluation
+### 5.1 已实现（隐式 Tile 流水线）
+- mmap + MADV_RANDOM: 4KB page 粒度按需加载
+- prefetch_scheduler: WILLNEED 预取后续层
+- evict_layer: DONTNEED 释放已完成层
 
-1. Measure L2 cache misses with `perf stat -e cache-misses`
-2. Compare tile-level vs tensor-level throughput
-3. Test different tile sizes (128K, 256K, 512K, 1M, 2M)
-4. Profile fused vs separate dequant+matmul
+### 5.2 待实现（显式 Tile 流水线）
+- 修改 ggml GEMM kernel 支持逐 Tile 计算
+- 实现双缓冲：I/O buffer + compute buffer
+- 融合反量化 kernel
+
+### 5.3 预期收益
+- L2/L3 cache hit rate 提升 20-40%
+- I/O-计算 overlap 提升至 80%+
+- 但实现复杂度高，ROI 低于 Phase 2a/2b
+
+## 6. 结论
+
+当前 mmap 方案已通过内核 page cache 实现了隐式 Tile 流水线，满足比赛需求。显式 Tile 流水线作为后续优化方向，预期收益 20-40% 但复杂度高，不在初赛范围内。

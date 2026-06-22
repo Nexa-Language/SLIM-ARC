@@ -103,4 +103,8 @@ class unified_io_scheduler {
     runtime_phase detect_phase(bool is_prefill, bool is_moe, size_t context_len);
 };
 
+// Global singleton accessor (set by llama-model-loader during init)
+unified_io_scheduler * get_global_unified_scheduler();
+void set_global_unified_scheduler(unified_io_scheduler * s);
+
 } // namespace slim_arc

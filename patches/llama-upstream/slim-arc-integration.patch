@@ -17,14 +17,15 @@ index d15ccfd..6e6f909 100644
              unicode.cpp
              unicode.h
 diff --git a/src/llama-context.cpp b/src/llama-context.cpp
-index 220240e..9b3eedf 100644
+index 220240e..9f1002a 100644
 --- a/src/llama-context.cpp
 +++ b/src/llama-context.cpp
-@@ -10,12 +10,15 @@
+@@ -10,12 +10,16 @@
  #include "llama-mmap.h"
  #include "llama-model.h"
  #include "llama-ext.h"
 +#include "slim-arc-prefetch.h"
++#include "slim-arc-unified-scheduler.h"
  #include "llama.h"
  
  #include <cinttypes>
@@ -36,7 +37,7 @@ index 220240e..9b3eedf 100644
  #include <stdexcept>
  
  //
-@@ -2437,12 +2440,113 @@ ggml_status llama_context::graph_compute(
+@@ -2437,12 +2441,121 @@ ggml_status llama_context::graph_compute(
          set_n_threads_fn.second(set_n_threads_fn.first, n_threads);
      }
  
@@ -51,7 +52,15 @@ index 220240e..9b3eedf 100644
 +    // We walk graph nodes and their src[] to find weight tensors (those
 +    // with buffer != NULL and data pointing into mmap), and issue WILLNEED
 +    // for each. The prefetch_scheduler handles dedup and async dispatch.
-+    if (auto * s = slim_arc::get_global_prefetch_scheduler()) {
++    // SLIM-ARC Phase 3: Use unified I/O scheduler if available, else fall back to prefetch_scheduler.
++    if (auto * u = slim_arc::get_global_unified_scheduler()) {
++        // Set runtime phase based on prefill/decode
++        // MoE models: use MOE_DECODE for decode to prioritize expert prefetch
++        u->set_phase(batched ? slim_arc::runtime_phase::PREFILL_SHORT
++                              : slim_arc::runtime_phase::MOE_DECODE);
++        // tick() calls prefetch_scheduler internally based on budget allocation
++        u->tick(0, 3);
++    } else if (auto * s = slim_arc::get_global_prefetch_scheduler()) {
 +        s->set_phase(batched ? slim_arc::compute_phase::PREFILL
 +                             : slim_arc::compute_phase::DECODE);
 +
@@ -152,16 +161,17 @@ index 220240e..9b3eedf 100644
      return status;
  }
 diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
-index 474cabd..e6911b7 100644
+index 474cabd..9e870b2 100644
 --- a/src/llama-model-loader.cpp
 +++ b/src/llama-model-loader.cpp
-@@ -1,3 +1,5 @@
+@@ -1,3 +1,6 @@
 +#include "slim-arc-prefetch.h"
++#include "slim-arc-unified-scheduler.h"
 +
  #include "llama-model-loader.h"
  
  #include "ggml-alloc.h"
-@@ -12,6 +14,7 @@
+@@ -12,6 +15,7 @@
  #include <cstring>
  #include <future>
  #include <regex>
@@ -169,7 +179,7 @@ index 474cabd..e6911b7 100644
  
  static const size_t kiB = 1024;
  static const size_t MiB = 1024*kiB;
-@@ -1350,6 +1353,28 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
+@@ -1350,6 +1354,28 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
  
              std::unique_ptr<llama_mmap> mapping = std::make_unique<llama_mmap>(file.get(), prefetch ? -1 : 0, is_numa);
              mmaps_used.emplace_back(mapping->size(), 0);
@@ -198,7 +208,7 @@ index 474cabd..e6911b7 100644
              if (mlock_mmaps) {
                  std::unique_ptr<llama_mlock> mlock_mmap(new llama_mlock());
                  mlock_mmap->init(mapping->addr());
-@@ -1363,6 +1388,65 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
+@@ -1363,6 +1389,71 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
      for (const auto & it : weights_map) {
          size_data += ggml_nbytes(it.second.tensor);
      }
@@ -232,6 +242,12 @@ index 474cabd..e6911b7 100644
 +    if (should_enable_prefetch) {
 +        static slim_arc::prefetch_scheduler s_scheduler(2 /*n_threads*/, 3 /*window*/);
 +        slim_arc::set_global_prefetch_scheduler(&s_scheduler);
++
++        // SLIM-ARC Phase 3: Create unified I/O scheduler wrapping prefetch_scheduler.
++        // kv_eviction_manager is nullptr until Phase 2b integration completes.
++        // Budget: 1GB per tick (tuned for NVMe ~2GB/s bandwidth).
++        static slim_arc::unified_io_scheduler s_unified(1ULL << 30, &s_scheduler, nullptr);
++        slim_arc::set_global_unified_scheduler(&s_unified);
 +
 +        // SLIM-ARC: Set memory budget based on total tensor size.
 +        // If total weights exceed ~6GB (8GB cgroup minus KV cache + compute),
@@ -1349,10 +1365,10 @@ index 0000000..a85041e
 +} // namespace slim_arc
 diff --git a/src/slim-arc-unified-scheduler.cpp b/src/slim-arc-unified-scheduler.cpp
 new file mode 100644
-index 0000000..92bd5fc
+index 0000000..eecdcb5
 --- /dev/null
 +++ b/src/slim-arc-unified-scheduler.cpp
-@@ -0,0 +1,116 @@
+@@ -0,0 +1,123 @@
 +// SLIM-ARC: Unified I/O Bandwidth Budget Scheduler Implementation
 +
 +#include "slim-arc-unified-scheduler.h"
@@ -1361,6 +1377,13 @@ index 0000000..92bd5fc
 +#include <cmath>
 +
 +namespace slim_arc {
++
++namespace {
++unified_io_scheduler * g_unified_scheduler = nullptr;
++}
++
++unified_io_scheduler * get_global_unified_scheduler() { return g_unified_scheduler; }
++void set_global_unified_scheduler(unified_io_scheduler * s) { g_unified_scheduler = s; }
 +
 +// Static weight ratio table initialization
 +constexpr double unified_io_scheduler::WEIGHT_RATIOS[5][3];
@@ -1471,10 +1494,10 @@ index 0000000..92bd5fc
 +} // namespace slim_arc
 diff --git a/src/slim-arc-unified-scheduler.h b/src/slim-arc-unified-scheduler.h
 new file mode 100644
-index 0000000..d724f42
+index 0000000..49c3dfc
 --- /dev/null
 +++ b/src/slim-arc-unified-scheduler.h
-@@ -0,0 +1,106 @@
+@@ -0,0 +1,110 @@
 +// SLIM-ARC: Unified I/O Bandwidth Budget Scheduler
 +//
 +// Core innovation: coordinates weight prefetch, KV cache swap, and MoE expert
@@ -1579,5 +1602,9 @@ index 0000000..d724f42
 +    void adapt_allocation();
 +    runtime_phase detect_phase(bool is_prefill, bool is_moe, size_t context_len);
 +};
++
++// Global singleton accessor (set by llama-model-loader during init)
++unified_io_scheduler * get_global_unified_scheduler();
++void set_global_unified_scheduler(unified_io_scheduler * s);
 +
 +} // namespace slim_arc

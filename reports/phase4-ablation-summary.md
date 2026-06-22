@@ -40,12 +40,19 @@
 | high (16G) | baseline | 116.97 | 47.58 | - | - |
 | high (16G) | slim-arc | 110.77 | 48.42 | -5.3% | +1.8% |
 
-### Qwen3-Next-80B（超大 MoE, 45GB）
+### Qwen3-Next-80B（超大 MoE, 45GB）— 端到端成功
 
 | Tier | Mode | 结果 |
 |------|------|------|
 | low (8G) | baseline | **OOM (killed)** |
-| low (8G) | slim-arc | **能运行，不 OOM**（RSS=8.1GB, 36+ 分钟稳定） |
+| low (8G) | slim-arc | 能运行，不 OOM（RSS=8.1GB, 36+ 分钟稳定） |
+| **high (16G)** | **slim-arc** | **pp4=0.17 t/s, tg1=0.38 t/s（端到端成功！）** |
+
+**80B 在 16GB 环境完成端到端推理**：
+- prefill 4 token + decode 1 token 全部成功
+- baseline 在同等环境直接 OOM
+- SLIM-ARC 让 45GB 模型在 16GB RAM 下可运行
+- 速度较慢（0.17-0.38 t/s），但验证了核心机制可行
 
 ## 分析
 
