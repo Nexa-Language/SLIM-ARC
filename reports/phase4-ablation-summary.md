@@ -40,19 +40,24 @@
 | high (16G) | baseline | 116.97 | 47.58 | - | - |
 | high (16G) | slim-arc | 110.77 | 48.42 | -5.3% | +1.8% |
 
-### Qwen3-Next-80B（超大 MoE, 45GB）— 端到端成功
+### Qwen3-Next-80B（超大 MoE, 45GB）— 核心对比数据
 
-| Tier | Mode | 结果 |
-|------|------|------|
-| low (8G) | baseline | **OOM (killed)** |
-| low (8G) | slim-arc | 能运行，不 OOM（RSS=8.1GB, 36+ 分钟稳定） |
-| **high (16G)** | **slim-arc** | **pp4=0.17 t/s, tg1=0.38 t/s（端到端成功！）** |
+| Tier | Mode | pp4 (t/s) | tg1 (t/s) | pp 提升 | tg 提升 |
+|------|------|-----------|----------|--------|--------|
+| low (8G) | baseline | 0.17 | 0.07 | - | - |
+| low (8G) | **slim-arc** | **0.20** | **0.31** | **+17.6%** | **+343%** |
+| high (16G) | baseline | 0.17 | 0.31 | - | - |
+| high (16G) | slim-arc | 0.17 | 0.38 | 0% | +22.6% |
 
-**80B 在 16GB 环境完成端到端推理**：
-- prefill 4 token + decode 1 token 全部成功
-- baseline 在同等环境直接 OOM
-- SLIM-ARC 让 45GB 模型在 16GB RAM 下可运行
-- 速度较慢（0.17-0.38 t/s），但验证了核心机制可行
+**核心成果：80B 在 8GB 最受限环境下 decode 提升 343%（4.4倍）**
+
+- SLIM-ARC 的 MADV_RANDOM + prefetch_scheduler 让 decode 阶段权重访问更高效
+- baseline 默认 WILLNEED 全预读在 8GB 内存压力下频繁 page reclaim 导致 thrashing
+- prefill 提升 17.6%，decode 提升巨大（decode 是内存敏感场景）
+
+**注**: 禁用 repack 后 baseline 在 8GB 也能运行（不 OOM），但速度远低于 SLIM-ARC。
+   之前"baseline OOM"是 repack 启用时的行为，禁用 repack 后两者都能跑，
+   SLIM-ARC 的优势体现在 prefetch 效率上。
 
 ## 分析
 
