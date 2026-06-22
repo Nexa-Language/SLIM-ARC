@@ -4,6 +4,42 @@
 
 ---
 
+## 2026-06-22 Phase 2b+3 KV Cache 换页 + 统一 I/O 调度器原型完成
+
+### 变更描述
+
+完成 Phase 2b KV Cache 异步换页原型和 Phase 3 统一 I/O 带宽预算调度器原型代码。
+
+### 涉及文件
+
+- `patches/llama-upstream/slim-arc-kv-eviction.h/cpp`（KV Cache 换页管理器）
+- `patches/llama-upstream/slim-arc-unified-scheduler.h/cpp`（统一调度器）
+- `reports/phase4-ablation-summary.md`（完整三档 baseline 数据）
+
+### 关键成果
+
+1. **Phase 2b KV Cache 换页原型**：
+   - 分层 KV Cache：hot(sink) / warm(sliding) / cold(mmap→SSD)
+   - 注意力分数驱动驱逐策略
+   - mmap 动态增长 + madvise 异步预取
+   - 统计追踪（evictions, prefetches, RAM/SSD 用量）
+
+2. **Phase 3 统一 I/O 调度器原型（核心创新）**：
+   - 5 种运行时阶段感知的带宽分配
+   - 动态自适应：基于 weight stalls / KV page faults / expert miss rate 调整
+   - 适配历史追踪
+
+3. **完整三档 baseline（warm cache）**：
+   - Dense Qwen3-4B: pp64 39.55→57.81, tg32 8.12→10.88
+   - MoE OLMoE-1B-7B: tg32 25.56→35.66
+
+### 下载进度
+
+- Qwen3-Next-80B-A3B-Instruct Q4_K_M: 72% (33GB/45GB)，ETA 37 分钟
+- 下载慢的原因：45GB 大文件 + hf-mirror 镜像限速 20-30 MB/s
+
+---
+
 ## 2026-06-22 Phase 2c Prefill/Decode 动态预取实现与测试
 
 ### 变更描述
