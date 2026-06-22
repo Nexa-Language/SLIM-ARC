@@ -109,7 +109,7 @@ void unified_io_scheduler::adapt_allocation() {
 }
 
 std::vector<unified_io_scheduler::adaptation_record> unified_io_scheduler::adaptation_history() const {
-    std::lock_guard<std::mutex> lk(history_mtx_);
+    std::lock_guard<std::mutex> lk(const_cast<std::mutex &>(history_mtx_));
     return history_;
 }
 
