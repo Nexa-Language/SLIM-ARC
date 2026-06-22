@@ -28,7 +28,7 @@ TIER_MEM_MB=("8192" "12288" "16384")
 
 PROMPT_LEN=64
 GEN_LEN=16
-REPEATS=2
+REPEATS=3
 
 run_bench() {
     local model=$1
@@ -46,6 +46,9 @@ run_bench() {
     local raw_file="$RAW_DIR/${model_name}-${tier}-${mode}.txt"
 
     echo "  [$model_name] tier=$tier mode=$mode ..."
+
+    # Drop page cache for cold-cache measurement (fair baseline vs optimized)
+    sudo sh -c 'echo 3 > /proc/sys/vm/drop_caches' 2>/dev/null || true
 
     # Reset cgroup memory stat
     echo 0 | sudo tee /sys/fs/cgroup/slim-arc-$tier/memory.peak >/dev/null 2>&1 || true
