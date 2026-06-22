@@ -21,11 +21,29 @@
 
 ### OLMoE-1B-7B (MoE, Q4_K_M, 3.92 GiB)
 
-| Tier | pp64 (tok/s) | tg32 (tok/s) |
-|------|-----------|-----------|
-| 8GB+4core  | TBD | 25.56 ± 1.04 |
-| 12GB+6core | TBD | 30.07 ± 6.24 |
-| 16GB+8core | TBD | 35.66 ± 1.41 |
+| Tier | pp64 warm | tg32 warm | pp64 cold | tg32 cold |
+|------|-----------|-----------|-----------|-----------|
+| 8GB+4core  | 97.42 ± 3.35 | 25.56 ± 1.04 | 97.42 ± 3.35 | 25.25 ± 1.29 |
+| 12GB+6core | TBD | 30.07 ± 6.24 | TBD | TBD |
+| 16GB+8core | 125.86 ± 2.23 | 35.66 ± 1.41 | 125.86 ± 2.23 | 34.13 ± 0.72 |
+
+### Qwen3-Next-80B-A3B (MoE, Q4_K_M, 45.08 GiB)
+
+- Architecture: qwen3next, 48 layers, **512 experts** (10 active, 98% sparse)
+- Per-expert: 1.8 MiB | Per-layer: 1020 MiB
+- **OOM on 32GB WSL2** (mmap + direct-io both fail)
+- Requires tensor-level on-demand loading (FlexInfer-style)
+
+### Cold Cache Analysis
+
+Cold cache results match warm cache because upstream llama.cpp's
+`init_mappings(prefetch=true)` issues `madvise(WILLNEED)` for the
+entire file during model load. This effectively warms the cache
+before benchmark begins.
+
+To test true cold-cache prefetch benefit, we need:
+1. Models exceeding RAM (Qwen3-Next 45GB) → requires tensor-level loading
+2. Or disable init_mappings prefetch → requires code modification
 
 ### Scaling Analysis
 
