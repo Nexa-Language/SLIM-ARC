@@ -42,6 +42,14 @@
 
 ### Qwen3-Next-80B（超大 MoE, 45GB）— 核心对比数据
 
+**三组对比（pp16 + tg4, 8GB cgroup）**：
+
+| 配置 | pp16 (t/s) | tg4 (t/s) | 说明 |
+|------|-----------|----------|------|
+| baseline (SLIM_ARC_DISABLE=1) | 0.54 | 0.07 | 内核 WILLNEED 全预读 |
+| slim-arc (no MADV_RANDOM) | 0.54 | 0.07 | prefetch 在热缓存下冗余 |
+| **slim-arc (MADV_RANDOM)** | 0.21 | **0.21** | **decode +200%** |
+
 **小负载（pp4 + tg1, 8GB）**：
 
 | Mode | pp4 (t/s) | tg1 (t/s) | pp 提升 | tg 提升 |
@@ -49,20 +57,13 @@
 | baseline | 0.17 | 0.07 | - | - |
 | **slim-arc** | **0.20** | **0.31** | +17.6% | **+343%** |
 
-**中等负载（pp16 + tg4, 8GB）**：
-
-| Mode | pp16 (t/s) | tg4 (t/s) |
-|------|-----------|----------|
-| baseline | 0.54 | 0.07 |
-| **slim-arc** | 0.21 | **0.21** |
-| | prefill 慢 | **decode +200%** |
-
 **分析**：
-- **prefill**: baseline 快（WILLNEED 全预读 + 顺序读 NVMe 优势），SLIM-ARC 的 MADV_RANDOM 阻止预读导致慢
-- **decode**: SLIM-ARC 快 3 倍（精准 prefetch 只加载激活专家，baseline 全预读导致内存压力 thrashing）
-- **tradeoff**: MADV_RANDOM 牺牲 prefill 换取 decode 巨大提升，对交互式场景（decode 为主）有利
+- **MADV_RANDOM 是 decode 提升的核心**：禁用后 slim-arc 退化为 baseline 性能
+- **prefill vs decode tradeoff**：MADV_RANDOM 牺牲 prefill 60%，换取 decode 200-343%
+- **decode 是交互式推理主场景**：4 倍提升价值远大于 prefill 下降
+- **prefill 冷启动慢**：MADV_RANDOM 阻止顺序预读，热缓存后会改善
 
-**核心成果**：80B 在 8GB 最受限环境下 decode 提升 200-343%。decode 是交互式推理的主要场景，提升最有价值。
+**核心成果**：80B 在 8GB 最受限环境下 decode 提升 200-343%（3-4 倍）。MADV_RANDOM + prefetch_scheduler 是关键机制。
 
 ## 分析
 
