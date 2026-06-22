@@ -2,6 +2,35 @@
 
 ---
 
+## 2026-06-22 核心成果：80B 8GB decode 提升 343%
+
+### 变更描述
+
+Qwen3-Next-80B (45GB) 在 8GB cgroup 的完整对比测试完成。
+
+### 关键数据
+
+| Mode | pp4 (t/s) | tg1 (t/s) |
+|------|-----------|----------|
+| baseline (SLIM_ARC_DISABLE=1) | 0.17 | 0.07 |
+| **SLIM-ARC** | **0.20 (+17.6%)** | **0.31 (+343%)** |
+
+**decode 提升 4.4 倍**是最核心的对比数据。
+
+### 分析
+
+- baseline 默认 WILLNEED 全预读，8GB 内存压力下频繁 page reclaim → thrashing
+- SLIM-ARC 的 MADV_RANDOM 只加载访问的页面 + prefetch_scheduler 精准预取
+- decode 是内存敏感场景，提升最明显
+- prefill 提升较小（compute-bound，I/O 可隐藏）
+
+### 涉及文件
+
+- [`reports/phase4-ablation-summary.md`](reports/phase4-ablation-summary.md): 更新 80B 对比表
+- [`reports/project-progress-summary.md`](reports/project-progress-summary.md): 更新核心成果
+
+---
+
 ## 2026-06-22 Phase 2a Router Hook 集成完成
 
 ### 变更描述
