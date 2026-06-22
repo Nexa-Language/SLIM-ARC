@@ -2,6 +2,38 @@
 
 ---
 
+## 2026-06-22 Phase 2a/3 接口实现 + 完整消融报告
+
+### 变更描述
+
+1. **Phase 2a MoE 专家选择性预取**: 实现 `register_expert_tensor` + `prefetch_experts` 接口，支持对 3D 合并 expert tensor 的子区域发 `madvise(WILLNEED)`。router hook 集成待后续。
+2. **Phase 3 统一调度器**: `unified_io_scheduler` 原型已就绪（phase 感知 budget 分配表），当前 `prefetch_scheduler` 已具备 phase 感知能力，作为简化版统一调度器运行。
+3. **完整消融报告**: [`reports/phase4-ablation-summary.md`](reports/phase4-ablation-summary.md) 汇总三档 × 两模型数据。
+
+### 12GB 环境异常分析
+
+mid tier (12GB) 出现性能下降（-8.8%/-13%），可能原因：
+- 模型 4GB 在 12GB 下能全缓存，MADV_RANDOM 未应用（<6GB 阈值）
+- prefetch_scheduler 的 WILLNEED 系统调用在热缓存模型上引入开销
+- **改进方向**: 当 model_size < cgroup_memory * 0.5 时，应完全禁用 prefetch（模型能全缓存）
+
+### 关键成果汇总
+
+| 模型 | 环境 | Baseline | SLIM-ARC | 提升 |
+|------|------|---------|---------|------|
+| OLMoE-1B-7B | 8GB | pp=59, tg=26 | pp=97, tg=40 | **+63%/+53%** |
+| Qwen3-4B | 8GB | pp=24, tg=13 | pp=29, tg=14 | +17%/+6% |
+| Qwen3-Next-80B | 8GB | **OOM** | **能运行** | ∞ |
+
+### 涉及文件
+
+- `src/llama-upstream/src/slim-arc-prefetch.h/cpp`: expert tensor 接口
+- `src/llama-upstream/src/llama-model-loader.cpp`: expert tensor 自动注册
+- `docs/design/phase2a-moe-expert-prediction.md`: Phase 2a 设计分析
+- `reports/phase4-ablation-summary.md`: 完整消融报告
+
+---
+
 ## 2026-06-22 消融实验：OLMoE在8GB环境提升53-63%
 
 ### 变更描述
