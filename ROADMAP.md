@@ -4,6 +4,47 @@
 
 ---
 
+## 2026-06-22 Phase 2c Prefill/Decode 动态预取实现与测试
+
+### 变更描述
+
+实现 SLIM-ARC Phase 2c（Prefill/Decode 感知的动态预取），完成三档环境测试。
+
+### 涉及文件
+
+- `patches/llama-upstream/slim-arc-prefetch.h`（添加 phase 感知、memory budget）
+- `patches/llama-upstream/slim-arc-prefetch.cpp`（实现动态窗口、decode 禁用）
+- `src/llama-upstream/src/llama-context.cpp`（集成 phase 检测）
+- `reports/phase2c-prefill-decode-results.md`（测试报告）
+- `reports/phase1-memory-profile-*.md`（访存行为分析）
+- `scripts/profile/analyze_gguf.py`（GGUF 分析工具）
+
+### 关键成果
+
+1. **Phase 1 访存行为分析完成**：Qwen3-4B 每层 57.5 MiB，FFN 占 72%
+2. **Phase 2c 动态预取实现**：Prefill 窗口=4，Decode 禁用
+3. **三档 baseline 数据**：
+   - 8GB+4核: pp64=39.80, tg32=9.74 tok/s
+   - 12GB+6核: pp64=52.40, tg32=11.33 tok/s
+   - 16GB+8核: pp64=54.28, tg32=11.90 tok/s
+4. **Phase 2c 结果**：16GB pp64 +5%，decode 无退化（已禁用）
+
+### 关键发现
+
+- Qwen3-4B (2.5GB) 在所有档位都完全放入内存，prefetch 无明显收益
+- 真正的预取收益需要冷缓存或模型超出内存（Qwen3-Next-80B 45GB）
+- OLMoE-1B-7B 验证 MoE 模型可跑：pp64=97.61, tg32=26.45 tok/s
+- Qwen3-Next-80B 下载中（9%，预计 2 小时完成）
+
+### 待办
+
+- 冷缓存测试（drop_caches 后对比）
+- Qwen3-Next-80B 下载完成后测试 45GB 模型在受限环境的表现
+- Phase 2b: KV Cache 异步换页
+- Phase 3: 统一 I/O 带宽预算调度器
+
+---
+
 ## 2026-06-21 Qwen3 兼容性根因定位与方案调整
 
 ### 变更描述
