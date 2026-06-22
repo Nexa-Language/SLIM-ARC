@@ -2,6 +2,39 @@
 
 ---
 
+## 2026-06-22 Phase 2a Router Hook 集成完成
+
+### 变更描述
+
+在 `graph_compute` 中集成 MoE router hook：
+1. **计算后**：遍历 graph 节点，找 `ffn_moe_topk` tensor（router 输出的 top-k expert IDs），读取 I32 数据，存入 `cache_router_experts(layer, expert_ids)`
+2. **计算前**：用上一层的 router cache 通过 `prefetch_experts(layer, cached_ids)` 对当前层的 expert tensor 子区域发 `madvise(WILLNEED)`，实现跨层专家预测预取
+
+### 接口
+
+- `cache_router_experts(layer, expert_ids, n)`: 缓存 layer N 的 router 输出
+- `get_cached_experts(layer, &n)`: 获取缓存的 expert IDs
+- `prefetch_experts(layer, ids, n)`: 对 expert tensor 子区域发 WILLNEED
+
+### cgroup 自适应阈值调整
+
+从 40% 调整到 60%（`total_weight < cgroup_mem * 60%` 时跳过 prefetch），让 OLMoE 3.9GB 在 8GB 环境也跳过（避免 madvise 开销）。
+
+### 消融数据（80B 后台干扰，数据有噪声）
+
+| 模型 | Tier | Baseline pp | SLIM-ARC pp | 提升 |
+|------|------|------------|------------|------|
+| OLMoE | mid(12G) | 42.96 | 71.86 | +67% |
+| OLMoE | high(16G) | 64.55 | 88.21 | +37% |
+
+### 涉及文件
+
+- `src/llama-upstream/src/slim-arc-prefetch.h/cpp`: cache_router_experts + get_cached_experts
+- `src/llama-upstream/src/llama-context.cpp`: graph_compute router hook + 跨层专家预取
+- `src/llama-upstream/src/llama-model-loader.cpp`: cgroup 阈值 40%→60%
+
+---
+
 ## 2026-06-22 Phase 2a/3 接口实现 + 完整消融报告
 
 ### 变更描述

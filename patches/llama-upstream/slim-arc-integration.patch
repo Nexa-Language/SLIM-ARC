@@ -17,10 +17,10 @@ index d15ccfd..6e6f909 100644
              unicode.cpp
              unicode.h
 diff --git a/src/llama-context.cpp b/src/llama-context.cpp
-index 220240e..0d93967 100644
+index 220240e..9b3eedf 100644
 --- a/src/llama-context.cpp
 +++ b/src/llama-context.cpp
-@@ -10,9 +10,11 @@
+@@ -10,12 +10,15 @@
  #include "llama-mmap.h"
  #include "llama-model.h"
  #include "llama-ext.h"
@@ -32,7 +32,11 @@ index 220240e..0d93967 100644
  #include <cmath>
  #include <cstring>
  #include <limits>
-@@ -2437,12 +2439,65 @@ ggml_status llama_context::graph_compute(
++#include <vector>
+ #include <stdexcept>
+ 
+ //
+@@ -2437,12 +2440,113 @@ ggml_status llama_context::graph_compute(
          set_n_threads_fn.second(set_n_threads_fn.first, n_threads);
      }
  
@@ -77,6 +81,19 @@ index 220240e..0d93967 100644
 +                    s->notify_layer_compute(l);
 +                }
 +            }
++
++            // SLIM-ARC Phase 2a: Cross-layer expert prediction.
++            // For each layer in this graph, use the PREVIOUS layer's router
++            // output (cached from last graph_compute) to selectively prefetch
++            // only the predicted-active experts via madvise(WILLNEED) on
++            // expert tensor sub-regions.
++            for (int l = min_layer; l <= max_layer; ++l) {
++                int n_cached = 0;
++                const int * cached = s->get_cached_experts(l - 1, &n_cached);
++                if (cached && n_cached > 0) {
++                    s->prefetch_experts(l, cached, n_cached);
++                }
++            }
 +        }
 +    }
 +
@@ -86,21 +103,56 @@ index 220240e..0d93967 100644
      }
  
 -    // fprintf(stderr, "splits: %d\n", ggml_backend_sched_get_n_splits(sched));
-+    // SLIM-ARC: Layer eviction via madvise(DONTNEED) is intentionally NOT
-+    // triggered here. Upstream llama.cpp builds the entire forward graph per
-+    // ubatch, so by the time graph_compute returns, all layers in this ubatch
-+    // have been used. Evicting would force re-loading on the next ubatch.
++    // SLIM-ARC Phase 2a: Extract MoE router expert IDs from graph after compute.
 +    //
-+    // Instead, we rely on the kernel's LRU page reclaim for mmap file-backed
-+    // pages (enabled by MADV_RANDOM in init_mappings). This keeps the working
-+    // set resident and evicts cold pages automatically under memory pressure.
-+    // The explicit evict_layer() API is available for future fine-grained
-+    // per-layer eviction in Phase 2b (KV cache tiering).
++    // After graph_compute completes, the "ffn_moe_topk" tensors contain the
++    // selected expert IDs for each MoE layer. We read these and cache them
++    // in the prefetch_scheduler. On the NEXT graph_compute, we use the
++    // previous layer's router output to predict and prefetch the current
++    // layer's active experts (cross-layer prediction).
++    if (status == GGML_STATUS_SUCCESS) {
++        if (auto * s = slim_arc::get_global_prefetch_scheduler()) {
++            int n_nodes = ggml_graph_n_nodes(gf);
++            for (int i = 0; i < n_nodes; ++i) {
++                struct ggml_tensor * t = ggml_graph_node(gf, i);
++                if (!t || !t->name) continue;
++                // MoE router output: tensor named "ffn_moe_topk" containing
++                // selected expert IDs as I32, shape [n_expert_used, n_tokens]
++                if (strstr(t->name, "ffn_moe_topk") != nullptr && t->data != nullptr) {
++                    int layer = slim_arc::tensor_layer_from_name(t->name);
++                    if (layer < 0) continue;
++                    // Read expert IDs from tensor data (I32 type)
++                    int n_expert_used = (int) t->ne[0];
++                    int n_tokens = (int) t->ne[1];
++                    if (n_expert_used <= 0 || n_tokens <= 0) continue;
++                    const int32_t * expert_data = (const int32_t *) t->data;
++                    // Collect unique expert IDs across all tokens in this layer
++                    // (use the first token's selection as prediction for next layer)
++                    std::vector<int> unique_experts;
++                    for (int e = 0; e < n_expert_used && e < 64; ++e) {
++                        int eid = (int) expert_data[e]; // first token's experts
++                        if (eid >= 0) {
++                            bool found = false;
++                            for (int ue : unique_experts) {
++                                if (ue == eid) { found = true; break; }
++                            }
++                            if (!found) unique_experts.push_back(eid);
++                        }
++                    }
++                    if (!unique_experts.empty()) {
++                        s->cache_router_experts(layer, unique_experts.data(),
++                                                (int) unique_experts.size());
++                    }
++                    break; // one router per layer
++                }
++            }
++        }
++    }
  
      return status;
  }
 diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
-index 474cabd..699aeae 100644
+index 474cabd..e6911b7 100644
 --- a/src/llama-model-loader.cpp
 +++ b/src/llama-model-loader.cpp
 @@ -1,3 +1,5 @@
@@ -173,7 +225,7 @@ index 474cabd..699aeae 100644
 +        if (f) { fscanf(f, "%zu", &cgroup_mem_limit); fclose(f); }
 +    }
 +    bool model_fits_in_ram = (cgroup_mem_limit > 0 &&
-+                              total_weight_size < cgroup_mem_limit * 40 / 100);
++                              total_weight_size < cgroup_mem_limit * 60 / 100);
 +    bool should_enable_prefetch = (use_mmap && !mappings.empty() &&
 +                                    getenv("SLIM_ARC_DISABLE") == nullptr &&
 +                                    !model_fits_in_ram);
@@ -925,10 +977,10 @@ index 0000000..ffbd7aa
 +} // namespace slim_arc
 diff --git a/src/slim-arc-prefetch.cpp b/src/slim-arc-prefetch.cpp
 new file mode 100644
-index 0000000..75be80c
+index 0000000..8f4bde9
 --- /dev/null
 +++ b/src/slim-arc-prefetch.cpp
-@@ -0,0 +1,198 @@
+@@ -0,0 +1,214 @@
 +// SLIM-ARC: Tensor-level asynchronous prefetch scheduler
 +//
 +// Implements layer-ahead prefetch on top of upstream llama.cpp's mmap.
@@ -1062,6 +1114,22 @@ index 0000000..75be80c
 +    total_calls_.fetch_add(1);
 +}
 +
++void prefetch_scheduler::cache_router_experts(int layer, const int * expert_ids, int n_experts) {
++    if (n_experts <= 0 || expert_ids == nullptr) return;
++    std::lock_guard<std::mutex> lk(mtx_);
++    router_expert_cache_[layer].assign(expert_ids, expert_ids + n_experts);
++}
++
++const int * prefetch_scheduler::get_cached_experts(int layer, int * out_n) const {
++    auto it = router_expert_cache_.find(layer);
++    if (it == router_expert_cache_.end() || it->second.empty()) {
++        if (out_n) *out_n = 0;
++        return nullptr;
++    }
++    if (out_n) *out_n = (int) it->second.size();
++    return it->second.data();
++}
++
 +void prefetch_scheduler::notify_layer_compute(int current_layer) {
 +    if (!enabled_.load()) return;
 +    // In DECODE phase with hot cache (small model fits in RAM), skip prefetch.
@@ -1129,10 +1197,10 @@ index 0000000..75be80c
 +} // namespace slim_arc
 diff --git a/src/slim-arc-prefetch.h b/src/slim-arc-prefetch.h
 new file mode 100644
-index 0000000..15c8410
+index 0000000..a85041e
 --- /dev/null
 +++ b/src/slim-arc-prefetch.h
-@@ -0,0 +1,133 @@
+@@ -0,0 +1,146 @@
 +#pragma once
 +
 +// SLIM-ARC: Tensor-level asynchronous prefetch scheduler
@@ -1189,6 +1257,15 @@ index 0000000..15c8410
 +    // This issues madvise(WILLNEED) for only the specified expert sub-regions,
 +    // reducing I/O bandwidth by ~(1 - k/n_experts) for MoE models.
 +    void prefetch_experts(int layer, const int * expert_ids, int n_experts);
++
++    // SLIM-ARC Phase 2a: Cache router output expert IDs from layer N,
++    // to be used as prediction for layer N+1 prefetch.
++    // Called after graph_compute completes.
++    void cache_router_experts(int layer, const int * expert_ids, int n_experts);
++
++    // SLIM-ARC Phase 2a: Get cached expert IDs for a layer (from previous
++    // layer's router output). Returns nullptr if no cache for this layer.
++    const int * get_cached_experts(int layer, int * out_n) const;
 +
 +    // Notify that we are about to compute layer `current_layer`.
 +    // This triggers async madvise(WILLNEED) for layers
@@ -1256,6 +1333,10 @@ index 0000000..15c8410
 +    };
 +    // Key: layer -> list of expert tensors (gate_exps, up_exps, down_exps)
 +    std::unordered_map<int, std::vector<expert_tensor_info>> expert_tensors_;
++
++    // SLIM-ARC Phase 2a: cached router expert IDs for cross-layer prediction
++    // Key: layer, Value: vector of expert IDs from that layer's router
++    std::unordered_map<int, std::vector<int>> router_expert_cache_;
 +};
 +
 +// Global singleton (set by llama_context during init)

@@ -131,6 +131,22 @@ void prefetch_scheduler::prefetch_experts(int layer, const int * expert_ids, int
     total_calls_.fetch_add(1);
 }
 
+void prefetch_scheduler::cache_router_experts(int layer, const int * expert_ids, int n_experts) {
+    if (n_experts <= 0 || expert_ids == nullptr) return;
+    std::lock_guard<std::mutex> lk(mtx_);
+    router_expert_cache_[layer].assign(expert_ids, expert_ids + n_experts);
+}
+
+const int * prefetch_scheduler::get_cached_experts(int layer, int * out_n) const {
+    auto it = router_expert_cache_.find(layer);
+    if (it == router_expert_cache_.end() || it->second.empty()) {
+        if (out_n) *out_n = 0;
+        return nullptr;
+    }
+    if (out_n) *out_n = (int) it->second.size();
+    return it->second.data();
+}
+
 void prefetch_scheduler::notify_layer_compute(int current_layer) {
     if (!enabled_.load()) return;
     // In DECODE phase with hot cache (small model fits in RAM), skip prefetch.

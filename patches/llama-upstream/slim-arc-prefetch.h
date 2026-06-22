@@ -55,6 +55,15 @@ class prefetch_scheduler {
     // reducing I/O bandwidth by ~(1 - k/n_experts) for MoE models.
     void prefetch_experts(int layer, const int * expert_ids, int n_experts);
 
+    // SLIM-ARC Phase 2a: Cache router output expert IDs from layer N,
+    // to be used as prediction for layer N+1 prefetch.
+    // Called after graph_compute completes.
+    void cache_router_experts(int layer, const int * expert_ids, int n_experts);
+
+    // SLIM-ARC Phase 2a: Get cached expert IDs for a layer (from previous
+    // layer's router output). Returns nullptr if no cache for this layer.
+    const int * get_cached_experts(int layer, int * out_n) const;
+
     // Notify that we are about to compute layer `current_layer`.
     // This triggers async madvise(WILLNEED) for layers
     // [current_layer+1, current_layer+window].
@@ -121,6 +130,10 @@ class prefetch_scheduler {
     };
     // Key: layer -> list of expert tensors (gate_exps, up_exps, down_exps)
     std::unordered_map<int, std::vector<expert_tensor_info>> expert_tensors_;
+
+    // SLIM-ARC Phase 2a: cached router expert IDs for cross-layer prediction
+    // Key: layer, Value: vector of expert IDs from that layer's router
+    std::unordered_map<int, std::vector<int>> router_expert_cache_;
 };
 
 // Global singleton (set by llama_context during init)
