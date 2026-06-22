@@ -4,6 +4,36 @@
 
 ---
 
+## 2026-06-22 Qwen3-Next-80B 下载完成与受限环境测试
+
+### 变更描述
+
+Qwen3-Next-80B-A3B-Instruct Q4_K_M（45GB）下载完成，完成 MoE 分析和受限环境测试。
+
+### 关键发现
+
+1. **Qwen3-Next-80B-A3B 架构**：
+   - 512 个专家（超稀疏 MoE），仅激活 10 个/token
+   - 98% 稀疏率 → 完美预测可减少 98% 带宽
+   - 每专家仅 1.8 MiB，window=3 预取预算仅 54 MiB
+
+2. **受限环境 OOM**：
+   - 45GB 模型在 32GB WSL2 上 OOM（mmap 和 direct-io 都不行）
+   - 上游 llama.cpp 的 mmap 是全量映射，page cache 增长导致 OOM killer
+   - **这验证了赛题核心挑战：需要张量级按需加载，而非全量 mmap**
+
+3. **技术路线确认**：
+   - 需要实现 FlexInfer 风格的张量级按需加载
+   - 只把当前计算的层加载到内存，其他层留在 SSD
+   - SLIM-ARC 的 prefetch 调度器正好解决"何时加载哪些层"的问题
+
+### 涉及文件
+
+- `reports/phase1-memory-profile-qwen3next-80b.md`（访存分析）
+- `reports/phase2a-moe-analysis-qwen3next.md`（MoE 专家分析）
+
+---
+
 ## 2026-06-22 Phase 2b+3 KV Cache 换页 + 统一 I/O 调度器原型完成
 
 ### 变更描述
