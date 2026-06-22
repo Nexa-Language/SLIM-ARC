@@ -160,6 +160,37 @@ index 220240e..9f1002a 100644
  
      return status;
  }
+diff --git a/src/llama-kv-cache.cpp b/src/llama-kv-cache.cpp
+index 2802103..b00d4a2 100644
+--- a/src/llama-kv-cache.cpp
++++ b/src/llama-kv-cache.cpp
+@@ -12,6 +12,7 @@
+ #include <limits>
+ #include <map>
+ #include <stdexcept>
++#include <sys/mman.h>  // SLIM-ARC Phase 2b: posix_madvise for KV cache page release
+ 
+ static bool ggml_is_power_of_2(int n) {
+     return (n & (n - 1)) == 0;
+@@ -385,6 +386,18 @@ void llama_kv_cache::clear(bool data) {
+     if (data) {
+         for (auto & [_, buf] : ctxs_bufs) {
+             ggml_backend_buffer_clear(buf.get(), 0);
++
++            // SLIM-ARC Phase 2b: Release KV cache physical pages via madvise(DONTNEED).
++            // After clearing, the data is all zeros and pages can be reclaimed by the
++            // kernel. This frees RAM between conversations/contexts, important for
++            // memory-constrained environments (8-16GB).
++            // Note: backend buffer is anonymous memory; DONTNEED discards pages
++            // (next access gets zero-filled pages, matching the clear intent).
++            size_t buf_size = ggml_backend_buffer_get_size(buf.get());
++            void * buf_base = ggml_backend_buffer_get_base(buf.get());
++            if (buf_base && buf_size > 0) {
++                (void) posix_madvise(buf_base, buf_size, POSIX_MADV_DONTNEED);
++            }
+         }
+     }
+ }
 diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
 index 474cabd..9e870b2 100644
 --- a/src/llama-model-loader.cpp
