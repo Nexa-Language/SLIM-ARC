@@ -35,10 +35,39 @@
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                    FlexInfer / ggml 底层                     │
-│  (张量级异步预取 · 均衡内存锁定 · Direct I/O · GGUF 格式)     │
+│              mmap + madvise 内核协同层 (已实现)               │
+│  (MADV_RANDOM 按需分页 · WILLNEED 异步预取 · DONTNEED 换出)  │
+│  (upstream llama.cpp · GGML backend buffer · GGUF 格式)     │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+## 实现状态（2026-06-22）
+
+| 模块 | 状态 | 文件 |
+|------|------|------|
+| 权重按需加载 (mmap+MADV_RANDOM) | ✅ 已实现 | `llama-model-loader.cpp` |
+| 禁用 GGML_CPU_REPACK | ✅ 已配置 | CMake `-DGGML_CPU_REPACK=OFF` |
+| prefetch_scheduler | ✅ 已实现 | `slim-arc-prefetch.h/cpp` |
+| Phase 感知 (Prefill/Decode) | ✅ 已实现 | `prefetch_scheduler::set_phase` |
+| cgroup 自适应跳过 | ✅ 已实现 | `init_mappings` |
+| MoE expert tensor 注册 | ✅ 已实现 | `register_expert_tensor` |
+| 跨层专家预测预取 | ✅ 已实现 | graph_compute router hook |
+| evict_layer (DONTNEED) | ✅ 接口已实现 | `prefetch_scheduler::evict_layer` |
+| unified_io_scheduler | ✅ 原型+集成 | `slim-arc-unified-scheduler.h/cpp` |
+| KV eviction manager | ✅ 接口已实现 | `slim-arc-kv-eviction.h/cpp` |
+| KV 集成到推理流程 | ❌ 待实现 | 需修改 `llama-kv-cache.cpp` |
+| Tile 流水线 | ✅ 隐式实现 | mmap page cache 粒度 |
+
+## 核心成果
+
+### 1. 80B 模型端到端成功
+- Qwen3-Next-80B (45GB) 在 16GB cgroup: pp4=0.17 t/s, tg1=0.38 t/s
+- Baseline (SLIM_ARC_DISABLE=1) 在 8GB/16GB 均 OOM
+
+### 2. 冷启动消融数据
+- OLMoE 8GB: pp +8.7%
+- Qwen3-4B 8GB: tg +18.6%
+- 详见 [`reports/phase4-ablation-summary.md`](../reports/phase4-ablation-summary.md)
 
 ## 3. 核心模块
 
