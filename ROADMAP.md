@@ -2,6 +2,42 @@
 
 ---
 
+## 2026-06-23 深度优化：KV q4_0 + 动态 MADV + 80B 达 1.03 t/s
+
+### 优化成果
+
+| 配置 | pp32 | tg8 | vs baseline |
+|------|------|-----|------------|
+| baseline (16GB) | 1.04 | 0.18 | - |
+| SLIM-ARC (16GB) | 1.26 | 0.90 | +400% |
+| **SLIM-ARC + KV q4_0 (16GB)** | **1.34** | **1.03** | **+472% (5.7×)** |
+| SLIM-ARC (32GB warm) | 1.90 | 1.24 | - |
+
+### 尝试的优化方法
+
+1. **动态 MADV 切换**: prefill→WILLNEED, decode→MADV_RANDOM
+   - 实现 `switch_madvise_all()` + `register_mmap_region()`
+   - 效果：开销抵消收益（45GB 区域 madvise 开销大）
+   
+2. **KV Cache 量化 (q4_0)**: ✅ 有效
+   - KV 内存减半，更多 RAM 给权重
+   - decode +14%（0.90→1.03 t/s）
+
+3. **投机解码 (ngram-simple)**: 加载太慢未完成
+   - 80B 冷启动 7+ 分钟，ngram 缓存建立慢
+   - draft model (Qwen3-4B) 方案：两个大模型加载更慢
+
+4. **线程数测试**: 8 threads 最优
+   - 14 threads 反而慢（memory-bound，同步开销）
+
+### 核心数据（可溯源）
+
+- 80B 16GB + KV q4_0: **tg8=1.03 t/s**（baseline 5.7 倍）
+- 80B 32GB warm: **tg8=1.24 t/s**（接近流畅）
+- 原始日志: [`logs/ablation/raw-80b/`](logs/ablation/raw-80b/)
+
+---
+
 ## 2026-06-23 重大失误：未跟踪代码丢失 + 恢复
 
 ### 事件
