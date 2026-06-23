@@ -265,7 +265,6 @@ plan/*.bak
 docs/papers/FlexInfer/
 docs/papers/llama.cpp/
 src/flexinfer/
-src/llama-upstream/
 build*/
 
 # Paper PDFs - too large for git, tracked separately in docs/papers/README.md
@@ -273,4 +272,6 @@ docs/papers/*.pdf
 
 # Plan files - internal planning, not committed to public repo
 plan/
+src/llama-upstream/
+src/flexinfer/
 scripts/profile/src/
