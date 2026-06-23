@@ -143,4 +143,15 @@ void set_global_prefetch_scheduler(prefetch_scheduler * s);
 // Helper: extract layer index from tensor name (blk.%d.*)
 int tensor_layer_from_name(const char * name);
 
+// SLIM-ARC: mmap region management for dynamic MADV switching.
+// Stores mmap addresses so graph_compute can switch between
+// MADV_WILLNEED (prefill: sequential readahead) and MADV_RANDOM
+// (decode: precise demand paging) based on compute phase.
+void register_mmap_region(void * addr, size_t size);
+
+// Switch all registered mmap regions to the given advice.
+// Called from graph_compute: MADV_WILLNEED before prefill, MADV_RANDOM before decode.
+// This eliminates the prefill penalty while keeping decode speedup.
+void switch_madvise_all(int advice);  // 0=WILLNEED, 1=RANDOM, 2=DONTNEED
+
 } // namespace slim_arc

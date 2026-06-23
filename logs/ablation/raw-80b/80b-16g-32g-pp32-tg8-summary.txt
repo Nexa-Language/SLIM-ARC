@@ -1,0 +1,17 @@
+=== 80B 16GB slim-arc pp32+tg8 ===
+pp32=1.26 ± 0.10, tg8=0.90 ± 0.21
+threads=8, cgroup=slim-arc-high(16GB), cold start
+build=7c90850
+
+=== 80B 16GB baseline pp32+tg8 ===
+pp32=1.04 ± 0.03, tg8=0.18 ± 0.02
+threads=8, cgroup=slim-arc-high(16GB), cold start, SLIM_ARC_DISABLE=1
+
+=== 80B 32GB no cgroup slim-arc pp32+tg8 ===
+pp32=1.90 ± 0.40, tg8=1.24 ± 0.02
+threads=8, no cgroup, warm cache
+
+=== 对比总结 ===
+16GB: baseline tg8=0.18, slim-arc tg8=0.90 → +400% (5x)
+32GB: slim-arc tg8=1.24 → 接近流畅运行
+

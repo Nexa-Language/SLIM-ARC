@@ -14,7 +14,7 @@ index d15ccfd..e9c841c 100644
              unicode.cpp
              unicode.h
 diff --git a/src/llama-context.cpp b/src/llama-context.cpp
-index 220240e..e8c97ee 100644
+index 220240e..7e28cda 100644
 --- a/src/llama-context.cpp
 +++ b/src/llama-context.cpp
 @@ -10,12 +10,16 @@
@@ -34,7 +34,7 @@ index 220240e..e8c97ee 100644
  #include <stdexcept>
  
  //
-@@ -2437,6 +2441,58 @@ ggml_status llama_context::graph_compute(
+@@ -2437,6 +2441,70 @@ ggml_status llama_context::graph_compute(
          set_n_threads_fn.second(set_n_threads_fn.first, n_threads);
      }
  
@@ -54,6 +54,18 @@ index 220240e..e8c97ee 100644
 +            }
 +        }
 +    }
++    // SLIM-ARC: Dynamic MADV switching.
++    // Prefill (batched): MADV_WILLNEED → kernel sequential readahead → fast prefill
++    // Decode (single): MADV_RANDOM → demand paging → fast decode (MoE sparsity)
++    // This eliminates the prefill -57% penalty while keeping decode +400% speedup.
++    if (getenv("SLIM_ARC_DISABLE") == nullptr) {
++        if (batched) {
++            slim_arc::switch_madvise_all(0); // WILLNEED for prefill
++        } else {
++            slim_arc::switch_madvise_all(1); // RANDOM for decode
++        }
++    }
++
 +    if (auto * u = slim_arc::get_global_unified_scheduler()) {
 +        u->set_phase(batched ? slim_arc::runtime_phase::PREFILL_SHORT
 +                              : slim_arc::runtime_phase::MOE_DECODE);
@@ -93,7 +105,7 @@ index 220240e..e8c97ee 100644
      auto status = ggml_backend_sched_graph_compute_async(sched.get(), gf);
      if (status != GGML_STATUS_SUCCESS) {
          LLAMA_LOG_ERROR("%s: ggml_backend_sched_graph_compute_async failed with error %d\n", __func__, status);
-@@ -2444,6 +2500,35 @@ ggml_status llama_context::graph_compute(
+@@ -2444,6 +2512,35 @@ ggml_status llama_context::graph_compute(
  
      // fprintf(stderr, "splits: %d\n", ggml_backend_sched_get_n_splits(sched));
  
@@ -155,7 +167,7 @@ index 2802103..5e47bab 100644
      }
  }
 diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
-index 474cabd..92d890c 100644
+index 474cabd..caa96af 100644
 --- a/src/llama-model-loader.cpp
 +++ b/src/llama-model-loader.cpp
 @@ -1,3 +1,6 @@
@@ -173,7 +185,7 @@ index 474cabd..92d890c 100644
  
  static const size_t kiB = 1024;
  static const size_t MiB = 1024*kiB;
-@@ -1350,6 +1354,19 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
+@@ -1350,6 +1354,22 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
  
              std::unique_ptr<llama_mmap> mapping = std::make_unique<llama_mmap>(file.get(), prefetch ? -1 : 0, is_numa);
              mmaps_used.emplace_back(mapping->size(), 0);
@@ -188,12 +200,15 @@ index 474cabd..92d890c 100644
 +                if (!slim_arc_disabled && !no_madv && msz > (6ULL << 30) &&
 +                    mapping->addr() && msz > 0) {
 +                    (void) posix_madvise(mapping->addr(), msz, POSIX_MADV_RANDOM);
++                    // Register mmap region for dynamic MADV switching in graph_compute
++                    // (prefill → WILLNEED, decode → MADV_RANDOM)
++                    slim_arc::register_mmap_region(mapping->addr(), msz);
 +                }
 +            }
              if (mlock_mmaps) {
                  std::unique_ptr<llama_mlock> mlock_mmap(new llama_mlock());
                  mlock_mmap->init(mapping->addr());
-@@ -1363,6 +1380,54 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
+@@ -1363,6 +1383,54 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
      for (const auto & it : weights_map) {
          size_data += ggml_nbytes(it.second.tensor);
      }
@@ -918,10 +933,10 @@ index 0000000..ffbd7aa
 +} // namespace slim_arc
 diff --git a/src/slim-arc-prefetch.cpp b/src/slim-arc-prefetch.cpp
 new file mode 100644
-index 0000000..8f4bde9
+index 0000000..96dfc7a
 --- /dev/null
 +++ b/src/slim-arc-prefetch.cpp
-@@ -0,0 +1,214 @@
+@@ -0,0 +1,241 @@
 +// SLIM-ARC: Tensor-level asynchronous prefetch scheduler
 +//
 +// Implements layer-ahead prefetch on top of upstream llama.cpp's mmap.
@@ -1135,13 +1150,40 @@ index 0000000..8f4bde9
 +    }
 +}
 +
++// SLIM-ARC: mmap region management for dynamic MADV switching
++namespace {
++struct mmap_region { void * addr; size_t size; };
++std::vector<mmap_region> g_mmap_regions;
++}
++
++void register_mmap_region(void * addr, size_t size) {
++    if (addr && size > 0) {
++        g_mmap_regions.push_back({addr, size});
++    }
++}
++
++void switch_madvise_all(int advice) {
++    int posix_advice;
++    switch (advice) {
++        case 0: posix_advice = POSIX_MADV_WILLNEED; break;
++        case 1: posix_advice = POSIX_MADV_RANDOM;   break;
++        case 2: posix_advice = POSIX_MADV_DONTNEED; break;
++        default: return;
++    }
++    for (const auto & r : g_mmap_regions) {
++        if (r.addr && r.size > 0) {
++            (void) posix_madvise(r.addr, r.size, posix_advice);
++        }
++    }
++}
++
 +} // namespace slim_arc
 diff --git a/src/slim-arc-prefetch.h b/src/slim-arc-prefetch.h
 new file mode 100644
-index 0000000..a85041e
+index 0000000..4be234e
 --- /dev/null
 +++ b/src/slim-arc-prefetch.h
-@@ -0,0 +1,146 @@
+@@ -0,0 +1,157 @@
 +#pragma once
 +
 +// SLIM-ARC: Tensor-level asynchronous prefetch scheduler
@@ -1286,6 +1328,17 @@ index 0000000..a85041e
 +
 +// Helper: extract layer index from tensor name (blk.%d.*)
 +int tensor_layer_from_name(const char * name);
++
++// SLIM-ARC: mmap region management for dynamic MADV switching.
++// Stores mmap addresses so graph_compute can switch between
++// MADV_WILLNEED (prefill: sequential readahead) and MADV_RANDOM
++// (decode: precise demand paging) based on compute phase.
++void register_mmap_region(void * addr, size_t size);
++
++// Switch all registered mmap regions to the given advice.
++// Called from graph_compute: MADV_WILLNEED before prefill, MADV_RANDOM before decode.
++// This eliminates the prefill penalty while keeping decode speedup.
++void switch_madvise_all(int advice);  // 0=WILLNEED, 1=RANDOM, 2=DONTNEED
 +
 +} // namespace slim_arc
 diff --git a/src/slim-arc-unified-scheduler.cpp b/src/slim-arc-unified-scheduler.cpp

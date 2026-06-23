@@ -211,4 +211,31 @@ void prefetch_scheduler::worker_loop() {
     }
 }
 
+// SLIM-ARC: mmap region management for dynamic MADV switching
+namespace {
+struct mmap_region { void * addr; size_t size; };
+std::vector<mmap_region> g_mmap_regions;
+}
+
+void register_mmap_region(void * addr, size_t size) {
+    if (addr && size > 0) {
+        g_mmap_regions.push_back({addr, size});
+    }
+}
+
+void switch_madvise_all(int advice) {
+    int posix_advice;
+    switch (advice) {
+        case 0: posix_advice = POSIX_MADV_WILLNEED; break;
+        case 1: posix_advice = POSIX_MADV_RANDOM;   break;
+        case 2: posix_advice = POSIX_MADV_DONTNEED; break;
+        default: return;
+    }
+    for (const auto & r : g_mmap_regions) {
+        if (r.addr && r.size > 0) {
+            (void) posix_madvise(r.addr, r.size, posix_advice);
+        }
+    }
+}
+
 } // namespace slim_arc
