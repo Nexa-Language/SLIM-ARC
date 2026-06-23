@@ -70,12 +70,25 @@ SLIM-ARC 的核心贡献是**统一调度**这三类 I/O 需求。
 
 ## 实验结果
 
-### 核心成果：Qwen3-Next-80B (45GB) 在 8GB 环境
+### 核心成果：Qwen3-Next-80B (45GB) 在 8GB 环境（四组消融可溯源）
+
+**pp4 + tg1**（有原始日志）：
 
 | 指标 | Baseline | SLIM-ARC | 提升 |
 |------|---------|---------|------|
-| prefill (pp4 t/s) | 0.17 | 0.20 | +17.6% |
-| **decode (tg1 t/s)** | **0.07** | **0.31** | **+343% (4.4×)** |
+| prefill (pp4 t/s) | 0.21 | 0.27 | +28.6% |
+| **decode (tg1 t/s)** | **0.08** | **0.42** | **+425% (5.2×)** |
+
+**四组单点消融**（pp16+tg4，详见[归因分析](reports/optimization-attribution-analysis.md)）：
+
+| 配置 | pp16 | tg4 | 说明 |
+|------|------|-----|------|
+| baseline | 0.63 | 0.08 | 全关 |
+| MADV_RANDOM only | 0.27 | 0.29 | decode +262% |
+| prefetch only | 0.54 | 0.07 | 等价 baseline |
+| slim-arc (全开) | 0.28 | 0.29 | = MADV only |
+
+**关键发现**: MADV_RANDOM 是 decode 提升核心，prefetch_scheduler 在 80B 场景冗余。
 
 ### Dense/MoE 小模型在 8GB 环境
 
@@ -84,26 +97,40 @@ SLIM-ARC 的核心贡献是**统一调度**这三类 I/O 需求。
 | Qwen3-4B | decode (tg16) | 6.36 | 7.54 | +18.6% |
 | OLMoE | prefill (pp64) | 88.27 | 95.99 | +8.7% |
 
-详见 [消融实验报告](reports/phase4-ablation-summary.md)。
+详见 [消融实验报告](reports/phase4-ablation-summary.md)。原始日志: `logs/ablation/raw-80b/`。
 
 ## 快速开始
 
 ```bash
-# 1. 搭建受限环境
+# 1. Clone upstream llama.cpp
+git clone --depth 1 https://github.com/ggml-org/llama.cpp.git src/llama-upstream
+
+# 2. Apply SLIM-ARC modifications (idempotent, pattern-based)
+python3 scripts/apply-slim-arc.py src/llama-upstream
+
+# 3. 搭建受限环境
 sudo bash scripts/env/setup-cgroups.sh
 
-# 2. 构建 upstream llama.cpp（禁用 repack 避免 OOM）
+# 4. 构建（禁用 repack 避免 OOM）
 cd src/llama-upstream/build
 cmake -DGGML_CPU_REPACK=OFF ..
 cmake --build . --target llama-bench -j$(nproc)
 
-# 3. 运行消融对比（baseline vs SLIM-ARC，三档自动切换）
+# 5. 运行消融对比（baseline vs SLIM-ARC，三档自动切换）
 bash scripts/bench/run-quick-ablation.sh
 
-# 4. 80B 在 8GB 环境测试
-sudo cgexec -g memory,cpu:slim-arc-low env LD_LIBRARY_PATH=src/llama-upstream/build/bin \
-  src/llama-upstream/build/bin/llama-bench -m data/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf -t 4 -p 4 -n 1 -mmp 1
+# 6. 80B 在 8GB 环境测试（四组消融）
+bash scripts/bench/run-80b-bench.sh
 ```
+
+### 环境变量开关
+
+| 变量 | 作用 |
+|------|------|
+| `SLIM_ARC_DISABLE=1` | 全关（baseline 对比） |
+| `SLIM_ARC_NO_MADV_RANDOM=1` | 只关 MADV_RANDOM |
+| `SLIM_ARC_NO_PREFETCH=1` | 只关 prefetch |
+| （默认） | 全开 |
 
 ## 项目结构
 
