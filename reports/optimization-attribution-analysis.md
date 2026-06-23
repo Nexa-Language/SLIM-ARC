@@ -98,10 +98,24 @@
 
 ## 结论（诚实版）
 
-SLIM-ARC 在 80B 8GB 场景的 decode 提升主要来自 **MADV_RANDOM + 禁用 repack**，而非 prefetch_scheduler。四组单点消融证明：
+## 6GB 环境验证（更受限场景）
 
-1. **MADV_RANDOM 是核心**: decode +262%，贡献 100%
-2. **prefetch_scheduler 当前冗余**: 在测试场景无独立价值，需后续优化（如与 KV 换页协同）
-3. **tradeoff 明确**: prefill -57%，decode +262%，交互式场景有利
+为验证 prefetch 是否在更受限环境产生价值，测试 80B 6GB：
 
-这比之前"所有模块都有贡献"的说法更诚实。后续工作应聚焦让 prefetch_scheduler 产生独立价值（如 KV 换页集成后的统一调度）。
+| 配置 | pp4 | tg1 | 说明 |
+|------|-----|-----|------|
+| baseline | 0.20 | 0.08 | 全关 |
+| prefetch only | 0.20 | 0.07 | 等价 baseline |
+| slim-arc (full) | 0.27 | 0.17 | MADV_RANDOM 驱动 |
+
+**结论**: 即使在 6GB（比 8GB 更受限），prefetch_scheduler 仍无独立价值。MADV_RANDOM 是唯一驱动因素（decode +112%）。
+
+## 结论（诚实版）
+
+SLIM-ARC 在 80B 场景的 decode 提升**完全来自 MADV_RANDOM + 禁用 repack**，prefetch_scheduler 在 6GB/8GB 均无独立价值。四组单点消融（8GB）+ 三组验证（6GB）证明：
+
+1. **MADV_RANDOM 是核心**: decode +112%~+425%，贡献 100%
+2. **prefetch_scheduler 当前冗余**: 在 6GB/8GB 测试场景均无独立价值
+3. **tradeoff 明确**: prefill 下降，decode 大幅提升，交互式场景有利
+
+后续工作方向：让 prefetch 产生价值需要**与 KV 换页协同**（统一调度多路 I/O 竞争），或**在 KV cache 压力大的长上下文场景**（当前测试 context=1-4 token，KV 压力小）。
