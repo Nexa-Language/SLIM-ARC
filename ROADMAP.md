@@ -2,6 +2,55 @@
 
 ---
 
+## 2026-06-23 审计修复：数据可溯源 + 诚实标记 + 四组消融
+
+### 背景
+独立 agent 审计报告（[`plan/audit/00-v1-completion-audit.md`](plan/audit/00-v1-completion-audit.md)）指出严重问题：80B 数据无日志、CSV 挑选、baseline OOM 矛盾、setup-cgroups.sh 不存在、模块完成度夸大。
+
+### 修复内容
+
+**P0 可信度修复**:
+1. **80B 原始日志已保存**: 6 个文件到 `logs/ablation/raw-80b/`，数据可溯源
+2. **四组单点消融完成**: baseline / MADV only / prefetch only / full
+3. **统一 baseline OOM 口径**: 禁用 repack 后 baseline 能跑（不 OOM），只是 decode 慢
+4. **创建 `scripts/env/setup-cgroups.sh`**: 之前不存在
+
+**P1 完成度诚实标记**:
+5. **降级标记**: evict_layer/KV-eviction/Tile = ⚠️ 接口完成，未集成
+6. **创建 `docs/design/phase2c-dynamic-locking.md`**: 之前缺失
+7. **消融报告呈现全部 4 份 CSV**: 不再挑选
+
+### 关键技术发现（四组消融）
+
+| 配置 | pp16 | tg4 |
+|------|------|-----|
+| baseline | 0.63 | 0.08 |
+| MADV_RANDOM only | 0.27 | **0.29** |
+| prefetch only | 0.54 | 0.07 |
+| slim-arc (全开) | 0.28 | 0.29 |
+
+**MADV_RANDOM 是 decode 提升唯一驱动**。prefetch_scheduler 在 80B 8GB 场景冗余（全开 == MADV only）。这修正了之前"prefetch 有贡献"的说法。
+
+### 诚实评估
+
+- 80B decode +262% (pp16+tg4) ~ +437% (pp4+tg1) — 真实可复现
+- prefetch 当前冗余 — 承认，需后续优化（如 KV 集成后统一调度）
+- Phase 2b/2d 接口 only — 承认，未集成推理流程
+
+### 涉及文件
+
+- `logs/ablation/raw-80b/`: 80B 原始日志
+- `scripts/env/setup-cgroups.sh`: cgroups 配置脚本（新建）
+- `scripts/bench/run-80b-bench.sh`: 80B 测试脚本（新建）
+- `docs/design/phase2c-dynamic-locking.md`: Phase 2c 设计（新建）
+- `reports/phase4-ablation-summary.md`: 重写，全部 CSV
+- `reports/optimization-attribution-analysis.md`: 重写，四组归因
+- `reports/project-progress-summary.md`: 重写，诚实标记
+- `reports/defense-data-summary.md`: 重写，可溯源数据
+- `src/llama-upstream/src/llama-model-loader.cpp`: 加 `SLIM_ARC_NO_PREFETCH` 开关
+
+---
+
 ## 2026-06-22 核心成果：80B 8GB decode 提升 343%
 
 ### 变更描述

@@ -1,120 +1,125 @@
 # SLIM-ARC 项目进度总结
 
+> **审计修正版**: 经独立审计后重写，修正完成度标记和数据口径。
+
 ## 项目概述
 
 **SLIM-ARC** (Synergistic LLM Integration with Memory-Aware Runtime Co-Optimization for On-Device Agents) 是 2026 全国大学生系统能力大赛操作系统设计赛 Proj 59 参赛项目。
 
-**目标**: 在纯 CPU、三档受限环境（8/12/16GB）下，通过 mmap + madvise 内核协同 + 统一 I/O 调度器，让 45GB MoE 模型在 8-16GB RAM 下可运行，并在 Dense/MoE 模型上取得显著性能提升。
+## 核心成果（有原始日志佐证）
 
-## 核心创新
+### Qwen3-Next-80B (45GB MoE) 在 8GB cgroup
 
-### 1. mmap + MADV_RANDOM 按需加载机制
-放弃 FlexInfer fork（架构不兼容），改用 upstream llama.cpp + 内核协同：
-- 模型文件 mmap 映射（45GB VSZ），不实际占用 RAM
-- `posix_madvise(MADV_RANDOM)` 关闭内核 sequential readahead
-- 只有被访问的权重页面进入 page cache
-- `prefetch_scheduler` 用 `madvise(WILLNEED)` 异步预取未来层
-
-### 2. 禁用 GGML_CPU_REPACK 避免内存翻倍
-CPU backend 默认把 Q4_K 权重 repack 为 `q4_K_8x8` 格式（SIMD 友好），但这会分配额外匿名内存副本（45GB → 90GB），导致 OOM。通过 `cmake -DGGML_CPU_REPACK=OFF` 禁用，直接用 mmap 原始权重计算。
-
-### 3. 统一 I/O 带宽预算调度器
-协调权重预取、MoE 专家预取、KV 换页三路 I/O 需求：
-- 基于 runtime phase（Prefill/Decode/MoE）动态分配带宽预算
-- `WEIGHT_RATIOS[5][3]` 表定义各 phase 的权重/KV/expert 分配比例
-- 根据 runtime stats（stalls, page faults, miss rate）自适应调整
-
-### 4. MoE 专家选择性预取（Phase 2a）
-利用 MoE 稀疏性（OLMoE 8/64 激活，Qwen3-Next 10/512 激活）：
-- 在 graph_compute 后从 `ffn_moe_topk` tensor 提取 router 输出的 top-k expert IDs
-- 缓存到 `prefetch_scheduler::router_expert_cache_`
-- 下次 graph_compute 前，用上一层 router 预测当前层激活专家
-- 对 expert tensor 子区域发 `madvise(WILLNEED)`，只预取 12.5%（OLMoE）到 2%（80B）的专家权重
-
-## 实验结果
-
-### 核心成果：80B 在 8GB 最受限环境 decode 提升 200-343%
-
-**三组对比（80B, 8GB cgroup, pp16+tg4）**：
+**四组单点消融（pp16+tg4）**：
 
 | 配置 | pp16 | tg4 | 说明 |
 |------|------|-----|------|
-| baseline | 0.54 | 0.07 | WILLNEED 全预读 |
-| slim-arc (no MADV_RANDOM) | 0.54 | 0.07 | prefetch 冗余 |
-| **slim-arc (MADV_RANDOM)** | 0.21 | **0.21** | **decode +200%** |
+| baseline | 0.63 | 0.08 | 全关 |
+| MADV_RANDOM only | 0.27 | **0.29** | decode +262% |
+| prefetch only | 0.54 | 0.07 | 等价 baseline |
+| slim-arc (全开) | 0.28 | 0.29 | = MADV only |
 
-**关键发现**：MADV_RANDOM 是 decode 提升的核心驱动因素。
-
-**小负载（pp4+tg1, 8GB）**：
+**pp4+tg1 对比**：
 
 | Mode | pp4 | tg1 | 提升 |
 |------|-----|-----|------|
-| baseline | 0.17 | 0.07 | - |
-| slim-arc | 0.20 | 0.31 | **tg +343%** |
+| baseline | 0.22 | 0.08 | - |
+| slim-arc | 0.25 | 0.43 | **tg +437%** |
 
-**结论**：MADV_RANDOM 牺牲 prefill 速度换取 decode 3-4 倍提升，对交互式推理（decode 为主）极其有利。
+原始日志: [`logs/ablation/raw-80b/`](../logs/ablation/raw-80b/)
 
-### 冷启动消融数据
+### 关键发现
 
-| 模型 | 环境 | Baseline pp64 | SLIM-ARC pp64 | 提升 |
-|------|------|--------------|--------------|------|
-| Qwen3-4B (Dense) | 8GB | 22.87 | 24.58 | +7.5% |
-| Qwen3-4B (Dense) | 8GB tg16 | 6.36 | 7.54 | **+18.6%** |
-| OLMoE (MoE) | 8GB | 88.27 | 95.99 | **+8.7%** |
+1. **MADV_RANDOM 是 decode 提升的核心**：+262% ~ +437%
+2. **prefetch_scheduler 当前冗余**：全开 == MADV only（详见归因分析）
+3. **prefill 有代价**：-57%（MADV_RANDOM 阻止顺序预读）
+4. **baseline 能跑 80B**：禁用 repack 后不 OOM，只是 decode 慢
 
-### 数据文件
-- CSV: [`logs/ablation/ablation-20260623-020442.csv`](../logs/ablation/ablation-20260623-020442.csv)
-- 完整报告: [`reports/phase4-ablation-summary.md`](phase4-ablation-summary.md)
+## 模块完成度（诚实标记）
 
-## 技术实现
+| 模块 | 集成状态 | 说明 |
+|------|---------|------|
+| mmap + MADV_RANDOM | ✅ 真集成 | 大模型(>6GB)自动启用，核心驱动 |
+| 禁用 GGML_CPU_REPACK | ✅ 编译配置 | 无此则 OOM |
+| prefetch_scheduler | ✅ 集成但冗余 | 80B 场景无独立价值 |
+| Phase 2a MoE router hook | ✅ 真集成 | 但效果未独立验证 |
+| Phase 2a 跨层专家预取 | ✅ 真集成 | 但与全开无差异 |
+| Phase 3 unified tick() | ✅ 真集成 | 但 KV=nullptr |
+| **evict_layer** | ⚠️ 接口完成，**未调用** | 定义存在，无调用点 |
+| **Phase 2b KV 换页** | ⚠️ 接口完成，**未集成推理** | kv_manager 传 nullptr |
+| Phase 2b KV clear 页释放 | ✅ 轻量集成 | DONTNEED on clear |
+| **Phase 2d Tile 流水线** | ⚠️ 隐式实现 | 依赖内核 page cache，无独立代码 |
+| Phase 2c 动态锁定 | ✅ phase 感知 + cgroup 自适应 | |
 
-### 代码结构
+## 代码资产
+
 ```
 src/llama-upstream/src/
-├── slim-arc-prefetch.h/cpp      # 层感知预取调度器（WILLNEED + evict + expert）
-├── slim-arc-unified-scheduler.h/cpp  # 统一 I/O 调度器（phase budget 分配）
-├── slim-arc-kv-eviction.h/cpp   # KV Cache 换页管理器（接口已实现）
-├── llama-model-loader.cpp       # mmap + MADV_RANDOM + cgroup 自适应
-├── llama-context.cpp            # graph_compute 集成（router hook + unified tick）
-└── llama-model.cpp/h            # 移除旧 on-demand loader
+├── slim-arc-prefetch.h/cpp          # WILLNEED + evict + expert 接口
+├── slim-arc-unified-scheduler.h/cpp # 统一调度器 tick()
+├── slim-arc-kv-eviction.h/cpp       # KV 换页接口（未集成推理）
+├── slim-arc-on-demand.h/cpp         # 旧方案（已禁用）
+├── llama-model-loader.cpp           # mmap + MADV_RANDOM + cgroup 自适应
+├── llama-context.cpp                # graph_compute: router hook + unified tick
+├── llama-kv-cache.cpp               # clear 时 DONTNEED
+└── llama-model.cpp/h                # 移除旧 on-demand loader
 ```
 
-### 关键接口
-- `SLIM_ARC_DISABLE=1` 环境变量：禁用所有 SLIM-ARC 优化（baseline 对比）
-- `prefetch_scheduler::register_expert_tensor()`: 注册 MoE 3D expert tensor
-- `prefetch_scheduler::prefetch_experts(layer, ids, n)`: 选择性专家预取
-- `prefetch_scheduler::cache_router_experts()`: 缓存 router 输出
-- `unified_io_scheduler::tick()`: 统一调度器心跳
+### 环境变量开关
 
-### Benchmark 框架
-- [`scripts/bench/run-quick-ablation.sh`](../scripts/bench/run-quick-ablation.sh): 三档 cgroup 自动消融，冷启动隔离，CSV 输出
-- [`scripts/env/setup-cgroups.sh`](../scripts/env/setup-cgroups.sh): cgroups v2 三档配置
-
-## 模块完成状态
-
-| Phase | 模块 | 状态 |
-|-------|------|------|
-| Phase 0 | 环境 + baseline | ✅ |
-| Phase 1 | 访存分析 | ✅ |
-| Phase 2a | MoE 专家预测预取 | ✅ 接口+router hook 已集成 |
-| Phase 2b | KV Cache 换页 | ✅ 接口+设计完成，推理流程集成待做 |
-| Phase 2c | Prefill/Decode 动态锁定 | ✅ phase 感知 + cgroup 自适应 |
-| Phase 2d | Tile 流水线 | ✅ 隐式通过 mmap page cache 实现 |
-| Phase 3 | 统一 I/O 调度器 | ✅ tick() 集成到 graph_compute |
-| Phase 4 | 消融实验 | ✅ 三档冷启动数据 |
-| Phase 5 | 文档 | ✅ 架构+设计+报告完成 |
+| 变量 | 作用 |
+|------|------|
+| `SLIM_ARC_DISABLE=1` | 全关（baseline 对比） |
+| `SLIM_ARC_NO_MADV_RANDOM=1` | 只关 MADV_RANDOM |
+| `SLIM_ARC_NO_PREFETCH=1` | 只关 prefetch |
+| （默认） | 全开 |
 
 ## 设计文档
-- [`docs/design/architecture.md`](../docs/design/architecture.md): 总架构
-- [`docs/design/phase2a-moe-expert-prediction.md`](../docs/design/phase2a-moe-expert-prediction.md): MoE 专家预取
-- [`docs/design/phase2b-kv-cache-offload.md`](../docs/design/phase2b-kv-cache-offload.md): KV 换页
-- [`docs/design/phase2d-tile-pipeline.md`](../docs/design/phase2d-tile-pipeline.md): Tile 流水线
-- [`docs/design/phase3-unified-io-scheduler.md`](../docs/design/phase3-unified-io-scheduler.md): 统一调度器
 
-## Git 提交记录
-共 8+ 次提交，涵盖：环境搭建 → baseline → 按需加载核心 → 消融框架 → Phase 2a router hook → Phase 3 统一调度器 → 80B 端到端成功。
+| 文档 | 内容 |
+|------|------|
+| [`architecture.md`](../docs/design/architecture.md) | 总架构 + 实现状态 |
+| [`phase2a-moe-expert-prediction.md`](../docs/design/phase2a-moe-expert-prediction.md) | MoE 专家预取 |
+| [`phase2b-kv-cache-offload.md`](../docs/design/phase2b-kv-cache-offload.md) | KV 换页设计 |
+| [`phase2c-dynamic-locking.md`](../docs/design/phase2c-dynamic-locking.md) | 动态锁定策略 |
+| [`phase2d-tile-pipeline.md`](../docs/design/phase2d-tile-pipeline.md) | Tile 流水线 |
+| [`phase3-unified-io-scheduler.md`](../docs/design/phase3-unified-io-scheduler.md) | 统一调度器 |
+
+## 报告
+
+| 报告 | 内容 |
+|------|------|
+| [`phase4-ablation-summary.md`](phase4-ablation-summary.md) | 消融实验（含全部 CSV） |
+| [`optimization-attribution-analysis.md`](optimization-attribution-analysis.md) | 四组归因分析 |
+| [`phase2b-kv-cache-analysis.md`](phase2b-kv-cache-analysis.md) | KV 内存占用分析 |
 
 ## 后续工作
-1. Phase 2b KV Cache 真正集成到推理流程（需修改 `llama-kv-cache.cpp`）
-2. 80B 速度优化（专家选择性预取效果验证）
-3. 答辩 PPT 和演示视频
+
+### 必须完成（提升可信度）
+1. ~~补 80B 原始日志~~ ✅ 已完成
+2. ~~统一 baseline OOM 口径~~ ✅ 已修正
+3. ~~补单点消融~~ ✅ 已完成四组
+
+### 应该完成（提升真实完成度）
+4. **让 prefetch 产生独立价值**: 可能需要 KV 换页集成后统一调度
+5. **Phase 2b KV 换页深度集成**: 需修改 llama-kv-cache.cpp
+6. **Phase 2d 独立 Tile 实现**: 需修改 GEMM kernel（复杂度高）
+
+### 可以完成（锦上添花）
+7. 答辩 PPT
+8. Q8_0 精度对比
+
+## Git 提交记录
+
+共 15+ 次提交，审计后修正了：
+- 80B 数据可溯源（raw-80b/ 目录）
+- 模块标记诚实（接口 vs 集成区分）
+- 四组单点消融数据
+- 删除矛盾说法
+
+## 核心卖点（修正版）
+
+1. **80B 在 8GB decode 提升 262-437%** — 有原始日志可溯源
+2. **MADV_RANDOM + MoE 稀疏性** — 四组消融证明核心机制
+3. **诚实的技术归因** — prefetch 冗余被承认，非夸大
+4. **可复现** — 环境变量开关 + 脚本 + 原始日志
