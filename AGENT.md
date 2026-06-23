@@ -72,3 +72,17 @@
 - 发现 FlexInfer 不支持 Qwen3 架构时，从最新 llama.cpp backport 架构定义
 - GGUF 转换失败时，调试 convert 脚本或降级为 llama.cpp 转换后重对齐
 - 任何错误都在 ROADMAP.md 记录，分析原因并总结改进措施
+
+## ⚠️ 重大教训：代码跟踪规则（2026-06-23 事故）
+
+**事故**: src/llama-upstream/ 整个目录因 .gitignore 误加而未被跟踪，WSL 重启后丢失全部修改过的 upstream 代码。
+
+**强制规则**:
+1. **所有修改过的代码必须被 git 跟踪**，绝不 ignore
+2. .gitignore 只能 ignore 构建产物（build/、*.o、*.so）和外部依赖（data/models/），不能 ignore 我们修改的源文件
+3. 修改第三方代码（如 upstream llama.cpp）后，必须：
+   - 用 `git add -f` 强制跟踪修改的文件，或
+   - 保存为 patch 文件到 `patches/` 目录，或
+   - 编写集成脚本（如 `scripts/apply-slim-arc.py`）确保可恢复
+4. `src/llama-upstream/` 是独立 git clone，本身不被主仓库跟踪，但所有 SLIM-ARC 修改通过 `scripts/apply-slim-arc.py` 可从 `patches/llama-upstream/` 完整恢复
+5. 每次修改后必须 `git add` 并确认 `git status` 显示修改被跟踪

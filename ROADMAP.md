@@ -2,6 +2,36 @@
 
 ---
 
+## 2026-06-23 重大失误：未跟踪代码丢失 + 恢复
+
+### 事件
+- src/llama-upstream/ 整个目录消失（WSL 重启清理未跟踪文件）
+- 原因：.gitignore 误加了 `src/llama-upstream/`，导致修改后的 upstream llama.cpp 源文件不被跟踪
+- 所有 SLIM-ARC 集成代码（对 llama-model-loader.cpp/llama-context.cpp/llama-kv-cache.cpp 的修改）丢失
+
+### 教训（必须遵守）
+1. **所有修改过的代码必须被 git 跟踪**，不能 ignore
+2. .gitignore 只能 ignore 构建产物和外部依赖，不能 ignore 我们修改的源文件
+3. 修改第三方代码后，必须用 `git add -f` 强制跟踪，或保存为 patch 文件
+
+### 恢复措施
+1. 重新 clone upstream llama.cpp
+2. 创建 [`scripts/apply-slim-arc.py`](scripts/apply-slim-arc.py) 集成脚本（基于 patches/ 下的独立文件 + 模式匹配）
+3. 验证恢复成功：80B 8GB slim-arc pp4=0.27 tg1=0.42（与之前数据一致）
+4. 所有 slim-arc 独立文件在 `patches/llama-upstream/` 下（已跟踪）
+
+### 防护机制
+- 集成脚本 `scripts/apply-slim-arc.py` 是幂等的，可从 patches/ 完整恢复所有修改
+- README 中说明恢复流程：clone upstream → run script → cmake build
+- 不再依赖未跟踪的 src/ 目录
+
+### 涉及文件
+- `scripts/apply-slim-arc.py`: 集成脚本（新建，已跟踪）
+- `patches/llama-upstream/`: slim-arc 独立文件（8个，已跟踪）
+- `.gitignore`: 移除了误加的 `scripts/profile/src/`，保留 `src/llama-upstream/`（因为是独立 git clone）
+
+---
+
 ## 2026-06-23 审计修复：数据可溯源 + 诚实标记 + 四组消融
 
 ### 背景
