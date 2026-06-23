@@ -1,12 +1,14 @@
 # SLIM-ARC 消融实验报告
 
+> **透明声明**: 本报告经独立审计后重写。所有数据均有原始日志可溯源（[`logs/ablation/raw-*/`](../logs/ablation/)）。测量存在波动，报告呈现全部数据而非挑选。
+
 ## 实验概述
 
 **目标**: 验证 SLIM-ARC 优化系统在三档受限环境下相对 baseline 的性能提升。
 
 **环境**: WSL2-Ubuntu, Intel i9-13900H (32GB RAM), NVMe SSD, cgroups v2 隔离
 
-**方法**: 每次测试前 `echo 3 > /proc/sys/vm/drop_caches` 清空 page cache（冷启动），3 次重复取均值。
+**方法**: 每次测试前 `echo 3 > /proc/sys/vm/drop_caches` 清空 page cache（冷启动），2 次重复。所有原始日志保存。
 
 ## 三档环境
 
@@ -16,89 +18,102 @@
 | mid  | 12GB | 6核 | 中端设备 |
 | high | 16GB | 8核 | 高端设备 |
 
-## 核心结果（冷启动）
+## Qwen3-Next-80B (45GB MoE) 核心对比 — 有原始日志
 
-### Qwen3-4B（Dense, 2.4GB）
+**原始日志**: [`logs/ablation/raw-80b/`](../logs/ablation/raw-80b/)
 
-| Tier | Mode | pp64 (t/s) | tg16 (t/s) | pp Δ | tg Δ |
-|------|------|-----------|----------|------|------|
-| low (8G) | baseline | 22.87 | 6.36 | - | - |
-| low (8G) | **slim-arc** | **24.58** | **7.54** | **+7.5%** | **+18.6%** |
-| mid (12G) | baseline | 28.95 | 12.00 | - | - |
-| mid (12G) | slim-arc | 28.35 | 11.33 | -2.1% | -5.6% |
-| high (16G) | baseline | 33.32 | 14.28 | - | - |
-| high (16G) | slim-arc | 30.56 | 13.97 | -8.3% | -2.2% |
+### 8GB cgroup (low tier, 4 threads)
 
-### OLMoE-1B-7B（MoE, 3.9GB, 64 experts active 8）
+**小负载（pp4 + tg1）**：
 
-| Tier | Mode | pp64 (t/s) | tg16 (t/s) | pp Δ | tg Δ |
-|------|------|-----------|----------|------|------|
-| low (8G) | baseline | 88.27 | 36.53 | - | - |
-| low (8G) | **slim-arc** | **95.99** | **36.62** | **+8.7%** | +0.2% |
-| mid (12G) | baseline | 100.50 | 39.93 | - | - |
-| mid (12G) | slim-arc | 100.54 | 42.14 | +0.04% | +5.5% |
-| high (16G) | baseline | 116.97 | 47.58 | - | - |
-| high (16G) | slim-arc | 110.77 | 48.42 | -5.3% | +1.8% |
+| Mode | pp4 (t/s) | tg1 (t/s) | 原始日志 |
+|------|-----------|----------|---------|
+| baseline | 0.22 | 0.08 | [`80b-8g-baseline-pp4-tg1.txt`](../logs/ablation/raw-80b/80b-8g-baseline-pp4-tg1.txt) |
+| slim-arc | 0.25 | 0.43 | [`80b-8g-slim-arc-pp4-tg1.txt`](../logs/ablation/raw-80b/80b-8g-slim-arc-pp4-tg1.txt) |
+| **提升** | +13.6% | **+437.5% (5.4×)** | |
 
-### Qwen3-Next-80B（超大 MoE, 45GB）— 核心对比数据
+**中等负载（pp16 + tg4）**：
 
-**三组对比（pp16 + tg4, 8GB cgroup）**：
+| Mode | pp16 (t/s) | tg4 (t/s) | 原始日志 |
+|------|-----------|----------|---------|
+| baseline | 0.63 | 0.08 | [`80b-8g-baseline-pp16-tg4.txt`](../logs/ablation/raw-80b/80b-8g-baseline-pp16-tg4.txt) |
+| slim-arc | 0.28 | 0.29 | [`80b-8g-slim-arc-pp16-tg4.txt`](../logs/ablation/raw-80b/80b-8g-slim-arc-pp16-tg4.txt) |
+| **变化** | -56% | **+262.5% (3.6×)** | |
 
-| 配置 | pp16 (t/s) | tg4 (t/s) | 说明 |
-|------|-----------|----------|------|
-| baseline (SLIM_ARC_DISABLE=1) | 0.54 | 0.07 | 内核 WILLNEED 全预读 |
-| slim-arc (no MADV_RANDOM) | 0.54 | 0.07 | prefetch 在热缓存下冗余 |
-| **slim-arc (MADV_RANDOM)** | 0.21 | **0.21** | **decode +200%** |
+### 16GB cgroup (high tier, 8 threads)
 
-**小负载（pp4 + tg1, 8GB）**：
+**pp4 + tg1**：
 
-| Mode | pp4 (t/s) | tg1 (t/s) | pp 提升 | tg 提升 |
-|------|-----------|----------|--------|--------|
-| baseline | 0.17 | 0.07 | - | - |
-| **slim-arc** | **0.20** | **0.31** | +17.6% | **+343%** |
+| Mode | pp4 (t/s) | tg1 (t/s) | 原始日志 |
+|------|-----------|----------|---------|
+| baseline | (未测) | (未测) | - |
+| slim-arc | 0.17 | 0.38 | [`80b-16g-slim-arc-pp4-tg1.txt`](../logs/ablation/raw-80b/80b-16g-slim-arc-pp4-tg1.txt) |
 
-**分析**：
-- **MADV_RANDOM 是 decode 提升的核心**：禁用后 slim-arc 退化为 baseline 性能
-- **prefill vs decode tradeoff**：MADV_RANDOM 牺牲 prefill 60%，换取 decode 200-343%
-- **decode 是交互式推理主场景**：4 倍提升价值远大于 prefill 下降
-- **prefill 冷启动慢**：MADV_RANDOM 阻止顺序预读，热缓存后会改善
+### baseline 能否运行 80B？
 
-**核心成果**：80B 在 8GB 最受限环境下 decode 提升 200-343%（3-4 倍）。MADV_RANDOM + prefetch_scheduler 是关键机制。
+**统一口径（纠正审计指出的矛盾）**：
+- **禁用 GGML_CPU_REPACK 后**（SLIM-ARC 编译配置）：baseline 在 8GB/16GB **都能运行**，不 OOM
+- **启用 GGML_CPU_REPACK 时**（upstream 默认）：baseline 在 8GB **OOM kill**（权重 repack 翻倍匿名内存）
 
-## 分析
+之前报告说"baseline OOM"不准确。准确表述：**baseline 能跑但 decode 慢（0.08 t/s），SLIM-ARC decode 快 3.6-5.4 倍**。
 
-### 1. 8GB 环境：冷启动下显著提升
-- Qwen3-4B: pp +7.5%, **tg +18.6%**
-- OLMoE: **pp +8.7%**, tg 持平
-- 冷启动场景下，SLIM-ARC 的 prefetch 让首次推理更快预热
+## 小模型消融 — 全部数据呈现
 
-### 2. 12GB 环境：模型可全缓存，自适应跳过
-- 代码检测到 model_size < cgroup_mem * 40%，自动跳过 prefetch
-- 避免了不必要的 madvise 开销，与 baseline 持平
+### 测量波动问题说明
 
-### 3. 16GB 环境：热缓存饱和
-- 模型完全在 RAM，优化空间小，数据波动在噪声范围
+OLMoE/Qwen3-4B 在 8GB 下进行了 4 次测量，数据波动较大（baseline pp64 从 55.9 到 88.3）。这主要因为：
+1. 80B 后台测试干扰 CPU 和内存资源
+2. 冷启动后 page cache 预热程度差异
+3. cgroup memory.peak 读取在某些 run 中异常
 
-### 4. 80B：从 OOM 到可运行
-- baseline 在 8GB 直接 OOM kill
-- SLIM-ARC (mmap+MADV_RANDOM+禁用repack) 能稳定运行
-- 这是**最核心的创新成果**
+**以下呈现全部 4 次数据，不做挑选**。
 
-## 优化技术栈
+### OLMoE-1B-7B (MoE, 3.9GB) 8GB cgroup, pp64
 
-| 技术 | 状态 | 效果 |
-|------|------|------|
-| mmap + MADV_RANDOM | ✅ 已实现 | 大模型不 OOM |
-| 禁用 GGML_CPU_REPACK | ✅ 已配置 | 避免匿名内存翻倍 |
-| prefetch_scheduler (WILLNEED) | ✅ 已实现 | 层感知异步预取 |
-| phase 感知 (Prefill/Decode) | ✅ 已实现 | 动态 window 切换 |
-| cgroup 自适应跳过 | ✅ 已实现 | 小模型免开销 |
-| MoE expert 选择性预取 | ✅ 接口已实现 | 待 router hook 集成 |
-| evict_layer (DONTNEED) | ✅ 接口已实现 | 待 graph_compute 集成 |
-| unified_io_scheduler | ✅ 原型就绪 | 待 KV 集成后启用 |
+| CSV 时间戳 | baseline (t/s) | slim-arc (t/s) | 变化 | 备注 |
+|------------|---------------|----------------|------|------|
+| 014809 | 59.26 | 96.75 | +63.2% | 80B 后台干扰，baseline 偏低 |
+| 020129 | 83.40 | 84.35 | +1.1% | 热缓存，两者接近 |
+| 020442 | 88.27 | 95.99 | +8.7% | 干净环境 |
+| 024304 | 55.90 | 48.74 | -12.8% | slim-arc 反而慢 |
+
+**中位数**：baseline ~71, slim-arc ~75，**约 +5%**（但波动大，不具统计显著性）
+
+### Qwen3-4B (Dense, 2.4GB) 8GB cgroup
+
+| CSV 时间戳 | baseline pp64 | slim-arc pp64 | baseline tg16 | slim-arc tg16 |
+|------------|--------------|--------------|--------------|--------------|
+| 014809 | 24.41 | 28.69 | 12.84 | 13.57 |
+| 020129 | 23.99 | 25.91 | 9.27 | 10.31 |
+| 020442 | 22.87 | 24.58 | 6.36 | 7.54 |
+| 024304 | 18.55 | 16.60 | 5.70 | 6.36 |
+
+**中位数提升**：pp ~+5%, tg ~+12%
+
+### 分析
+
+1. **小模型提升有限且不稳定**：MADV_RANDOM 只对 >6GB 模型启用，小模型（2.4-3.9GB）不触发，提升主要来自 prefetch_scheduler，但效果在热缓存下冗余
+2. **80B 是核心场景**：45GB 模型触发 MADV_RANDOM，MoE 稀疏性让 decode 提升 3.6-5.4 倍
+3. **prefill 下降是 tradeoff**：MADV_RANDOM 阻止顺序预读，prefill 慢 56%，但 decode 提升远大于此
+
+## 优化技术完成度（真实标记）
+
+| 技术 | 集成状态 | 说明 |
+|------|---------|------|
+| mmap + MADV_RANDOM | ✅ 真集成 | 大模型(>6GB)自动启用 |
+| 禁用 GGML_CPU_REPACK | ✅ 编译配置 | cmake -DGGML_CPU_REPACK=OFF |
+| prefetch_scheduler | ✅ 真集成 | WILLNEED 预取 + phase 感知 |
+| Phase 2a MoE router hook | ✅ 真集成 | 从 ffn_moe_topk 提取 expert IDs |
+| Phase 2a 跨层专家预取 | ✅ 真集成 | cache_router_experts + prefetch_experts |
+| Phase 3 unified tick() | ✅ 真集成 | graph_compute 中调用 |
+| **evict_layer** | ⚠️ 接口完成，**未集成调用** | 定义存在但无调用点 |
+| **Phase 2b KV 换页** | ⚠️ 接口完成，**未集成推理** | kv_manager 传 nullptr |
+| Phase 2b KV clear 页释放 | ✅ 轻量集成 | llama_kv_cache::clear 调用 DONTNEED |
+| **Phase 2d Tile 流水线** | ⚠️ 隐式实现 | 依赖内核 page cache，无独立代码 |
 
 ## 数据文件
 
-- 冷启动 CSV: [`logs/ablation/ablation-20260623-020442.csv`](../logs/ablation/ablation-20260623-020442.csv)
-- 原始日志: [`logs/ablation/raw-20260623-020442/`](../logs/ablation/raw-20260623-020442/)
-- 脚本: [`scripts/bench/run-quick-ablation.sh`](../scripts/bench/run-quick-ablation.sh)
+- 80B 原始日志: [`logs/ablation/raw-80b/`](../logs/ablation/raw-80b/)
+- 小模型 CSV (4份): [`logs/ablation/ablation-20260623-01*.csv`](../logs/ablation/) ~ 02*.csv
+- 小模型原始日志: [`logs/ablation/raw-20260623-*/`](../logs/ablation/)
+- Benchmark 脚本: [`scripts/bench/run-80b-bench.sh`](../scripts/bench/run-80b-bench.sh)

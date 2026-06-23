@@ -192,7 +192,7 @@ index 2802103..b00d4a2 100644
      }
  }
 diff --git a/src/llama-model-loader.cpp b/src/llama-model-loader.cpp
-index 474cabd..ce9f791 100644
+index 474cabd..8c19f64 100644
 --- a/src/llama-model-loader.cpp
 +++ b/src/llama-model-loader.cpp
 @@ -1,3 +1,6 @@
@@ -245,7 +245,7 @@ index 474cabd..ce9f791 100644
              if (mlock_mmaps) {
                  std::unique_ptr<llama_mlock> mlock_mmap(new llama_mlock());
                  mlock_mmap->init(mapping->addr());
-@@ -1363,6 +1395,71 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
+@@ -1363,6 +1395,75 @@ void llama_model_loader::init_mappings(bool prefetch, llama_mlocks * mlock_mmaps
      for (const auto & it : weights_map) {
          size_data += ggml_nbytes(it.second.tensor);
      }
@@ -273,9 +273,13 @@ index 474cabd..ce9f791 100644
 +    }
 +    bool model_fits_in_ram = (cgroup_mem_limit > 0 &&
 +                              total_weight_size < cgroup_mem_limit * 60 / 100);
++    // SLIM_ARC_NO_PREFETCH=1: keep MADV_RANDOM but disable prefetch_scheduler
++    // (for single-point ablation: isolate MADV_RANDOM contribution)
++    bool no_prefetch = getenv("SLIM_ARC_NO_PREFETCH") != nullptr;
 +    bool should_enable_prefetch = (use_mmap && !mappings.empty() &&
 +                                    getenv("SLIM_ARC_DISABLE") == nullptr &&
-+                                    !model_fits_in_ram);
++                                    !model_fits_in_ram &&
++                                    !no_prefetch);
 +    if (should_enable_prefetch) {
 +        static slim_arc::prefetch_scheduler s_scheduler(2 /*n_threads*/, 3 /*window*/);
 +        slim_arc::set_global_prefetch_scheduler(&s_scheduler);
