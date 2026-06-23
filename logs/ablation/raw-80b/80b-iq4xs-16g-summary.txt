@@ -1,0 +1,10 @@
+=== IQ4_XS results summary ===
+80B IQ4_XS (39.71 GiB, 4.25 bpw) + SLIM-ARC + KV q4_0 + 16GB cgroup:
+pp32 = 1.71 ± 0.50
+tg8  = 1.12 ± 0.20
+
+vs Q4_K_M (45GB): pp32=1.34, tg8=0.68-1.03
+vs baseline Q4_K_M: tg8=0.18
+
+Improvement: +522% (6.2x) over baseline
+IQ4_XS is 5GB smaller → better cache hit rate → faster
