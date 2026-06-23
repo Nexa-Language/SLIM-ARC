@@ -93,21 +93,31 @@ src/llama-upstream/src/
 | [`optimization-attribution-analysis.md`](optimization-attribution-analysis.md) | 四组归因分析 |
 | [`phase2b-kv-cache-analysis.md`](phase2b-kv-cache-analysis.md) | KV 内存占用分析 |
 
-## 后续工作
+## 最终验证结论（6GB + 长上下文）
 
-### 必须完成（提升可信度）
-1. ~~补 80B 原始日志~~ ✅ 已完成
-2. ~~统一 baseline OOM 口径~~ ✅ 已修正
-3. ~~补单点消融~~ ✅ 已完成四组
+### 6GB 环境（更受限）验证
+80B 6GB 四组消融：prefetch 仍冗余，MADV_RANDOM 是唯一驱动（decode +112%）。
 
-### 应该完成（提升真实完成度）
-4. **让 prefetch 产生独立价值**: 可能需要 KV 换页集成后统一调度
-5. **Phase 2b KV 换页深度集成**: 需修改 llama-kv-cache.cpp
-6. **Phase 2d 独立 Tile 实现**: 需修改 GEMM kernel（复杂度高）
+### 长上下文验证（OLMoE pp512+tg32）
+小模型（<6GB）不触发 MADV_RANDOM，prefetch 反而有害（-18%）。确认 SLIM-ARC 价值仅在大模型（>6GB）+ MoE 稀疏性场景。
 
-### 可以完成（锦上添花）
-7. 答辩 PPT
-8. Q8_0 精度对比
+### 适用场景边界
+- ✅ **大模型（>6GB）+ MoE**: decode +112%~+425%
+- ❌ **小模型（<6GB）**: prefetch 增加开销，无收益
+- ❌ **Dense 模型**: 无 MoE 稀疏性，MADV_RANDOM 无优势
+
+## 代码资产（三重保护）
+
+1. **`patches/llama-upstream/`**: 8 个 slim-arc 独立文件（已跟踪）
+2. **`patches/llama-upstream/slim-arc-integration.patch`**: 完整 1535 行 patch（已跟踪）
+3. **`scripts/apply-slim-arc.py`**: 幂等集成脚本，可从 patches 完整恢复（已跟踪）
+
+### 恢复流程
+```bash
+git clone --depth 1 https://github.com/ggml-org/llama.cpp.git src/llama-upstream
+python3 scripts/apply-slim-arc.py src/llama-upstream
+cd src/llama-upstream/build && cmake -DGGML_CPU_REPACK=OFF .. && cmake --build . -j
+```
 
 ## Git 提交记录
 
