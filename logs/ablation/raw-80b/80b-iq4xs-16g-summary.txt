@@ -8,3 +8,13 @@ vs baseline Q4_K_M: tg8=0.18
 
 Improvement: +522% (6.2x) over baseline
 IQ4_XS is 5GB smaller → better cache hit rate → faster
+=== IQ4_XS 8GB results ===
+80B IQ4_XS (39.71 GiB) + SLIM-ARC + KV q4_0 + 8GB cgroup (4 threads):
+pp4 = 0.35 ± 0.03
+tg1 = 0.76 ± 0.13
+
+vs Q4_K_M 8GB: pp4=0.27, tg1=0.42
+vs baseline 8GB: tg1=0.08
+
+Improvement: +850% (9.5x) over baseline
+
