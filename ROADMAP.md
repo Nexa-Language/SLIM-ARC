@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-06-24 Speculative Decoding 调研：MoE 80B 净负收益
+
+### 变更描述
+测试 llama.cpp 内置 speculative decoding（ngram-simple 模式）在 80B IQ4_XS 上的效果。
+
+### 测试结果
+- **配置**: 80B IQ4_XS, 32GB, 8 threads, self-draft (同模型做 draft+target), ngram n=8 m=4
+- **accept rate**: 33.3% (72 drafted, 24 accepted)
+- **decode speed**: 1.41 t/s (vs baseline 3.01 t/s) — **净负收益 -53%**
+- **原因**: 80B 做 draft 没有小模型加速，验证开销 > 投机收益；MoE router 的高熵使 n-gram 预测准确率低
+
+### 结论
+1. Speculative decoding 在 80B MoE 上**不适用**（验证 unsloth 的结论）
+2. 需要真正的 small draft model（如 Qwen3-0.6B），但 Qwen3-Next 没有 small 版本
+3. n-gram speculation 适合重复性高的文本（代码、结构化输出），不适合开放生成
+4. **记录为负面结果**，在报告中诚实呈现
+
+### 原始日志
+- `logs/speculative_ngram_test.txt`
+
+---
+
 ## 2026-06-24 80B eviction benchmark: decode +9.6% 加速
 
 ### 变更描述
