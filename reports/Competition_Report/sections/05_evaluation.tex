@@ -77,8 +77,12 @@
     \end{tabular}
 \end{table}
 
-% Figure: 三档环境性能对比柱状图
-% 需要生成的 matplotlib 图表: bar chart comparing baseline vs SLIM-ARC+KVq4 across 8GB/16GB/32GB
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures/fig_three_tier_comparison.png}
+    \caption{Qwen3-Next-80B 三档环境 decode 性能对比}
+    \label{fig:three_tier}
+\end{figure}
 
 \subsubsection{IQ4\_XS 量化（40\,GB）}
 
@@ -121,8 +125,12 @@
     \end{tabular}
 \end{table}
 
-% Figure: 四组消融实验柱状图
-% 需要生成的 matplotlib 图表: grouped bar chart of 4 configs × (pp16, tg4)
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/fig_ablation_4way.png}
+    \caption{四组单点消融实验结果对比}
+    \label{fig:ablation_4way}
+\end{figure}
 
 \textbf{关键发现}：
 
@@ -210,8 +218,12 @@ OLMoE（3.9\,GB）同样未触发 MADV\_RANDOM，主要因为模型小于 6\,GB 
 
 为缓解数据波动的影响，所有核心实验均采用冷启动（drop\_caches）+ 多次测量的方法。报告中呈现的数据为多次测量的代表值，完整原始日志保存于 \texttt{logs/ablation/} 目录。
 
-% Figure: 数据波动箱线图
-% 需要生成的 matplotlib 图表: box plot showing tg8 variance across multiple runs
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/fig_volatility_boxplot.png}
+    \caption{80B 模型多次测量的数据波动分布（箱线图+散点）}
+    \label{fig:volatility}
+\end{figure}
 
 \subsection{KV Cache 量化效果}
 
@@ -232,5 +244,9 @@ OLMoE（3.9\,GB）同样未触发 MADV\_RANDOM，主要因为模型小于 6\,GB 
 
 Q4\_0 量化使 KV Cache 内存减半，为权重缓存腾出更多物理内存，decode 性能提升 14\%。Q8\_0 虽然精度更高但性能不如 Q4\_0，因为其内存节省不足以显著改善 cache 命中率。
 
-% Figure: KV Cache 量化对比柱状图
-% 需要生成的 matplotlib 图表: grouped bar chart comparing F16/Q8_0/Q4_0 for pp32 and tg8
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/fig_kv_quant_comparison.png}
+    \caption{KV Cache 量化类型对比（F16 vs Q8\_0 vs Q4\_0）}
+    \label{fig:kv_quant}
+\end{figure}

@@ -81,9 +81,26 @@ SLIM-ARC 证明了一个关键 insight：\textbf{MoE 模型的专家稀疏性与
 
 最终，SLIM-ARC 使 Qwen3-Next-80B（45\,GB）在 8\,GB RAM 环境下从 OOM 变为可运行（0.76\,t/s），在 32\,GB 热缓存环境下达到流畅运行（2.45\,t/s），相比 baseline 实现了最高 850\%（9.5 倍）的性能提升。
 
-% Figure: 优化效果总览雷达图
-% 需要生成的 matplotlib 图表: radar chart showing 5 dimensions (memory efficiency, decode speed, prefill speed, reproducibility, integration depth)
-%   for 4 configs: baseline, +MADV, +MADV+KVq4, +MADV+KVq4+IQ4XS
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.65\textwidth]{figures/fig_radar_multimetric.png}
+    \caption{多维度优化效果评估雷达图}
+    \label{fig:radar}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/fig_optimization_waterfall.png}
+    \caption{优化技术堆叠瀑布图（80B 8\,GB cgroup）}
+    \label{fig:waterfall}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.85\textwidth]{figures/fig_quant_comparison.png}
+    \caption{Q4\_K\_M vs IQ4\_XS 量化格式性能对比}
+    \label{fig:quant_compare}
+\end{figure}
 
 % Figure: 未来工作路线图
 % Prompt: "A roadmap diagram showing current achievements and future work:
