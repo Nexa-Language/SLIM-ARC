@@ -21,30 +21,27 @@
 \providecommand{\BIBdecl}{\relax}
 \BIBdecl
 
-\bibitem{cs231n_conv_nets}
-F.-F. Li, A.~Karpathy, and J.~Johnson, ``{Convolutional Neural Networks (CNNs /
-  ConvNets)},'' \url{https://cs231n.github.io/convolutional-networks/}, 2017,
-  stanford CS231n Course Notes.
+\bibitem{flexinfer2025}
+H.~Du, S.~Wu, A.~Kharlamova, N.~Guan, and C.~J. Xue, ``Flexinfer: Breaking
+  memory constraint via flexible and efficient offloading for on-device {LLM}
+  inference,'' in \emph{Proceedings of the 5th Workshop on Machine Learning and
+  Systems (EuroMLSys '25)}.\hskip 1em plus 0.5em minus 0.4em\relax ACM, 2025,
+  pp. 56--65.
 
-\bibitem{chellapilla2006high}
-K.~Chellapilla, S.~Puri, and P.~Simard, ``High performance convolutional neural
-  networks for document processing,'' in \emph{Tenth International Workshop on
-  Frontiers in Handwriting Recognition}.\hskip 1em plus 0.5em minus 0.4em\relax
-  Suvisoft, 2006.
+\bibitem{dualblade2024}
+H.~Wang, S.~Cao, Y.~C. Lin, and G.~Pekhimenko, ``{DUAL-BLADE}: Dual-path
+  {NVMe}-direct {KV} cache offloading for efficient large language model
+  inference,'' in \emph{Proceedings of the 29th ACM International Conference on
+  Architectural Support for Programming Languages and Operating Systems
+  (ASPLOS)}, 2024.
 
-\bibitem{nvidia_cudnn_developer_guide}
-{NVIDIA Corporation}, ``{cuDNN Developer Guide},''
-  \url{https://docs.nvidia.com/deeplearning/cudnn/developer-guide/index.html},
-  2024, version 8.9.x.
+\bibitem{mobilemoe2024}
+J.~Chen, Z.~Wang, K.~Zhang, and Y.~Meng, ``{MobileMoE}: Scaling on-device
+  mixture of experts,'' in \emph{Proceedings of the International Conference on
+  Machine Learning (ICML)}, 2024.
 
-\bibitem{nvidia_cudnn_api_ref}
-------, ``{cuDNN API Reference},''
-  \url{https://docs.nvidia.com/deeplearning/cudnn/api/index.html}, 2024,
-  version 8.9.x.
-
-\bibitem{lavin2016fast}
-A.~Lavin and S.~Gray, ``Fast algorithms for convolutional neural networks,''
-  \emph{arXiv preprint arXiv:1509.09308}, 2016, proceedings of the IEEE
-  Conference on Computer Vision and Pattern Recognition (CVPR).
+\bibitem{llamacpp2024}
+G.~Gerganov \emph{et~al.}, ``llama.cpp: {LLM} inference in {C/C++},''
+  \url{https://github.com/ggml-org/llama.cpp}, 2024.
 
 \end{thebibliography}
