@@ -1,0 +1,83 @@
+% SLIM-ARC: 学术报告 - 背景与相关工作
+\section{背景与相关工作}
+
+\subsection{端侧 LLM 推理的内存墙挑战}
+
+大语言模型在自然语言理解、代码生成、多轮对话等任务上取得了突破性进展，但其庞大的参数规模与端侧设备有限的内存资源之间形成了严峻的矛盾。以本文使用的 Qwen3-Next-80B-A3B 模型为例，其 Q4\_K\_M 量化后的权重大小为 45\,GB，而典型的端侧设备（如 Raspberry Pi 5 配备 8\,GB RAM，或中端智能手机配备 12--16\,GB RAM）远不足以容纳完整模型。即使采用更激进的 IQ4\_XS 量化（40\,GB），模型大小仍远超 8--16\,GB 的物理内存限制。
+
+LLM 推理过程涉及三类主要的内存消耗：
+
+\begin{itemize}
+    \item \textbf{模型权重}：占比最大（45\,GB），在推理期间只读访问。
+    \item \textbf{KV Cache}：随上下文长度线性增长，32K 上下文下可达 6\,GB（Qwen3-Next-80B，F16 KV）。
+    \item \textbf{计算缓冲区}：包含 attention 中间结果、FFN 激活值等，通常 1--2\,GB。
+\end{itemize}
+
+当三类内存需求的总和超过物理内存时，操作系统会触发频繁的页面交换（swapping），导致推理速度急剧下降甚至完全不可用。
+
+\subsection{MoE 模型的稀疏性机遇}
+
+混合专家模型（Mixture of Experts, MoE）为解决上述问题提供了独特机遇。Qwen3-Next-80B-A3B 采用超稀疏 MoE 架构，包含 512 个专家网络，但每个 token 仅激活其中 10 个专家，稀疏率高达 98\%。这意味着：
+
+\begin{equation}
+    \text{有效激活权重} = \frac{10}{512} \times \text{总专家权重} \approx 2\% \times \text{总权重}
+\end{equation}
+
+理论上，如果能够仅加载被激活的专家权重，I/O 带宽需求可降低 98\%。然而，现有框架（如 llama.cpp）将所有专家权重以合并的 3D 张量形式存储（如 \texttt{blk.\{l\}.ffn\_gate\_exps.weight}，形状为 \texttt{[in\_dim, hidden\_dim, n\_experts]}），无法在张量级别实现选择性加载。
+
+\subsection{相关工作}
+
+\subsubsection{FlexInfer}
+
+FlexInfer~\cite{flexinfer2025} 是 EuroMLSys 2025 提出的端侧 LLM 推理框架，其核心机制包括：
+
+\begin{itemize}
+    \item \textbf{张量级异步预取}：使用 Direct I/O 和多线程预取，在计算当前层时异步加载后续层的权重。
+    \item \textbf{均衡内存锁定}：根据内存预算决定哪些层的权重常驻 RAM，哪些卸载到 SSD。
+    \item \textbf{灵活张量保留}：静态启发式算法，根据总内存预算决定保留 FFN 还是 Attention 参数。
+\end{itemize}
+
+FlexInfer 的局限在于：(1) 其 fork 版本的 GGUF 读取器与 Qwen3 架构不兼容；(2) 未利用 MoE 模型的专家稀疏性；(3) 未考虑 KV Cache 的内存优化。
+
+\subsubsection{DUAL-BLADE}
+
+DUAL-BLADE~\cite{dualblade2024} 提出了 NVMe-direct 的 KV Cache 卸载方案，将注意力分数较低的 KV Block 异步驱逐到 SSD，并在需要时预取回 RAM。其核心思路是将 FlexInfer 的权重卸载框架泛化到 KV Cache。但 DUAL-BLADE 仅优化 KV Cache，未考虑权重与 KV 之间的 I/O 带宽竞争。
+
+\subsubsection{MobileMoE}
+
+MobileMoE~\cite{mobilemoe2024} 提出了 MoE 专家缓存机制，通过轻量级 Router Predictor 提前 1--2 层预测即将激活的专家，并仅预取所需权重。理论分析表明，预测准确率达到 80\% 时可节省约 70\% 的带宽。但 MobileMoE 假设每个专家是独立张量，而 llama.cpp 中专家以合并 3D 张量存储，需要子区域级别的预取策略。
+
+\subsubsection{llama.cpp 的 mmap 机制}
+
+llama.cpp~\cite{llamacpp2024} 原生支持 mmap 方式的模型加载，通过将 GGUF 文件映射到虚拟地址空间，利用内核的 demand paging 实现按需加载。然而，默认的 \texttt{madvise(WILLNEED)} 策略会触发内核的顺序预读（sequential readahead），对于 45\,GB 的大模型，预读行为会大量消耗物理内存页缓存，导致 8\,GB 环境下的 OOM。
+
+\subsubsection{GGUF 量化格式}
+
+GGUF（GPT-Generated Unified Format）是 llama.cpp 使用的模型文件格式，支持多种量化类型：
+
+\begin{itemize}
+    \item \textbf{Q4\_K\_M}：4-bit K-quant Medium，45\,GB for 80B 模型，精度损失小。
+    \item \textbf{IQ4\_XS}：Importance Matrix 4-bit XS，40\,GB for 80B 模型，精度与 Q4\_K\_M 接近但体积更小。
+    \item \textbf{Q8\_0}：8-bit 量化，约 85\,GB for 80B 模型，精度最高但体积过大。
+\end{itemize}
+
+\subsection{问题定义与期望解决方法}
+
+基于上述分析，本文需要解决的核心问题为：\textbf{如何让 45\,GB 的 MoE 大模型在 8--16\,GB RAM 的端侧设备上高效运行？}
+
+具体而言，需要同时解决以下子问题：
+
+\begin{enumerate}
+    \item \textbf{OOM 避免}：模型权重远超物理内存，必须通过操作系统级虚拟内存机制实现按需加载。
+    \item \textbf{MoE 稀疏性利用}：仅加载被激活的专家权重，减少 98\% 的无效 I/O。
+    \item \textbf{预取延迟掩盖}：通过异步预取重叠 I/O 与计算，避免 decode 阶段的 page fault 延迟。
+    \item \textbf{KV Cache 优化}：通过量化降低 KV Cache 的内存占用，为权重缓存腾出空间。
+    \item \textbf{统一 I/O 调度}：协调权重预取、KV 换页和专家预取三路 I/O 需求的带宽竞争。
+\end{enumerate}
+
+% 示意图位置说明：
+% Figure: 端侧 LLM 推理的内存墙问题示意图
+% Prompt: "A diagram showing the memory wall challenge: a 45GB model weight (large blue block) 
+%   vs 8GB RAM limit (small green block), with three memory consumers labeled 
+%   (weights 45GB, KV Cache 6GB, compute buffer 2GB), an OOM red zone, 
+%   and an arrow showing the gap. Clean technical style, minimal, labeled in English."

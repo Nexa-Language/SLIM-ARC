@@ -1,0 +1,236 @@
+% SLIM-ARC: 学术报告 - 实验评估
+\section{实验评估}
+
+\subsection{实验设置}
+
+\subsubsection{硬件与软件环境}
+
+\begin{table}[H]
+    \centering
+    \caption{实验环境配置}
+    \label{tab:eval_env}
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{配置项} & \textbf{规格} \\
+        \midrule
+        CPU & Intel Core i9-13900H (6P+8E, 20T) \\
+        RAM & 32\,GB DDR5 (WSL2 可用) \\
+        存储 & NVMe SSD (读写 $\sim$3.5\,GB/s) \\
+        OS & Ubuntu 22.04 (WSL2) \\
+        隔离 & cgroups v2 (memory.max + cpuset.cpus) \\
+        编译器 & GCC 11.4.0, CMake 3.22 \\
+        推理框架 & upstream llama.cpp (commit 7c90850) + SLIM-ARC \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsubsection{测试模型}
+
+\begin{table}[H]
+    \centering
+    \caption{测试模型规格}
+    \label{tab:eval_models}
+    \begin{tabular}{lccccc}
+        \toprule
+        \textbf{模型} & \textbf{类型} & \textbf{量化} & \textbf{大小} & \textbf{专家数} & \textbf{激活专家} \\
+        \midrule
+        Qwen3-4B & Dense & Q4\_K\_M & 2.4\,GB & --- & --- \\
+        OLMoE-1B-7B & MoE & Q4\_K\_M & 3.9\,GB & 64 & 8 \\
+        Qwen3-Next-80B & MoE & Q4\_K\_M & 45.1\,GB & 512 & 10 \\
+        Qwen3-Next-80B & MoE & IQ4\_XS & 39.7\,GB & 512 & 10 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsubsection{测试方法}
+
+每次测试前执行 \texttt{echo 3 > /proc/sys/vm/drop\_caches} 清空 page cache（冷启动），使用 \texttt{llama-bench} 工具测量 prefill（pp）和 decode（tg）吞吐量，重复 2 次取平均值。所有原始日志保存至 \texttt{logs/ablation/raw-80b/}。
+
+\subsection{核心实验：80B 在三档环境下的性能}
+
+\subsubsection{Q4\_K\_M 量化（45\,GB）}
+
+\begin{table}[H]
+    \centering
+    \caption{Qwen3-Next-80B Q4\_K\_M 三档环境性能对比}
+    \label{tab:q4km_3tier}
+    \begin{tabular}{lcccccc}
+        \toprule
+        \textbf{环境} & \textbf{线程} & \textbf{配置} & \textbf{pp} & \textbf{tg} & \textbf{vs baseline} \\
+        \midrule
+        \multicolumn{6}{l}{\textit{8\,GB cgroup (4 核)}} \\
+        \midrule
+        & 4 & baseline (KV f16) & 0.22 & 0.08 & --- \\
+        & 4 & SLIM-ARC (KV f16) & 0.27 & 0.42 & +425\% \\
+        & 4 & SLIM-ARC + KV q4\_0 & 0.35 & 0.76 & +850\% \\
+        \midrule
+        \multicolumn{6}{l}{\textit{16\,GB cgroup (8 核)}} \\
+        \midrule
+        & 8 & baseline (KV f16) & 1.04 & 0.18 & --- \\
+        & 8 & SLIM-ARC (KV f16) & 1.26 & 0.90 & +400\% \\
+        & 8 & SLIM-ARC + KV q4\_0 & 1.34 & 1.03 & +472\% \\
+        \midrule
+        \multicolumn{6}{l}{\textit{32\,GB 无限制 (8 核, 热缓存)}} \\
+        \midrule
+        & 8 & SLIM-ARC (KV f16) & 1.90 & 1.24 & --- \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% Figure: 三档环境性能对比柱状图
+% 需要生成的 matplotlib 图表: bar chart comparing baseline vs SLIM-ARC+KVq4 across 8GB/16GB/32GB
+
+\subsubsection{IQ4\_XS 量化（40\,GB）}
+
+\begin{table}[H]
+    \centering
+    \caption{Qwen3-Next-80B IQ4\_XS 性能对比}
+    \label{tab:iq4xs_results}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{环境} & \textbf{配置} & \textbf{pp32} & \textbf{tg8} & \textbf{vs baseline} \\
+        \midrule
+        8\,GB (4 核) & SLIM-ARC + KV q4\_0 & 0.35 & 0.76 & +850\% \\
+        16\,GB (8 核) & SLIM-ARC + KV q4\_0 & 1.71 & 1.12 & +522\% \\
+        \textbf{32\,GB (8 核)} & \textbf{SLIM-ARC + KV q4\_0} & \textbf{2.64} & \textbf{2.45} & \textbf{流畅运行} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+32\,GB 热缓存环境下，IQ4\_XS 达到 \textbf{2.45\,tokens/s}（0.4 秒/token），实现了流畅的交互式推理。相比 Q4\_K\_M 在相同环境下的 1.24\,t/s，提升 98\%，主要归因于 5.4\,GB 的体积缩减带来了更高的 page cache 命中率。
+
+\subsection{消融实验}
+
+\subsubsection{四组单点消融（80B Q4\_K\_M, 8\,GB, pp16+tg4）}
+
+为精确定位各优化技术的贡献，我们设计了四组消融实验：
+
+\begin{table}[H]
+    \centering
+    \caption{四组单点消融实验结果}
+    \label{tab:ablation_4way}
+    \begin{tabular}{lcccp{4cm}}
+        \toprule
+        \textbf{配置} & \textbf{pp16} & \textbf{tg4} & \textbf{MADV} & \textbf{说明} \\
+        \midrule
+        baseline & 0.63 & 0.08 & OFF & 全关，等价 upstream \\
+        MADV only & 0.27 & 0.29 & ON & 仅 MADV\_RANDOM，无 prefetch \\
+        prefetch only & 0.54 & 0.07 & OFF & 仅 prefetch，无 MADV\_RANDOM \\
+        SLIM-ARC (全开) & 0.28 & 0.29 & ON & MADV\_RANDOM + prefetch \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+% Figure: 四组消融实验柱状图
+% 需要生成的 matplotlib 图表: grouped bar chart of 4 configs × (pp16, tg4)
+
+\textbf{关键发现}：
+
+\begin{enumerate}
+    \item \textbf{MADV\_RANDOM 是 decode 加速的唯一驱动因素}：MADV only (0.29\,t/s) $\approx$ SLIM-ARC 全开 (0.29\,t/s)，而 prefetch only (0.07\,t/s) $\approx$ baseline (0.08\,t/s)。
+    \item \textbf{prefetch\_scheduler 在当前场景冗余}：在有 MADV\_RANDOM 时无额外贡献，在无 MADV\_RANDOM 时等价 baseline（因内核 WILLNEED 已全预读）。
+    \item \textbf{MADV\_RANDOM 对 prefill 有害}：baseline pp16=0.63 vs MADV pp16=0.27（--57\%），因阻止了顺序预读。
+    \item \textbf{tradeoff 对交互式推理有利}：decode +262\% 的收益远大于 prefill --57\% 的代价。
+\end{enumerate}
+
+\subsubsection{6\,GB 环境验证}
+
+为验证 prefetch 是否在更受限环境产生价值，额外测试了 6\,GB cgroup：
+
+\begin{table}[H]
+    \centering
+    \caption{80B 6\,GB 环境验证（pp4+tg1）}
+    \label{tab:eval_6gb}
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{配置} & \textbf{pp4} & \textbf{tg1} & \textbf{说明} \\
+        \midrule
+        baseline & 0.20 & 0.08 & 全关 \\
+        prefetch only & 0.20 & 0.07 & 仍冗余 \\
+        SLIM-ARC (全开) & 0.27 & 0.17 & MADV\_RANDOM 驱动 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+即使在 6\,GB（比 8\,GB 更受限），prefetch\_scheduler 仍无独立价值，MADV\_RANDOM 仍是唯一驱动因素。
+
+\subsection{小模型实验}
+
+\subsubsection{Qwen3-4B（Dense, 2.4\,GB）}
+
+\begin{table}[H]
+    \centering
+    \caption{Qwen3-4B 三档冷启动消融（pp64+tg16）}
+    \label{tab:eval_qwen3_4b}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{档位} & \textbf{模式} & \textbf{pp64} & \textbf{tg16} & \textbf{备注} \\
+        \midrule
+        Low (8\,GB) & baseline & 22.87 & 6.36 & --- \\
+        Low (8\,GB) & SLIM-ARC & 24.58 & 7.54 & tg +18.6\% \\
+        \midrule
+        Mid (12\,GB) & baseline & 28.95 & 12.00 & --- \\
+        Mid (12\,GB) & SLIM-ARC & 28.35 & 11.33 & 持平（自适应跳过） \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+由于 Qwen3-4B（2.4\,GB）小于 6\,GB 阈值，MADV\_RANDOM 不触发。SLIM-ARC 的自适应逻辑检测到模型可完全放入 cgroup 内存（<60\%），自动跳过了 prefetch 调度器，避免不必要的 madvise 开销。
+
+\subsubsection{OLMoE-1B-7B（MoE, 3.9\,GB）}
+
+\begin{table}[H]
+    \centering
+    \caption{OLMoE 三档冷启动消融（pp64+tg16）}
+    \label{tab:eval_olmoe}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{档位} & \textbf{模式} & \textbf{pp64} & \textbf{tg16} & \textbf{备注} \\
+        \midrule
+        Low (8\,GB) & baseline & 88.27 & 36.53 & --- \\
+        Low (8\,GB) & SLIM-ARC & 95.99 & 36.62 & pp +8.7\% \\
+        \midrule
+        High (16\,GB) & baseline & 136.85 & 38.25 & --- \\
+        High (16\,GB) & SLIM-ARC & 135.63 & 38.99 & 持平 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+OLMoE（3.9\,GB）同样未触发 MADV\_RANDOM，主要因为模型小于 6\,GB 阈值。在 8\,GB 环境下，SLIM-ARC 带来了 +8.7\% 的 prefill 提升，可能来自 prefetch 调度器在冷启动场景下的辅助预读。
+
+\subsection{数据波动分析}
+
+在 80B 大模型的实验中，我们观察到显著的数据波动。同一配置的多次测量结果可能相差 2--3 倍。主要原因包括：
+
+\begin{enumerate}
+    \item \textbf{Page cache 状态差异}：80B 模型（45\,GB）远超 32\,GB 物理内存，每次推理都需要从 SSD 加载部分页面。page cache 命中率取决于系统其他进程的活动，导致每次运行的 I/O 延迟不同。
+    \item \textbf{cgroup 内存回收干扰}：当 cgroup 接近 memory.max 时，内核会频繁回收页面，引入不可预测的延迟。
+    \item \textbf{NVMe SSD 的 GC 机制}：SSD 的垃圾回收行为会影响随机读取的延迟。
+\end{enumerate}
+
+为缓解数据波动的影响，所有核心实验均采用冷启动（drop\_caches）+ 多次测量的方法。报告中呈现的数据为多次测量的代表值，完整原始日志保存于 \texttt{logs/ablation/} 目录。
+
+% Figure: 数据波动箱线图
+% 需要生成的 matplotlib 图表: box plot showing tg8 variance across multiple runs
+
+\subsection{KV Cache 量化效果}
+
+\begin{table}[H]
+    \centering
+    \caption{KV Cache 量化类型对比（80B 16\,GB, 8 线程）}
+    \label{tab:eval_kv_quant}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{KV 类型} & \textbf{pp32} & \textbf{tg8} & \textbf{KV 内存} & \textbf{vs F16} \\
+        \midrule
+        F16 & 1.26 & 0.90 & 2$\times$ & --- \\
+        Q8\_0 & 1.31 & 0.83 & 1$\times$ & --8\% \\
+        \textbf{Q4\_0} & \textbf{1.34} & \textbf{1.03} & \textbf{0.5$\times$} & \textbf{+14\%} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Q4\_0 量化使 KV Cache 内存减半，为权重缓存腾出更多物理内存，decode 性能提升 14\%。Q8\_0 虽然精度更高但性能不如 Q4\_0，因为其内存节省不足以显著改善 cache 命中率。
+
+% Figure: KV Cache 量化对比柱状图
+% 需要生成的 matplotlib 图表: grouped bar chart comparing F16/Q8_0/Q4_0 for pp32 and tg8

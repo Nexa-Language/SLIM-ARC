@@ -1,0 +1,123 @@
+% SLIM-ARC: 学术报告 - 核心设计
+\section{核心设计}
+
+\subsection{整体架构}
+
+SLIM-ARC 采用分层架构设计，如图\ref{fig:architecture}所示，自底向上分为三层：
+
+\begin{enumerate}
+    \item \textbf{内核协同层}（mmap + madvise）：利用操作系统虚拟内存机制，将 GGUF 模型文件通过 mmap 映射到进程虚拟地址空间（45\,GB VSZ），通过 \texttt{posix\_madvise} 控制内核的页面预取行为，实现按需分页。
+    \item \textbf{运行时调度层}（prefetch\_scheduler + unified\_io\_scheduler）：基于运行时阶段（Prefill/Decode）和 MoE Router 输出，动态调度权重预取、专家选择性加载和 KV Cache 管理。
+    \item \textbf{量化优化层}（KV q4\_0 + IQ4\_XS）：通过模型权重的低比特量化（IQ4\_XS，45→40\,GB）和 KV Cache 量化（f16→q4\_0），进一步降低物理内存占用。
+\end{enumerate}
+
+% Figure: SLIM-ARC 整体架构图
+% Prompt: "A layered architecture diagram for SLIM-ARC system:
+%   Bottom layer: 'Kernel Cooperation Layer' with mmap (45GB VSZ) and madvise (MADV_RANDOM/WILLNEED/DONTNEED)
+%   Middle layer: 'Runtime Scheduling Layer' with prefetch_scheduler, MoE Router Hook, Unified I/O Scheduler
+%   Top layer: 'Quantization Layer' with IQ4_XS weights (40GB) and KV q4_0 quantization
+%   Arrows showing data flow between layers. Clean technical style, English labels."
+
+\subsection{mmap + MADV\_RANDOM 按需加载机制}
+
+\subsubsection{设计动机}
+
+在传统的 mmap 加载方式下，llama.cpp 使用 \texttt{madvise(WILLNEED)} 提示内核进行顺序预读。对于小模型（如 4B），这能加速 prefill 阶段的顺序访问。但对于 80B 大模型，内核的 readahead 策略会预读大量未使用的页面，导致 8\,GB 环境下的物理内存耗尽和 OOM。
+
+关键观察是：MoE 模型在 decode 阶段的访存具有高度稀疏性。Qwen3-Next-80B 每个 token 仅激活 10/512 个专家，其余 502 个专家的权重完全不需要加载。如果能阻止内核预读这些未激活的页面，物理内存占用可从 45\,GB 降至接近实际访问量（约 2\,GB）。
+
+\subsubsection{机制设计}
+
+在模型加载阶段（\texttt{init\_mappings}），对大于 6\,GB 的 mmap 区域调用 \texttt{posix\_madvise(MADV\_RANDOM)}：
+
+\begin{equation}
+    \texttt{posix\_madvise(addr, size, POSIX\_MADV\_RANDOM)}
+\end{equation}
+
+\texttt{MADV\_RANDOM} 的语义是告诉内核该区域的访问模式是随机的，内核应禁用 readahead，仅在页面被实际访问时触发缺页（page fault）加载。
+
+对于 decode 阶段，每个 token 的前向传播只访问当前层的权重（非 MoE 部分）和被激活的专家权重。MADV\_RANDOM 使得这些访问以 4\,KB 页粒度按需加载，未访问的专家权重完全不占用物理内存。
+
+\subsubsection{prefill/decode 的 tradeoff}
+
+MADV\_RANDOM 在 decode 阶段带来显著加速，但对 prefill 阶段有害。prefill 需要顺序读取所有层的全部权重，MADV\_RANDOM 阻止了内核的顺序预读，导致每个页面都要同步缺页。实测中 prefill 速度下降约 57\%，但 decode 速度提升 200--850\%。
+
+由于交互式推理的主要瓶颈在 decode（逐 token 生成），这一 tradeoff 对实际应用是有利的。系统通过环境变量 \texttt{SLIM\_ARC\_NO\_MADV\_RANDOM=1} 提供了关闭选项，供 prefill-heavy 场景使用。
+
+\subsection{禁用 GGML\_CPU\_REPACK}
+
+\subsubsection{问题发现}
+
+在集成 MADV\_RANDOM 后，80B 模型在 8\,GB 环境下仍然 OOM。通过 \texttt{dmesg} 分析发现，进程的匿名物理内存（\texttt{anon-rss}）达到 8.3\,GB，远超模型权重本身。根因在于 llama.cpp 的 CPU 后端默认启用了 \texttt{GGML\_CPU\_REPACK}（CMake 选项 \texttt{-DGGML\_CPU\_REPACK=ON}），该机制将 Q4\_K 权重重打包为 \texttt{q4\_K\_8x8} 格式以优化 GEMM 的 SIMD 访问模式，但这会在内存中生成一份完整的重打包副本，导致匿名内存翻倍（45\,GB → 90\,GB）。
+
+\subsubsection{解决方案}
+
+通过 CMake 编译选项 \texttt{-DGGML\_CPU\_REPACK=OFF} 禁用重打包，CPU 后端直接使用 mmap 区域中的原始 Q4\_K 权重进行计算。实测验证，禁用 repack 后：
+
+\begin{itemize}
+    \item 80B 模型在 8\,GB 环境下不再 OOM（\texttt{anon-rss} 降至约 1\,GB）
+    \item 热缓存下 decode 性能无损失（repack 的 SIMD 优化对 memory-bound 的 decode 无显著帮助）
+    \item prefill 性能略有下降，但被 MADV\_RANDOM 的 prefill 代价所掩盖
+\end{itemize}
+
+\subsection{层感知预取调度器}
+
+\subsubsection{架构设计}
+
+\texttt{prefetch\_scheduler} 在模型加载时注册所有权重张量的 mmap 地址、大小和层级信息。在每次 \texttt{graph\_compute} 调用时：
+
+\begin{enumerate}
+    \item 遍历计算图节点，提取所有引用的层级（\texttt{blk.\{N\}.*}）
+    \item 对当前层 + 预取窗口内的后续层，调用 \texttt{madvise(WILLNEED)} 提示内核异步预读
+    \item 根据运行时阶段（Prefill/Decode）动态调整预取窗口大小
+\end{enumerate}
+
+Prefill 阶段使用较大的窗口（默认 4 层），因为 prefill 是计算密集型，I/O 可被计算掩盖；Decode 阶段使用较小窗口（1 层），因为 decode 是访存密集型，精确预取更重要。
+
+\subsubsection{MoE Router Hook 与跨层专家预测}
+
+利用 llama.cpp 计算图中 \texttt{ffn\_moe\_topk} 张量包含 Router 输出的 top-k expert IDs 这一特性：
+
+\begin{enumerate}
+    \item 在每次 \texttt{graph\_compute} 完成后，遍历计算图节点，查找名为 \texttt{ffn\_moe\_topk} 的张量
+    \item 读取该张量的 I32 数据（形状为 \texttt{[n\_expert\_used, n\_tokens]}），提取每个 token 的激活专家 ID
+    \item 将当前层的 router 输出缓存到 \texttt{cache\_router\_experts(layer, expert\_ids)}
+    \item 在下一次 \texttt{graph\_compute} 开始时，用上一层的 router 输出预测当前层的激活专家
+    \item 对预测的专家在合并 3D 张量中的对应子区域调用 \texttt{madvise(WILLNEED)}
+\end{enumerate}
+
+由于 Qwen3-Next-80B 的专家权重以 \texttt{[dim, dim, 512]} 的 3D 合并张量存储，每个专家占 \texttt{total\_size / 512} 的连续子区域。通过计算偏移量 \texttt{expert\_addr = base + expert\_id * per\_expert\_size}，可以精确地对单个专家的权重页面发出预取提示。
+
+\subsection{KV Cache 量化}
+
+将 KV Cache 的数据类型从默认的 F16 改为 Q4\_0，使 KV Cache 的内存占用减半。对于 80B 模型在 16K 上下文下，KV Cache 从 6\,GB 降至 3\,GB，为权重缓存腾出更多物理内存。实测 decode 性能提升约 14\%。
+
+\subsection{统一 I/O 带宽预算调度器}
+
+\texttt{unified\_io\_scheduler} 根据运行时阶段（PREFILL\_SHORT, PREFILL\_LONG, DECODE\_SHORT, DECODE\_LONG, MOE\_DECODE）动态分配 I/O 带宽预算：
+
+\begin{table}[H]
+    \centering
+    \caption{统一 I/O 带宽分配比例}
+    \label{tab:budget_ratios}
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{阶段} & \textbf{权重} & \textbf{KV Cache} & \textbf{专家} \\
+        \midrule
+        PREFILL\_SHORT & 60\% & 10\% & 30\% \\
+        PREFILL\_LONG  & 50\% & 20\% & 30\% \\
+        DECODE\_SHORT  & 70\% & 20\% & 10\% \\
+        DECODE\_LONG   & 30\% & 60\% & 10\% \\
+        MOE\_DECODE    & 20\% & 20\% & 60\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+调度器在每个 \texttt{graph\_compute} 周期中调用 \texttt{tick()} 方法，根据当前阶段的预算比例分配 \texttt{madvise(WILLNEED)} 的调用范围，并根据运行时统计信息（权重等待停顿、KV 页面错误、专家预测失败率）自适应调整比例。
+
+% Figure: MoE 专家稀疏性与按需加载示意图
+% Prompt: "A diagram showing MoE expert sparsity: 
+%   Left: 512 expert boxes, only 10 highlighted (activated), 502 grayed out (not needed)
+%   Middle: Arrow showing 'mmap + MADV_RANDOM' converting full 45GB to only ~2GB resident
+%   Right: Physical memory (8GB) with only activated experts loaded, rest stays on SSD
+%   Clean technical style, English labels, showing the 98% sparsity concept."

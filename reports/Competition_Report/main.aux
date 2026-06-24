@@ -1,0 +1,110 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand\HyperFirstAtBeginDocument{\AtBeginDocument}
+\HyperFirstAtBeginDocument{\ifx\hyper@anchor\@undefined
+\global\let\oldcontentsline\contentsline
+\gdef\contentsline#1#2#3#4{\oldcontentsline{#1}{#2}{#3}}
+\global\let\oldnewlabel\newlabel
+\gdef\newlabel#1#2{\newlabelxx{#1}#2}
+\gdef\newlabelxx#1#2#3#4#5#6{\oldnewlabel{#1}{{#2}{#3}}}
+\AtEndDocument{\ifx\hyper@anchor\@undefined
+\let\contentsline\oldcontentsline
+\let\newlabel\oldnewlabel
+\fi}
+\fi}
+\global\let\hyper@last\relax 
+\gdef\HyperFirstAtBeginDocument#1{#1}
+\providecommand*\HyPL@Entry[1]{}
+\HyPL@Entry{0<</S/D>>}
+\providecommand \oddpage@label [2]{}
+\HyPL@Entry{1<</S/D>>}
+\citation{cs231n_conv_nets}
+\@writefile{toc}{\contentsline {section}{\numberline {1}实验目的}{2}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}实验环境}{2}{section.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces 实验环境配置对比\relax }}{2}{table.caption.2}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{tab:env_config}{{1}{2}{实验环境配置对比\relax }{table.caption.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {3}实验原理}{2}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}卷积神经网络中的卷积操作}{2}{subsection.3.1}\protected@file@percent }
+\citation{chellapilla2006high}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces 卷积神经网络中的卷积操作示意图\relax }}{3}{figure.caption.3}\protected@file@percent }
+\newlabel{fig:cnn_arch}{{1}{3}{卷积神经网络中的卷积操作示意图\relax }{figure.caption.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}直接卷积（滑窗法）}{3}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}im2col + GEMM方法}{3}{subsection.3.3}\protected@file@percent }
+\citation{nvidia_cudnn_developer_guide}
+\citation{nvidia_cudnn_api_ref}
+\citation{lavin2016fast}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}cuDNN卷积}{4}{subsection.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {4}实验实现}{4}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}任务1：CUDA直接卷积}{4}{subsection.4.1}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {1}直接卷积Kernel（Shared Memory优化版）}{4}{lstlisting.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}任务2：im2col + GEMM卷积}{5}{subsection.4.2}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {2}im2col Kernel}{5}{lstlisting.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}任务3：cuDNN卷积}{6}{subsection.4.3}\protected@file@percent }
+\@writefile{lol}{\contentsline {lstlisting}{\numberline {3}cuDNN卷积调用关键步骤}{6}{lstlisting.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}实验结果}{6}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}正确性验证}{6}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}图像卷积可视化演示}{6}{subsection.5.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces 风景图像1的卷积效果对比（RGB彩色）\relax }}{7}{figure.caption.4}\protected@file@percent }
+\newlabel{fig:conv_effect_landscape1}{{2}{7}{风景图像1的卷积效果对比（RGB彩色）\relax }{figure.caption.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces 风景图像2的卷积效果对比（RGB彩色）\relax }}{7}{figure.caption.5}\protected@file@percent }
+\newlabel{fig:conv_effect_landscape2}{{3}{7}{风景图像2的卷积效果对比（RGB彩色）\relax }{figure.caption.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces 城市图像的卷积效果对比（RGB彩色）\relax }}{8}{figure.caption.6}\protected@file@percent }
+\newlabel{fig:conv_effect_city}{{4}{8}{城市图像的卷积效果对比（RGB彩色）\relax }{figure.caption.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}RTX 4060 Laptop 实验结果}{8}{subsection.5.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces RTX 4060 卷积性能（stride=1）\relax }}{8}{table.caption.7}\protected@file@percent }
+\newlabel{tab:rtx4060_stride1}{{2}{8}{RTX 4060 卷积性能（stride=1）\relax }{table.caption.7}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces RTX 4060 卷积性能（stride=2）\relax }}{9}{table.caption.8}\protected@file@percent }
+\newlabel{tab:rtx4060_stride2}{{3}{9}{RTX 4060 卷积性能（stride=2）\relax }{table.caption.8}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces RTX 4060 卷积性能（stride=3）\relax }}{9}{table.caption.9}\protected@file@percent }
+\newlabel{tab:rtx4060_stride3}{{4}{9}{RTX 4060 卷积性能（stride=3）\relax }{table.caption.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces RTX 4060上三种方法的GFLOPS对比（stride=1,2,3）\relax }}{10}{figure.caption.10}\protected@file@percent }
+\newlabel{fig:combined_gflops}{{5}{10}{RTX 4060上三种方法的GFLOPS对比（stride=1,2,3）\relax }{figure.caption.10}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces RTX 4060上各方法相对于cuDNN的加速比热力图\relax }}{10}{figure.caption.11}\protected@file@percent }
+\newlabel{fig:speedup_heatmap}{{6}{10}{RTX 4060上各方法相对于cuDNN的加速比热力图\relax }{figure.caption.11}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}A100 实验结果}{10}{subsection.5.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces A100 卷积性能（stride=1）\relax }}{10}{table.caption.12}\protected@file@percent }
+\newlabel{tab:a100_stride1}{{5}{10}{A100 卷积性能（stride=1）\relax }{table.caption.12}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces A100 卷积性能（stride=2）\relax }}{11}{table.caption.13}\protected@file@percent }
+\newlabel{tab:a100_stride2}{{6}{11}{A100 卷积性能（stride=2）\relax }{table.caption.13}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces A100 卷积性能（stride=3）\relax }}{11}{table.caption.14}\protected@file@percent }
+\newlabel{tab:a100_stride3}{{7}{11}{A100 卷积性能（stride=3）\relax }{table.caption.14}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces A100上四种方法的GFLOPS对比\relax }}{11}{figure.caption.15}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces A100上四种方法的GFLOPS对比\relax }}{12}{figure.caption.16}\protected@file@percent }
+\newlabel{fig:a100_gflops}{{8}{12}{A100上四种方法的GFLOPS对比\relax }{figure.caption.16}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces A100上各方法相对于cuDNN的加速比热力图\relax }}{12}{figure.caption.17}\protected@file@percent }
+\newlabel{fig:a100_speedup_heatmap}{{9}{12}{A100上各方法相对于cuDNN的加速比热力图\relax }{figure.caption.17}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}RTX 4060 vs A100 对比}{13}{subsection.5.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces RTX 4060 Laptop vs A100-40GB GFLOPS对比\relax }}{13}{figure.caption.18}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {6}性能分析}{13}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}测量方法与数据波动}{13}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}直接卷积 vs im2col+GEMM}{13}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}stride对性能的影响}{14}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}自实现 vs cuDNN}{14}{subsection.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.5}RTX 4060 vs A100 性能差异}{14}{subsection.6.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.6}深入分析}{14}{subsection.6.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces stride=1时各方法执行时间对比（对数刻度）\relax }}{15}{figure.caption.19}\protected@file@percent }
+\newlabel{fig:grouped_bar}{{11}{15}{stride=1时各方法执行时间对比（对数刻度）\relax }{figure.caption.19}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces 各方法相对于direct\_basic的加速比（右侧截断显示）\relax }}{15}{figure.caption.20}\protected@file@percent }
+\newlabel{fig:diverging_bars}{{12}{15}{各方法相对于direct\_basic的加速比（右侧截断显示）\relax }{figure.caption.20}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces RTX 4060上各方法执行时间随输入规模的变化趋势\relax }}{16}{figure.caption.21}\protected@file@percent }
+\newlabel{fig:area_chart}{{13}{16}{RTX 4060上各方法执行时间随输入规模的变化趋势\relax }{figure.caption.21}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {14}{\ignorespaces 各方法执行时间分布（箱线图+散点，对数刻度）\relax }}{16}{figure.caption.22}\protected@file@percent }
+\newlabel{fig:violin_plot}{{14}{16}{各方法执行时间分布（箱线图+散点，对数刻度）\relax }{figure.caption.22}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {15}{\ignorespaces 四种方法的多维度性能评估雷达图\relax }}{17}{figure.caption.23}\protected@file@percent }
+\newlabel{fig:radar_chart}{{15}{17}{四种方法的多维度性能评估雷达图\relax }{figure.caption.23}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {16}{\ignorespaces RTX 4060与A100性能对比（哑铃图）\relax }}{17}{figure.caption.24}\protected@file@percent }
+\newlabel{fig:dumbbell_plot}{{16}{17}{RTX 4060与A100性能对比（哑铃图）\relax }{figure.caption.24}{}}
+\bibstyle{IEEEtran}
+\bibdata{reference}
+\bibcite{cs231n_conv_nets}{1}
+\bibcite{chellapilla2006high}{2}
+\bibcite{nvidia_cudnn_developer_guide}{3}
+\bibcite{nvidia_cudnn_api_ref}{4}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.7}Nsight性能分析}{18}{subsection.6.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}实验心得与总结}{18}{section.7}\protected@file@percent }
+\bibcite{lavin2016fast}{5}
+\newlabel{LastPage}{{}{19}{}{page.19}{}}
+\xdef\lastpage@lastpage{19}
+\xdef\lastpage@lastpageHy{19}
+\gdef \@abspage@last{20}

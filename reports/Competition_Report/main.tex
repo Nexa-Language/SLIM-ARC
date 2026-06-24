@@ -1,0 +1,169 @@
+\documentclass[a4paper]{article}
+
+\usepackage[UTF8]{ctex}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{listings}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{color}
+\usepackage{indentfirst}
+\setlength{\parindent}{2em}
+\usepackage{zhnumber}
+\usepackage[dvipsnames,table,xcdraw]{xcolor}
+\usepackage{adjustbox}
+\usepackage{subcaption}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[many]{tcolorbox}
+\usepackage{enumitem}
+\usepackage{xeCJK}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{inconsolata}
+\usepackage{cite}
+
+% 设置中文字体 (Noto CJK)
+\setCJKmainfont{Noto Serif CJK SC}
+\setCJKsansfont{Noto Sans CJK SC}
+\setCJKmonofont{Noto Sans Mono CJK SC}
+
+\setlist[itemize]{
+    itemsep=2pt,
+    topsep=4pt,
+    parsep=1pt,
+    leftmargin=3em
+}
+\setlist[itemize,1]{
+    label=\textcolor{orange}{$\blacktriangleright$},
+    font=\color{blue!80!black}\small\bfseries,
+    before={\color{blue!80!black}\small\bfseries}
+}
+\setlist[itemize,2]{
+    label={\normalfont\textbullet},
+    font=\normalfont\normalsize\color{black},
+    before={\color{black}},
+    leftmargin=*
+}
+\setlist[itemize,3]{
+    label={\normalfont$\circ$},
+    font=\normalfont\normalsize,
+    before={},
+    leftmargin=*
+}
+
+\newtcolorbox[auto counter]{myquote}[1][]{
+    colback=gray!5,
+    colframe=gray!30,
+    left=5mm, right=5mm,
+    top=3mm, bottom=3mm,
+    width=0.85\textwidth,
+    center,
+    arc=0mm,
+    boxrule=0.5pt,
+    fontupper=\small\linespread{1.1}\selectfont,
+    before upper={\parindent2em\color{black!40!blue}\itshape\small\kaishu},
+    #1
+}
+
+\newcommand{\projname}{SLIM-ARC: 端侧MoE大模型推理优化}
+\newcommand{\reporttitle}{SLIM-ARC: 内存感知的端侧LLM推理协同优化}
+\newcommand{\stuno}{23336188}
+\newcommand{\authorname}{欧阳易\CJKfontspec{Noto Serif CJK SC}芃}
+\newcommand{\major}{计算机科学与技术}
+\newcommand{\adviser}{赵帅}
+\newcommand{\labdate}{2026年6月}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\kaishu \projname}
+\fancyhead[C]{\kaishu \reporttitle}
+\fancyhead[R]{\kaishu \authorname}
+\fancyfoot[C]{第 \thepage 页，共 \pageref{LastPage} 页}
+
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\definecolor{NavyBlue}{RGB}{0,0,128}
+
+\lstset{
+    language=C,
+    basicstyle=\footnotesize\ttfamily,
+    breaklines=true,
+    keywordstyle=\bfseries\color{blue},
+    morekeywords={__global__,__shared__,__restrict__,cudaMalloc,cudaMemcpy,cudaFree,
+                  cudaEventCreate,cudaEventRecord,cudaEventSynchronize,cudaEventElapsedTime,
+                  cudaEventDestroy,cublasCreate,cublasSgemm,cublasDestroy,
+                  cudnnCreate,cudnnConvolutionForward,cudnnDestroy,
+                  cudnnSetTensor4dDescriptor,cudnnSetFilter4dDescriptor,
+                  cudnnSetConvolution2dDescriptor,cudnnGetConvolutionForwardAlgorithm_v7,
+                  cudnnGetConvolutionForwardWorkspaceSize},
+    emph={},
+    emphstyle=\bfseries\color{Rhodamine},
+    commentstyle=\itshape\color{green!50!black},
+    stringstyle=\bfseries\color{PineGreen!90!black},
+    columns=fullflexible,
+    numbers=left,
+    numbersep=2em,
+    numberstyle=\footnotesize\color{gray},
+    frame=single,
+    framesep=1em,
+    showstringspaces=false,
+    keepspaces=true,
+    backgroundcolor=\color{gray!5},
+    xleftmargin=0.15\linewidth,
+    xrightmargin=0.05\linewidth,
+    captionpos=b,
+    aboveskip=1em,
+    belowskip=1em,
+}
+
+\begin{document}
+
+% 封面
+\begin{titlepage}
+    \centering
+
+    \includegraphics[width=10cm]{figures/SYSULogo.png}
+
+    \vspace{1em}
+    \vspace{1em}
+    {\Large \kaishu \projname \par}
+    \vspace{3em}
+
+    {\fontsize{36pt}{40pt}\kaishu \selectfont \boldmath \reporttitle\par}
+    \vspace*{\fill}
+
+    \begin{center}
+    {\Large
+    \makebox[5em][s]{学号}:\underline{\makebox[15em][c]{\kaishu \stuno}}\\[1em]
+    \makebox[5em][s]{姓名}:\underline{\makebox[15em][c]{\kaishu \authorname}}\\[1em]
+    \makebox[5em][s]{专业}:\underline{\makebox[15em][c]{\kaishu \major}}\\[1em]
+    \makebox[5em][s]{指导教师}:\underline{\makebox[15em][c]{\kaishu \adviser}}\\[1em]
+    \makebox[5em][s]{实验日期}:\underline{\makebox[15em][c]{\kaishu \labdate}}
+    }
+    \end{center}
+
+    \vspace*{\fill}
+\end{titlepage}
+
+% 目录
+\tableofcontents
+\newpage
+
+% 各章节内容
+\input{sections/01_abstract}
+\input{sections/02_background}
+\input{sections/03_core_design}
+\input{sections/04_implementation}
+\input{sections/05_evaluation}
+\input{sections/06_conclusion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{reference}
+
+\end{document}

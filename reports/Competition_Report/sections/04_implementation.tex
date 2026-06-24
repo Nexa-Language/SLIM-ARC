@@ -1,0 +1,127 @@
+% SLIM-ARC: 学术报告 - 实现
+\section{实现}
+
+\subsection{开发环境与基础框架}
+
+SLIM-ARC 基于 upstream llama.cpp（commit 7c90850）构建，采用 C++17 标准，使用 CMake 3.14+ 作为构建系统。开发与测试在 WSL2-Ubuntu 环境下进行，硬件为 Intel i9-13900H（6P+8E 核，20 线程），32\,GB DDR5 RAM，NVMe SSD。
+
+\subsubsection{与 upstream llama.cpp 的集成方式}
+
+由于 llama.cpp 采用 OOP 架构（\texttt{llama-model.cpp}、\texttt{llama-context.cpp}、\texttt{llama-model-loader.cpp}、\texttt{llama-kv-cache.cpp}），SLIM-ARC 的集成涉及对四个核心文件的修改。为保证代码可追溯和可恢复，我们开发了幂等的集成脚本 \texttt{scripts/apply-slim-arc.py}，该脚本通过模式匹配（而非固定行号）自动应用所有 SLIM-ARC 修改，适应 upstream 版本变化。
+
+\subsubsection{cgroups v2 三档环境}
+
+使用 cgroups v2 创建三档隔离环境：
+
+\begin{table}[H]
+    \centering
+    \caption{三档 cgroups v2 环境配置}
+    \label{tab:cgroups_config}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{档位} & \textbf{内存上限} & \textbf{CPU 核} & \textbf{模拟场景} & \textbf{cgroup 路径} \\
+        \midrule
+        Low  & 8\,GB  & 0--3  & 端侧设备 & \texttt{/sys/fs/cgroup/slim-arc-low} \\
+        Mid  & 12\,GB & 0--5  & 中端设备 & \texttt{/sys/fs/cgroup/slim-arc-mid} \\
+        High & 16\,GB & 0--7  & 高端设备 & \texttt{/sys/fs/cgroup/slim-arc-high} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+通过 \texttt{scripts/env/setup-cgroups.sh} 一键配置，使用 \texttt{cgexec} 命令在指定 cgroup 下运行 benchmark。
+
+\subsection{代码模块结构}
+
+SLIM-ARC 的代码由 8 个独立文件组成，分为两类：
+
+\subsubsection{SLIM-ARC 独立模块（6 个文件）}
+
+\begin{enumerate}
+    \item \texttt{slim-arc-prefetch.h/cpp}：层感知预取调度器，核心组件。维护张量注册表（按层索引），在 \texttt{graph\_compute} 时触发 \texttt{madvise(WILLNEED)} 预取。还实现了 MoE 专家张量子区域注册和选择性预取接口。
+    
+    \item \texttt{slim-arc-unified-scheduler.h/cpp}：统一 I/O 带宽预算调度器。根据运行时阶段（5 种 phase）和运行时统计信息，动态分配权重/KV/专家三路 I/O 的带宽比例。每个 \texttt{graph\_compute} 周期调用 \texttt{tick()} 方法。
+    
+    \item \texttt{slim-arc-kv-eviction.h/cpp}：KV Cache 换页管理器。实现了基于注意力分数的 KV Block 驱逐策略（sink + sliding window + cold tier），接口完整但推理流程深度集成为后续工作。
+    
+    \item \texttt{slim-arc-on-demand.h/cpp}：早期尝试的 pread + aligned\_alloc 按需加载方案，因与 backend buffer 架构冲突已禁用，保留作为消融对比。
+\end{enumerate}
+
+\subsubsection{llama.cpp 源文件修改（4 个文件）}
+
+\begin{enumerate}
+    \item \texttt{llama-model-loader.cpp}（+65 行）：
+    \begin{itemize}
+        \item 在 \texttt{init\_mappings()} 中添加 \texttt{posix\_madvise(MADV\_RANDOM)}
+        \item 注册 mmap 区域到全局管理器（用于动态 MADV 切换）
+        \item 创建 \texttt{prefetch\_scheduler} 和 \texttt{unified\_io\_scheduler} 单例
+        \item 注册所有权重张量（含 MoE expert tensor 3D 结构解析）
+        \item 读取 cgroup \texttt{memory.max} 实现自适应跳过
+    \end{itemize}
+    
+    \item \texttt{llama-context.cpp}（+85 行）：
+    \begin{itemize}
+        \item 在 \texttt{graph\_compute()} 开头：收集计算图层范围、调用 \texttt{unified\_scheduler.tick()}、触发专家预取
+        \item 在 \texttt{graph\_compute()} 结尾：从 \texttt{ffn\_moe\_topk} 张量提取 Router 输出的 expert IDs 并缓存
+        \item 动态 MADV 切换（opt-in，默认关闭）
+    \end{itemize}
+    
+    \item \texttt{llama-kv-cache.cpp}（+7 行）：
+    \begin{itemize}
+        \item 在 \texttt{clear()} 方法中添加 \texttt{posix\_madvise(DONTNEED)} 释放 KV Cache 物理页面
+    \end{itemize}
+    
+    \item \texttt{CMakeLists.txt}（+4 行）：添加 SLIM-ARC 源文件到构建目标
+\end{enumerate}
+
+\subsection{环境变量接口}
+
+系统通过环境变量提供细粒度的优化控制，便于消融实验：
+
+\begin{table}[H]
+    \centering
+    \caption{SLIM-ARC 环境变量接口}
+    \label{tab:env_vars}
+    \begin{tabular}{lccp{6cm}}
+        \toprule
+        \textbf{变量} & \textbf{默认} & \textbf{作用} & \textbf{说明} \\
+        \midrule
+        \texttt{SLIM\_ARC\_DISABLE} & 0 & 全关 & 禁用所有 SLIM-ARC 优化，等价 upstream baseline \\
+        \texttt{SLIM\_ARC\_NO\_MADV\_RANDOM} & 0 & 只关 MADV\_RANDOM & 保留 prefetch 但禁用 MADV\_RANDOM \\
+        \texttt{SLIM\_ARC\_NO\_PREFETCH} & 0 & 只关 prefetch & 保留 MADV\_RANDOM 但禁用预取调度器 \\
+        \texttt{SLIM\_ARC\_DYNAMIC\_MADV} & 0 & 开启动态切换 & prefill 时切换到 WILLNEED，decode 时切回 RANDOM \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\subsection{构建与复现流程}
+
+\begin{enumerate}
+    \item \textbf{Clone upstream}：\texttt{git clone --depth 1 https://github.com/ggml-org/llama.cpp.git src/llama-upstream}
+    \item \textbf{Apply SLIM-ARC}：\texttt{python3 scripts/apply-slim-arc.py src/llama-upstream}
+    \item \textbf{Configure cgroups}：\texttt{sudo bash scripts/env/setup-cgroups.sh}
+    \item \textbf{Build}：\texttt{cd src/llama-upstream/build \&\& cmake -DGGML\_CPU\_REPACK=OFF .. \&\& cmake --build . -j}
+    \item \textbf{Run benchmark}：\texttt{bash scripts/bench/run-80b-bench.sh}
+\end{enumerate}
+
+集成脚本 \texttt{apply-slim-arc.py} 的幂等性保证了重复运行的安全性，且基于模式匹配而非固定行号，能适应 upstream 版本更新。
+
+\subsection{模型量化策略}
+
+系统支持多种 GGUF 量化格式，实测最优配置为 IQ4\_XS（4.25 bpw，39.71\,GB）：
+
+\begin{table}[H]
+    \centering
+    \caption{80B 模型量化格式对比}
+    \label{tab:quant_comparison}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{量化} & \textbf{大小} & \textbf{bpw} & \textbf{16GB tg8 (t/s)} & \textbf{32GB tg8 (t/s)} \\
+        \midrule
+        Q4\_K\_M & 45.08\,GB & 4.50 & 1.12 & 1.24 \\
+        \textbf{IQ4\_XS} & \textbf{39.71\,GB} & \textbf{4.25} & \textbf{1.12} & \textbf{2.45} \\
+        Q3\_K\_M & $\sim$35\,GB & 3.50 & --- & --- \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+IQ4\_XS 相比 Q4\_K\_M 减少了 5.4\,GB，在 32\,GB 热缓存环境下显著提升了 page cache 命中率，decode 速度从 1.24\,t/s 提升至 2.45\,t/s（+98\%）。
