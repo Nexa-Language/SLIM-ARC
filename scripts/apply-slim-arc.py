@@ -277,6 +277,46 @@ def patch_context(filepath):
             1)
         print("  added router hook (ffn_moe_topk extraction)")
 
+    # SLIM-ARC Phase 4: StreamingLLM-style KV eviction after decode
+    kv_evict_block = """
+    // SLIM-ARC Phase 4: StreamingLLM-style KV eviction after decode.
+    // Keeps first N tokens (attention sinks) + last W tokens (sliding window),
+    // evicts tokens in between via llama_memory_seq_rm to cap KV memory.
+    // Enabled via SLIM_ARC_KV_EVICT=1, configured by SLIM_ARC_KV_SINK/WINDOW.
+    if (status == GGML_STATUS_SUCCESS && !batched) {
+        static bool kv_evict_enabled = getenv("SLIM_ARC_KV_EVICT") != nullptr;
+        if (kv_evict_enabled) {
+            static int kv_sink  = []{ const char * e = getenv("SLIM_ARC_KV_SINK");  return e ? atoi(e) : 4; }();
+            static int kv_window = []{ const char * e = getenv("SLIM_ARC_KV_WINDOW"); return e ? atoi(e) : 1024; }();
+            static int last_evicted_pos = 0;
+            static bool first_call = true;
+            if (first_call) {
+                fprintf(stderr, "SLIM-ARC KV eviction: ENABLED (sink=%d, window=%d)\\n", kv_sink, kv_window);
+                first_call = false;
+            }
+            llama_pos pos_max = memory->seq_pos_max(0);
+            int seq_len = (int) pos_max + 1;
+            int threshold = kv_sink + kv_window;
+            if (seq_len > threshold) {
+                int p0 = (last_evicted_pos > kv_sink) ? last_evicted_pos : kv_sink;
+                int p1 = seq_len - kv_window;
+                if (p1 > p0) {
+                    memory->seq_rm(0, p0, p1);
+                    last_evicted_pos = p1;
+                    fprintf(stderr, "SLIM-ARC KV eviction: evicted [%d,%d) (seq_len %d->%d)\\n",
+                            p0, p1, seq_len, seq_len - (p1 - p0));
+                }
+            }
+        }
+    }
+"""
+    if 'SLIM_ARC_KV_EVICT' not in content:
+        content = content.replace(
+            "    return status;\n}",
+            kv_evict_block + "    return status;\n}",
+            1)
+        print("  added KV eviction hook (StreamingLLM-style)")
+
     with open(filepath, 'w') as f:
         f.write(content)
 

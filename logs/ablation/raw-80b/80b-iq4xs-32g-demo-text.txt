@@ -1,0 +1,58 @@
+0.00.017.622 I llama_completion: llama backend init
+0.00.017.729 I llama_completion: load the model and apply lora adapter, if any
+0.00.018.195 I common_init_result: fitting params to device memory ...
+0.00.018.295 I common_init_result: (for bugs during this step try to reproduce them with -fit off, or provide --verbose logs if the bug only occurs with -fit on)
+0.00.511.586 I common_params_fit_impl: projected to use 40898 MiB of host memory vs. 32096 MiB of total host memory
+0.00.512.416 W common_fit_params: failed to fit params to free device memory: was unable to fit model into system memory by reducing context, abort
+0.00.796.377 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.38.829.590 W llama_context: n_ctx_seq (256) < n_ctx_train (262144) -- the full capacity of the model will not be utilized
+0.39.144.692 I common_init_from_params: warming up the model with an empty run - please wait ... (--no-warmup to disable)
+0.41.854.821 I llama_completion: llama threadpool init, n_threads = 8
+0.41.855.024 I llama_completion: chat template is available, enabling conversation mode (disable it with -no-cnv)
+0.41.855.043 W *** User-specified prompt will pre-start conversation, did you mean to set --system-prompt (-sys) instead?
+0.41.857.519 I llama_completion: chat template example:
+<|im_start|>system
+You are a helpful assistant<|im_end|>
+<|im_start|>user
+Hello<|im_end|>
+<|im_start|>assistant
+Hi there<|im_end|>
+<|im_start|>user
+How are you?<|im_end|>
+<|im_start|>assistant
+
+0.41.857.560 I 
+0.41.857.720 I system_info: n_threads = 8 (n_threads_batch = 8) / 12 | CPU : SSE3 = 1 | SSSE3 = 1 | AVX = 1 | AVX_VNNI = 1 | AVX2 = 1 | F16C = 1 | FMA = 1 | BMI2 = 1 | LLAMAFILE = 1 | OPENMP = 1 | 
+0.41.857.747 I 
+0.41.858.345 I llama_completion: interactive mode on.
+0.41.858.420 I sampler seed: 2444289178
+0.41.858.432 I sampler params: 
+	repeat_last_n = 64, repeat_penalty = 1.000, frequency_penalty = 0.000, presence_penalty = 0.000
+	dry_multiplier = 0.000, dry_base = 1.750, dry_allowed_length = 2, dry_penalty_last_n = -1
+	top_k = 20, top_p = 0.800, min_p = 0.050, xtc_probability = 0.000, xtc_threshold = 0.100, typical_p = 1.000, top_n_sigma = -1.000, temp = 0.700
+	mirostat = 0, mirostat_lr = 0.100, mirostat_ent = 5.000, adaptive_target = -1.000, adaptive_decay = 0.900
+0.41.858.465 I sampler chain: logits -> ?penalties -> ?dry -> ?top-n-sigma -> top-k -> ?typical -> top-p -> min-p -> ?xtc -> temp-ext -> dist 
+0.41.858.466 I generate: n_ctx = 256, n_batch = 2048, n_predict = 48, n_keep = 0
+0.41.858.466 I 
+0.41.858.467 I == Running in interactive mode. ==
+0.41.858.468 I  - Press Ctrl+C to interject at any time.
+0.41.858.469 I  - Press Return to return control to the AI.
+ - To return control without starting a new line, end your input with '/'.
+ - If you want to submit another line, end your input with '\'.
+0.41.858.469 I  - Not using system message. To change it, set a different value via -sys PROMPT
+0.41.858.469 I 
+user
+The capital of China is Beijing. It is a
+assistant
+The capital of China is Beijing. It is a major political, cultural, historical, and economic center of the country. As the seat of the Chinese government and home to the State Council, the National People's Congress, and the Chinese Communist
+> EOF by user
+
+
+1.35.552.689 I common_perf_print:    sampling time =      26.27 ms
+1.35.552.691 I common_perf_print:    samplers time =      10.47 ms /    66 tokens
+1.35.552.771 I common_perf_print:        load time =   41246.27 ms
+1.35.552.776 I common_perf_print: prompt eval time =   18976.94 ms /    18 tokens ( 1054.27 ms per token,     0.95 tokens per second)
+1.35.552.779 I common_perf_print:        eval time =   30199.54 ms /    47 runs   (  642.54 ms per token,     1.56 tokens per second)
+1.35.552.780 I common_perf_print:       total time =   49604.84 ms /    65 tokens
+1.35.552.782 I common_perf_print: unaccounted time =     402.09 ms /   0.8 %      (total - sampling - prompt eval - eval) / (total)
+1.35.552.783 I common_perf_print:    graphs reused =         47
