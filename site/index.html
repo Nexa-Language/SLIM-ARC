@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLIM-ARC | Synergistic LLM Integration with Memory-Aware Runtime Co-Optimization</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="icon" href="assets/logo_nobg.png">
+</head>
+<body>
+    <!-- 粒子背景 -->
+    <canvas id="particle-canvas"></canvas>
+    
+    <!-- 导航 -->
+    <nav class="nav">
+        <div class="nav-logo">
+            <img src="assets/logo_nobg.png" alt="SLIM-ARC" class="nav-logo-img">
+            <span class="nav-title">SLIM-ARC</span>
+        </div>
+        <div class="nav-links">
+            <a href="index.html" class="active">首页</a>
+            <a href="architecture.html">架构</a>
+            <a href="benchmark.html">基准测试</a>
+            <a href="team.html">团队</a>
+            <a href="https://github.com/Nexa-Language/SLIM-ARC" target="_blank" class="nav-github">GitHub</a>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="hero">
+        <div class="hero-content">
+            <div class="hero-badge">OS挑战赛 Proj 59 · 中山大学</div>
+            <h1 class="hero-title">
+                <span class="gradient-text">SLIM-ARC</span>
+            </h1>
+            <p class="hero-subtitle">Synergistic LLM Integration with Memory-Aware Runtime Co-Optimization for On-Device Agents</p>
+            <p class="hero-desc">让 80B MoE 大模型在 8GB 内存端侧设备上流畅运行</p>
+            <div class="hero-cta">
+                <a href="architecture.html" class="btn btn-primary">探索架构 →</a>
+                <a href="benchmark.html" class="btn btn-secondary">查看数据</a>
+            </div>
+        </div>
+        <div class="hero-visual">
+            <div class="floating-card card-1">
+                <div class="card-value">64.5×</div>
+                <div class="card-label">累计加速</div>
+            </div>
+            <div class="floating-card card-2">
+                <div class="card-value">5.16</div>
+                <div class="card-label">tokens/s (32GB)</div>
+            </div>
+            <div class="floating-card card-3">
+                <div class="card-value">+71.4%</div>
+                <div class="card-label">FlashAttention</div>
+            </div>
+            <div class="floating-card card-4">
+                <div class="card-value">2GB</div>
+                <div class="card-label">RSS (vs 45GB)</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 核心数据 -->
+    <section class="stats">
+        <h2 class="section-title">核心成果</h2>
+        <div class="stats-grid">
+            <div class="stat-card reveal">
+                <div class="stat-number" data-target="850" data-suffix="%">0</div>
+                <div class="stat-desc">8GB 环境解码加速<br><span class="stat-sub">vs baseline (0.08→0.76 t/s)</span></div>
+            </div>
+            <div class="stat-card reveal">
+                <div class="stat-number" data-target="98" data-suffix="%">0</div>
+                <div class="stat-desc">物理内存节省<br><span class="stat-sub">MADV_RANDOM 按需加载</span></div>
+            </div>
+            <div class="stat-card reveal">
+                <div class="stat-number" data-target="75" data-suffix="%">0</div>
+                <div class="stat-desc">GSM8K 精度保持<br><span class="stat-sub">Qwen3-4B Q4_K_M</span></div>
+            </div>
+            <div class="stat-card reveal">
+                <div class="stat-number" data-target="30" data-suffix="+">0</div>
+                <div class="stat-desc">引用论文<br><span class="stat-sub">NeurIPS/ICLR/USENIX</span></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 技术亮点 -->
+    <section class="features">
+        <h2 class="section-title">技术亮点</h2>
+        <div class="features-grid">
+            <div class="feature-card reveal">
+                <div class="feature-icon">🧠</div>
+                <h3>MoE 稀疏性 × OS 虚拟内存</h3>
+                <p>通过 <code>posix_madvise(MADV_RANDOM)</code> 让内核 demand paging 与 MoE Router 2% 激活率天然匹配，仅加载被激活的专家权重。</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon">⚡</div>
+                <h3>FlashAttention 集成</h3>
+                <p>IO-aware tiling 融合，将 attention 的 QK<sup>T</sup> 和 softmax(P)V 合并为单 kernel，decode 吞吐 +71.4%。</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon">💾</div>
+                <h3>StreamingLLM KV Eviction</h3>
+                <p>sink + sliding window 驱逐策略，KV 内存从 O(L) 降至 O(1)，80B decode +9.6%。</p>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon">📊</div>
+                <h3>量化精度边界发现</h3>
+                <p>首次用 GSM8K ALEM 协议发现 IQ4_XS 保持语言流畅但推理崩溃，为端侧模型选择提供指导。</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- 优化链 -->
+    <section class="optimization-chain">
+        <h2 class="section-title">优化链：0.08 → 5.16 t/s</h2>
+        <div class="chain-container">
+            <div class="chain-step reveal">
+                <div class="chain-bar" style="height: 8%"></div>
+                <div class="chain-label">Baseline</div>
+                <div class="chain-value">0.08 t/s</div>
+            </div>
+            <div class="chain-arrow">→</div>
+            <div class="chain-step reveal">
+                <div class="chain-bar" style="height: 15%"></div>
+                <div class="chain-label">+MADV_RANDOM</div>
+                <div class="chain-value">0.42 t/s</div>
+            </div>
+            <div class="chain-arrow">→</div>
+            <div class="chain-step reveal">
+                <div class="chain-bar" style="height: 25%"></div>
+                <div class="chain-label">+KV q4_0</div>
+                <div class="chain-value">0.76 t/s</div>
+            </div>
+            <div class="chain-arrow">→</div>
+            <div class="chain-step reveal">
+                <div class="chain-bar" style="height: 60%"></div>
+                <div class="chain-label">+IQ4_XS</div>
+                <div class="chain-value">2.45 t/s</div>
+            </div>
+            <div class="chain-arrow">→</div>
+            <div class="chain-step reveal highlight">
+                <div class="chain-bar" style="height: 100%"></div>
+                <div class="chain-label">+FlashAttention</div>
+                <div class="chain-value">5.16 t/s</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta">
+        <h2 class="section-title">深入了解</h2>
+        <div class="cta-grid">
+            <a href="architecture.html" class="cta-card">
+                <h3>系统架构 →</h3>
+                <p>三层设计：内核协同层、运行时调度层、量化优化层</p>
+            </a>
+            <a href="benchmark.html" class="cta-card">
+                <h3>实验数据 →</h3>
+                <p>三档环境性能、GSM8K 精度、消融实验</p>
+            </a>
+            <a href="https://github.com/Nexa-Language/SLIM-ARC" target="_blank" class="cta-card">
+                <h3>源代码 →</h3>
+                <p>完整可复现的 SLIM-ARC 实现</p>
+            </a>
+        </div>
+    </section>
+
+    <footer class="footer">
+        <p>SLIM-ARC · 2026 全国大学生系统能力大赛操作系统设计赛 Proj 59</p>
+        <p>中山大学 · 依托Agent答辩OS团队</p>
+    </footer>
+
+    <script src="js/particles.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>
