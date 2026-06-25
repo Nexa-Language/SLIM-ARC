@@ -2,6 +2,42 @@
 
 ---
 
+## 2026-06-25 FlashAttention + GSM8K 标准benchmark测试
+
+### 变更描述
+按综述 ALEM 协议测试 FlashAttention 和 GSM8K 精度。
+
+### FlashAttention 测试（80B IQ4_XS, 32GB, 8 threads, KV q4_0）
+| 配置 | pp64 t/s | tg48 t/s | vs baseline |
+|------|---------|---------|------------|
+| baseline (无 -fa) | 5.89 | 3.01 | --- |
+| -fa on | 6.64 | 3.90 | +29.6% |
+| **-fa auto (默认)** | **12.99** | **5.16** | **+71.4%** |
+
+**关键发现**: `-fa auto` 让模型自选最优 attention 实现，tg48 达 5.16 t/s（+71.4%）。FlashAttention 通过 IO-aware tiling 融合显著减少 decode 的内存读写。
+
+### GSM8K 精度测试（8-shot, temp=0.2, top_p=0.95）
+| 模型 | 量化 | Accuracy | Throughput | 说明 |
+|------|------|---------|-----------|------|
+| Qwen3-4B | Q4_K_M | **15/20 = 75%** | 7.8 tok/s | 数学推理保持 |
+| Qwen3-Next-80B | IQ4_XS + KV q4_0 | **0/10 = 0%** | 1.7 tok/s | **推理能力崩溃** |
+
+**关键发现**: IQ4_XS + KV q4_0 在 80B 上导致数学推理能力完全崩溃（0%），但语言流畅性保持。典型表现：计算正确但最终答案写错（"2+1=3, The answer is 2"）。说明极端量化对 MoE 推理的损害远大于语言建模。
+
+### 结论
+1. FlashAttention (`-fa auto`) 是高收益零成本优化，应作为默认配置
+2. 量化对精度的影响需要按任务类型评估：语言建模 OK ≠ 推理 OK
+3. GSM8K 是比 PPL 更敏感的精度代理指标
+4. 比赛展示应区分"流畅生成"和"精确推理"两个场景
+
+### 涉及文件
+- `scripts/bench/run-gsm8k-api.py`（GSM8K API 测试脚本）
+- `data/benchmarks/gsm8k/gsm8k_test.jsonl`（标准测试集）
+- `logs/gsm8k_qwen3_4b_20q.jsonl` + `logs/gsm8k_80b_10q.jsonl`
+- `logs/ablation/raw-80b/80b-32g-flashattn-*.txt`
+
+---
+
 ## 2026-06-24 Speculative Decoding 调研：MoE 80B 净负收益
 
 ### 变更描述

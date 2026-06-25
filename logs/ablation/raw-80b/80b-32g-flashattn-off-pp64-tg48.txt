@@ -1,0 +1,3 @@
+| model                          |       size |     params | backend    | threads | type_k | type_v |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | -----: | -----: | --: | --------------: | -------------------: |
+llama_bench: error: failed to create context with model '../../data/models/Qwen3-Next-80B-A3B-Instruct-IQ4_XS.gguf'

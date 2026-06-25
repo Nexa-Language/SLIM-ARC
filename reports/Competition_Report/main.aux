@@ -18,153 +18,159 @@
 \HyPL@Entry{0<</S/D>>}
 \providecommand \oddpage@label [2]{}
 \HyPL@Entry{1<</S/D>>}
-\@writefile{toc}{\contentsline {section}{\numberline {1}摘要}{3}{section.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {2}背景与相关工作}{3}{section.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}端侧 LLM 推理的内存墙挑战}{3}{subsection.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {1}摘要}{4}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}背景与相关工作}{4}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}端侧 LLM 推理的内存墙挑战}{4}{subsection.2.1}\protected@file@percent }
 \citation{flexinfer2025}
 \citation{dualblade2024}
 \citation{hillinfer2024}
 \citation{scoutattention2024}
 \citation{mobilemoe2024}
 \citation{moeprism2024}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}MoE 模型的稀疏性机遇}{4}{subsection.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}相关工作}{4}{subsection.2.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.1}FlexInfer}{4}{subsubsection.2.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.2}DUAL-BLADE}{4}{subsubsection.2.3.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.3}HillInfer}{4}{subsubsection.2.3.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.4}ScoutAttention}{4}{subsubsection.2.3.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.5}MobileMoE}{4}{subsubsection.2.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}MoE 模型的稀疏性机遇}{5}{subsection.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}相关工作}{5}{subsection.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.1}FlexInfer}{5}{subsubsection.2.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.2}DUAL-BLADE}{5}{subsubsection.2.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.3}HillInfer}{5}{subsubsection.2.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.4}ScoutAttention}{5}{subsubsection.2.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.5}MobileMoE}{5}{subsubsection.2.3.5}\protected@file@percent }
 \citation{powerinfer2_2024}
 \citation{survey2024}
 \citation{flexinfer-optimize}
 \citation{llamacpp2024}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.6}MoE-Prism}{5}{subsubsection.2.3.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.7}PowerInfer-2}{5}{subsubsection.2.3.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.8}端侧 LLM 综述}{5}{subsubsection.2.3.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.9}llama.cpp 的 mmap 机制}{5}{subsubsection.2.3.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.10}GGUF 量化格式}{5}{subsubsection.2.3.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}问题定义与期望解决方法}{5}{subsection.2.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {3}核心设计}{6}{section.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}整体架构}{6}{subsection.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}mmap + MADV\_RANDOM 按需加载机制}{6}{subsection.3.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.1}设计动机}{6}{subsubsection.3.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.2}机制设计}{6}{subsubsection.3.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.3}prefill/decode 的 tradeoff}{6}{subsubsection.3.2.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}禁用 GGML\_CPU\_REPACK}{7}{subsection.3.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.1}问题发现}{7}{subsubsection.3.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.2}解决方案}{7}{subsubsection.3.3.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}层感知预取调度器}{7}{subsection.3.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.1}架构设计}{7}{subsubsection.3.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.2}MoE Router Hook 与跨层专家预测}{7}{subsubsection.3.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}KV Cache 量化}{8}{subsection.3.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}统一 I/O 带宽预算调度器}{8}{subsection.3.6}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces 统一 I/O 带宽分配比例\relax }}{8}{table.caption.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.6}MoE-Prism}{6}{subsubsection.2.3.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.7}PowerInfer-2}{6}{subsubsection.2.3.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.8}端侧 LLM 综述}{6}{subsubsection.2.3.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.9}llama.cpp 的 mmap 机制}{6}{subsubsection.2.3.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.10}GGUF 量化格式}{6}{subsubsection.2.3.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}问题定义与期望解决方法}{6}{subsection.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}核心设计}{7}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}整体架构}{7}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}mmap + MADV\_RANDOM 按需加载机制}{7}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.1}设计动机}{7}{subsubsection.3.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.2}机制设计}{7}{subsubsection.3.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.3}prefill/decode 的 tradeoff}{7}{subsubsection.3.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}禁用 GGML\_CPU\_REPACK}{8}{subsection.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.1}问题发现}{8}{subsubsection.3.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.2}解决方案}{8}{subsubsection.3.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}层感知预取调度器}{8}{subsection.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.1}架构设计}{8}{subsubsection.3.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.2}MoE Router Hook 与跨层专家预测}{8}{subsubsection.3.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}KV Cache 量化}{9}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}统一 I/O 带宽预算调度器}{9}{subsection.3.6}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces 统一 I/O 带宽分配比例\relax }}{9}{table.caption.2}\protected@file@percent }
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{tab:budget_ratios}{{1}{8}{统一 I/O 带宽分配比例\relax }{table.caption.2}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}实现}{8}{section.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}开发环境与基础框架}{8}{subsection.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.1}与 upstream llama.cpp 的集成方式}{8}{subsubsection.4.1.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.2}cgroups v2 三档环境}{8}{subsubsection.4.1.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces 三档 cgroups v2 环境配置\relax }}{9}{table.caption.3}\protected@file@percent }
-\newlabel{tab:cgroups_config}{{2}{9}{三档 cgroups v2 环境配置\relax }{table.caption.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}代码模块结构}{9}{subsection.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.1}SLIM-ARC 独立模块（6 个文件）}{9}{subsubsection.4.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.2}llama.cpp 源文件修改（4 个文件）}{9}{subsubsection.4.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}环境变量接口}{10}{subsection.4.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces SLIM-ARC 环境变量接口\relax }}{10}{table.caption.4}\protected@file@percent }
-\newlabel{tab:env_vars}{{3}{10}{SLIM-ARC 环境变量接口\relax }{table.caption.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}构建与复现流程}{10}{subsection.4.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}模型量化策略}{10}{subsection.4.5}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces 80B 模型量化格式对比\relax }}{10}{table.caption.5}\protected@file@percent }
-\newlabel{tab:quant_comparison}{{4}{10}{80B 模型量化格式对比\relax }{table.caption.5}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}实验评估}{11}{section.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}实验设置}{11}{subsection.5.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.1}硬件与软件环境}{11}{subsubsection.5.1.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces 实验环境配置\relax }}{11}{table.caption.6}\protected@file@percent }
-\newlabel{tab:eval_env}{{5}{11}{实验环境配置\relax }{table.caption.6}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.2}测试模型}{11}{subsubsection.5.1.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces 测试模型规格\relax }}{11}{table.caption.7}\protected@file@percent }
-\newlabel{tab:eval_models}{{6}{11}{测试模型规格\relax }{table.caption.7}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.3}测试方法}{11}{subsubsection.5.1.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}核心实验：80B 在三档环境下的性能}{12}{subsection.5.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.1}Q4\_K\_M 量化（45\,GB）}{12}{subsubsection.5.2.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces Qwen3-Next-80B Q4\_K\_M 三档环境性能对比\relax }}{12}{table.caption.8}\protected@file@percent }
-\newlabel{tab:q4km_3tier}{{7}{12}{Qwen3-Next-80B Q4\_K\_M 三档环境性能对比\relax }{table.caption.8}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces SLIM-ARC 性能全景：(a) 三档环境 decode 对比，(b) 优化堆叠瀑布图，(c) 量化格式对比，(d) prefill vs decode 权衡\relax }}{13}{figure.caption.9}\protected@file@percent }
-\newlabel{fig:landscape}{{1}{13}{SLIM-ARC 性能全景：(a) 三档环境 decode 对比，(b) 优化堆叠瀑布图，(c) 量化格式对比，(d) prefill vs decode 权衡\relax }{figure.caption.9}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}IQ4\_XS 量化（40\,GB）}{13}{subsubsection.5.2.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Qwen3-Next-80B IQ4\_XS 性能对比\relax }}{13}{table.caption.10}\protected@file@percent }
-\newlabel{tab:iq4xs_results}{{8}{13}{Qwen3-Next-80B IQ4\_XS 性能对比\relax }{table.caption.10}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}端到端文本生成验证}{13}{subsubsection.5.2.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}消融实验}{14}{subsection.5.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.1}四组单点消融（80B Q4\_K\_M, 8\,GB, pp16+tg4）}{14}{subsubsection.5.3.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces 四组单点消融实验结果\relax }}{14}{table.caption.11}\protected@file@percent }
-\newlabel{tab:ablation_4way}{{9}{14}{四组单点消融实验结果\relax }{table.caption.11}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces 四组单点消融：diverging bar 展示各组件对 prefill 和 decode 的贡献（正=加速，负=减速）\relax }}{14}{figure.caption.12}\protected@file@percent }
-\newlabel{fig:ablation_4way}{{2}{14}{四组单点消融：diverging bar 展示各组件对 prefill 和 decode 的贡献（正=加速，负=减速）\relax }{figure.caption.12}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.2}6\,GB 环境验证}{15}{subsubsection.5.3.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces 80B 6\,GB 环境验证（pp4+tg1）\relax }}{15}{table.caption.13}\protected@file@percent }
-\newlabel{tab:eval_6gb}{{10}{15}{80B 6\,GB 环境验证（pp4+tg1）\relax }{table.caption.13}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}小模型实验}{15}{subsection.5.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.1}Qwen3-4B（Dense, 2.4\,GB）}{15}{subsubsection.5.4.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Qwen3-4B 三档冷启动消融（pp64+tg16）\relax }}{15}{table.caption.14}\protected@file@percent }
-\newlabel{tab:eval_qwen3_4b}{{11}{15}{Qwen3-4B 三档冷启动消融（pp64+tg16）\relax }{table.caption.14}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.2}OLMoE-1B-7B（MoE, 3.9\,GB）}{16}{subsubsection.5.4.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces OLMoE 三档冷启动消融（pp64+tg16）\relax }}{16}{table.caption.15}\protected@file@percent }
-\newlabel{tab:eval_olmoe}{{12}{16}{OLMoE 三档冷启动消融（pp64+tg16）\relax }{table.caption.15}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}数据波动分析}{16}{subsection.5.5}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces (a) 数据波动箱线图+散点 (b) 多维度优化评估雷达图\relax }}{16}{figure.caption.16}\protected@file@percent }
-\newlabel{fig:volatility}{{3}{16}{(a) 数据波动箱线图+散点 (b) 多维度优化评估雷达图\relax }{figure.caption.16}{}}
+\newlabel{tab:budget_ratios}{{1}{9}{统一 I/O 带宽分配比例\relax }{table.caption.2}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}实现}{9}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}开发环境与基础框架}{9}{subsection.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.1}与 upstream llama.cpp 的集成方式}{9}{subsubsection.4.1.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.2}cgroups v2 三档环境}{9}{subsubsection.4.1.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces 三档 cgroups v2 环境配置\relax }}{10}{table.caption.3}\protected@file@percent }
+\newlabel{tab:cgroups_config}{{2}{10}{三档 cgroups v2 环境配置\relax }{table.caption.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}代码模块结构}{10}{subsection.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.1}SLIM-ARC 独立模块（6 个文件）}{10}{subsubsection.4.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.2}llama.cpp 源文件修改（4 个文件）}{10}{subsubsection.4.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}环境变量接口}{11}{subsection.4.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces SLIM-ARC 环境变量接口\relax }}{11}{table.caption.4}\protected@file@percent }
+\newlabel{tab:env_vars}{{3}{11}{SLIM-ARC 环境变量接口\relax }{table.caption.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}构建与复现流程}{11}{subsection.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}模型量化策略}{11}{subsection.4.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces 80B 模型量化格式对比\relax }}{11}{table.caption.5}\protected@file@percent }
+\newlabel{tab:quant_comparison}{{4}{11}{80B 模型量化格式对比\relax }{table.caption.5}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}实验评估}{12}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}FlashAttention 优化}{12}{subsection.5.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces FlashAttention 对 80B IQ4\_XS 性能影响（32\,GB, 8 threads, KV q4\_0, pp64+tg48）\relax }}{12}{table.caption.6}\protected@file@percent }
+\newlabel{tab:eval_flashattn}{{5}{12}{FlashAttention 对 80B IQ4\_XS 性能影响（32\,GB, 8 threads, KV q4\_0, pp64+tg48）\relax }{table.caption.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}实验设置}{12}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.1}硬件与软件环境}{12}{subsubsection.5.2.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces 实验环境配置\relax }}{12}{table.caption.7}\protected@file@percent }
+\newlabel{tab:eval_env}{{6}{12}{实验环境配置\relax }{table.caption.7}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}测试模型}{12}{subsubsection.5.2.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces 测试模型规格\relax }}{12}{table.caption.8}\protected@file@percent }
+\newlabel{tab:eval_models}{{7}{12}{测试模型规格\relax }{table.caption.8}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}测试方法}{13}{subsubsection.5.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}核心实验：80B 在三档环境下的性能}{13}{subsection.5.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.1}Q4\_K\_M 量化（45\,GB）}{13}{subsubsection.5.3.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Qwen3-Next-80B Q4\_K\_M 三档环境性能对比\relax }}{13}{table.caption.9}\protected@file@percent }
+\newlabel{tab:q4km_3tier}{{8}{13}{Qwen3-Next-80B Q4\_K\_M 三档环境性能对比\relax }{table.caption.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces SLIM-ARC 性能全景：(a) 三档环境 decode 对比，(b) 优化堆叠瀑布图，(c) 量化格式对比，(d) prefill vs decode 权衡\relax }}{14}{figure.caption.10}\protected@file@percent }
+\newlabel{fig:landscape}{{1}{14}{SLIM-ARC 性能全景：(a) 三档环境 decode 对比，(b) 优化堆叠瀑布图，(c) 量化格式对比，(d) prefill vs decode 权衡\relax }{figure.caption.10}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.2}IQ4\_XS 量化（40\,GB）}{14}{subsubsection.5.3.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Qwen3-Next-80B IQ4\_XS 性能对比\relax }}{14}{table.caption.11}\protected@file@percent }
+\newlabel{tab:iq4xs_results}{{9}{14}{Qwen3-Next-80B IQ4\_XS 性能对比\relax }{table.caption.11}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.3}端到端文本生成验证}{14}{subsubsection.5.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}消融实验}{15}{subsection.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.1}四组单点消融（80B Q4\_K\_M, 8\,GB, pp16+tg4）}{15}{subsubsection.5.4.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces 四组单点消融实验结果\relax }}{15}{table.caption.12}\protected@file@percent }
+\newlabel{tab:ablation_4way}{{10}{15}{四组单点消融实验结果\relax }{table.caption.12}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces 四组单点消融：diverging bar 展示各组件对 prefill 和 decode 的贡献（正=加速，负=减速）\relax }}{15}{figure.caption.13}\protected@file@percent }
+\newlabel{fig:ablation_4way}{{2}{15}{四组单点消融：diverging bar 展示各组件对 prefill 和 decode 的贡献（正=加速，负=减速）\relax }{figure.caption.13}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.2}6\,GB 环境验证}{16}{subsubsection.5.4.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces 80B 6\,GB 环境验证（pp4+tg1）\relax }}{16}{table.caption.14}\protected@file@percent }
+\newlabel{tab:eval_6gb}{{11}{16}{80B 6\,GB 环境验证（pp4+tg1）\relax }{table.caption.14}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}小模型实验}{16}{subsection.5.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.1}Qwen3-4B（Dense, 2.4\,GB）}{16}{subsubsection.5.5.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces Qwen3-4B 三档冷启动消融（pp64+tg16）\relax }}{16}{table.caption.15}\protected@file@percent }
+\newlabel{tab:eval_qwen3_4b}{{12}{16}{Qwen3-4B 三档冷启动消融（pp64+tg16）\relax }{table.caption.15}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.2}OLMoE-1B-7B（MoE, 3.9\,GB）}{17}{subsubsection.5.5.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces OLMoE 三档冷启动消融（pp64+tg16）\relax }}{17}{table.caption.16}\protected@file@percent }
+\newlabel{tab:eval_olmoe}{{13}{17}{OLMoE 三档冷启动消融（pp64+tg16）\relax }{table.caption.16}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}数据波动分析}{17}{subsection.5.6}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces (a) 数据波动箱线图+散点 (b) 多维度优化评估雷达图\relax }}{17}{figure.caption.17}\protected@file@percent }
+\newlabel{fig:volatility}{{3}{17}{(a) 数据波动箱线图+散点 (b) 多维度优化评估雷达图\relax }{figure.caption.17}{}}
 \citation{streamingllm2024}
 \citation{solidattention2026}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}KV Cache 量化效果}{17}{subsection.5.6}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces KV Cache 量化类型对比（80B 16\,GB, 8 线程）\relax }}{17}{table.caption.17}\protected@file@percent }
-\newlabel{tab:eval_kv_quant}{{13}{17}{KV Cache 量化类型对比（80B 16\,GB, 8 线程）\relax }{table.caption.17}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}StreamingLLM KV Eviction}{17}{subsection.5.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.7.1}机制}{17}{subsubsection.5.7.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.7.2}验证结果（Qwen3-4B, 32\,GB, 4 threads, n=300）}{17}{subsubsection.5.7.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces KV Eviction 消融（Qwen3-4B-Q4\_K\_M, sink=4, window=256）\relax }}{17}{table.caption.18}\protected@file@percent }
-\newlabel{tab:eval_kv_evict}{{14}{17}{KV Eviction 消融（Qwen3-4B-Q4\_K\_M, sink=4, window=256）\relax }{table.caption.18}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.7.3}80B eviction 消融（IQ4\_XS, 32\,GB, 8 threads, KV q4\_0）}{18}{subsubsection.5.7.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces 80B KV Eviction 消融（sink=4, window=32, pp64+tg48）\relax }}{18}{table.caption.19}\protected@file@percent }
-\newlabel{tab:eval_kv_evict_80b}{{15}{18}{80B KV Eviction 消融（sink=4, window=32, pp64+tg48）\relax }{table.caption.19}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces 优化技术渐进提升：从 baseline 到 IQ4\_XS + KV q4\_0 + eviction 的完整优化链\relax }}{18}{figure.caption.20}\protected@file@percent }
-\newlabel{fig:opt_dumbbell}{{4}{18}{优化技术渐进提升：从 baseline 到 IQ4\_XS + KV q4\_0 + eviction 的完整优化链\relax }{figure.caption.20}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces (a) KV Cache 量化类型对比（带误差棒） (b) 线程数扩展性分析\relax }}{18}{figure.caption.21}\protected@file@percent }
-\newlabel{fig:kv_quant}{{5}{18}{(a) KV Cache 量化类型对比（带误差棒） (b) 线程数扩展性分析\relax }{figure.caption.21}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.8}模型精度验证}{19}{subsection.5.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.8.1}Qwen3-4B-Q4\_K\_M 困惑度}{19}{subsubsection.5.8.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces Qwen3-4B-Q4\_K\_M 在 WikiTest-2 上的困惑度（n\_ctx=2048, 前 32 chunks）\relax }}{19}{table.caption.22}\protected@file@percent }
-\newlabel{tab:eval_ppl}{{16}{19}{Qwen3-4B-Q4\_K\_M 在 WikiTest-2 上的困惑度（n\_ctx=2048, 前 32 chunks）\relax }{table.caption.22}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.9}Speculative Decoding 负面结果}{19}{subsection.5.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.9.1}实验配置}{19}{subsubsection.5.9.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.9.2}结果}{19}{subsubsection.5.9.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {17}{\ignorespaces Speculative Decoding 负面结果（80B MoE, self-draft, ngram-simple）\relax }}{19}{table.caption.23}\protected@file@percent }
-\newlabel{tab:eval_spec_dec}{{17}{19}{Speculative Decoding 负面结果（80B MoE, self-draft, ngram-simple）\relax }{table.caption.23}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}总结与未来展望}{20}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}工作总结}{20}{subsection.6.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.1.1}核心技术贡献}{20}{subsubsection.6.1.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.1.2}实验验证}{20}{subsubsection.6.1.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}诚实评估与局限性}{21}{subsection.6.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.1}prefetch\_scheduler 的冗余}{21}{subsubsection.6.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.2}数据波动问题}{21}{subsubsection.6.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.3}Phase 2b KV Cache 换页的未完成}{21}{subsubsection.6.2.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.4}动态 MADV 切换的失效}{21}{subsubsection.6.2.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}未来展望}{21}{subsection.6.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.1}短期优化方向}{21}{subsubsection.6.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.2}中长期研究方向}{22}{subsubsection.6.3.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}结论}{22}{subsection.6.4}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces 多维度优化效果评估雷达图\relax }}{22}{figure.caption.24}\protected@file@percent }
-\newlabel{fig:radar}{{6}{22}{多维度优化效果评估雷达图\relax }{figure.caption.24}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.7}KV Cache 量化效果}{18}{subsection.5.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces KV Cache 量化类型对比（80B 16\,GB, 8 线程）\relax }}{18}{table.caption.18}\protected@file@percent }
+\newlabel{tab:eval_kv_quant}{{14}{18}{KV Cache 量化类型对比（80B 16\,GB, 8 线程）\relax }{table.caption.18}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.8}StreamingLLM KV Eviction}{18}{subsection.5.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.8.1}机制}{18}{subsubsection.5.8.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.8.2}验证结果（Qwen3-4B, 32\,GB, 4 threads, n=300）}{18}{subsubsection.5.8.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces KV Eviction 消融（Qwen3-4B-Q4\_K\_M, sink=4, window=256）\relax }}{18}{table.caption.19}\protected@file@percent }
+\newlabel{tab:eval_kv_evict}{{15}{18}{KV Eviction 消融（Qwen3-4B-Q4\_K\_M, sink=4, window=256）\relax }{table.caption.19}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.8.3}80B eviction 消融（IQ4\_XS, 32\,GB, 8 threads, KV q4\_0）}{19}{subsubsection.5.8.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces 80B KV Eviction 消融（sink=4, window=32, pp64+tg48）\relax }}{19}{table.caption.20}\protected@file@percent }
+\newlabel{tab:eval_kv_evict_80b}{{16}{19}{80B KV Eviction 消融（sink=4, window=32, pp64+tg48）\relax }{table.caption.20}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces 优化技术渐进提升：从 baseline 到 IQ4\_XS + KV q4\_0 + eviction 的完整优化链\relax }}{19}{figure.caption.21}\protected@file@percent }
+\newlabel{fig:opt_dumbbell}{{4}{19}{优化技术渐进提升：从 baseline 到 IQ4\_XS + KV q4\_0 + eviction 的完整优化链\relax }{figure.caption.21}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces (a) KV Cache 量化类型对比（带误差棒） (b) 线程数扩展性分析\relax }}{19}{figure.caption.22}\protected@file@percent }
+\newlabel{fig:kv_quant}{{5}{19}{(a) KV Cache 量化类型对比（带误差棒） (b) 线程数扩展性分析\relax }{figure.caption.22}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.9}模型精度验证}{20}{subsection.5.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.9.1}Qwen3-4B-Q4\_K\_M 困惑度}{20}{subsubsection.5.9.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {17}{\ignorespaces Qwen3-4B-Q4\_K\_M 在 WikiTest-2 上的困惑度（n\_ctx=2048, 前 32 chunks）\relax }}{20}{table.caption.23}\protected@file@percent }
+\newlabel{tab:eval_ppl}{{17}{20}{Qwen3-4B-Q4\_K\_M 在 WikiTest-2 上的困惑度（n\_ctx=2048, 前 32 chunks）\relax }{table.caption.23}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.9.2}GSM8K 推理精度（综述 ALEM 协议）}{20}{subsubsection.5.9.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {18}{\ignorespaces GSM8K 推理精度对比（8-shot, temp=0.2, 综述 ALEM 协议）\relax }}{20}{table.caption.24}\protected@file@percent }
+\newlabel{tab:eval_gsm8k}{{18}{20}{GSM8K 推理精度对比（8-shot, temp=0.2, 综述 ALEM 协议）\relax }{table.caption.24}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.10}Speculative Decoding 负面结果}{21}{subsection.5.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.10.1}实验配置}{21}{subsubsection.5.10.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.10.2}结果}{21}{subsubsection.5.10.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {19}{\ignorespaces Speculative Decoding 负面结果（80B MoE, self-draft, ngram-simple）\relax }}{21}{table.caption.25}\protected@file@percent }
+\newlabel{tab:eval_spec_dec}{{19}{21}{Speculative Decoding 负面结果（80B MoE, self-draft, ngram-simple）\relax }{table.caption.25}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}总结与未来展望}{22}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}工作总结}{22}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.1.1}核心技术贡献}{22}{subsubsection.6.1.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.1.2}实验验证}{22}{subsubsection.6.1.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}诚实评估与局限性}{22}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.1}prefetch\_scheduler 的冗余}{22}{subsubsection.6.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.2}数据波动问题}{23}{subsubsection.6.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.3}Phase 2b KV Cache 换页的未完成}{23}{subsubsection.6.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.4}动态 MADV 切换的失效}{23}{subsubsection.6.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}未来展望}{23}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.1}短期优化方向}{23}{subsubsection.6.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.2}中长期研究方向}{23}{subsubsection.6.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}结论}{24}{subsection.6.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces 多维度优化效果评估雷达图\relax }}{24}{figure.caption.26}\protected@file@percent }
+\newlabel{fig:radar}{{6}{24}{多维度优化效果评估雷达图\relax }{figure.caption.26}{}}
 \bibstyle{IEEEtran}
 \bibdata{reference}
 \bibcite{flexinfer2025}{1}
 \bibcite{dualblade2024}{2}
 \bibcite{hillinfer2024}{3}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces 优化技术堆叠瀑布图（80B 8\,GB cgroup）\relax }}{23}{figure.caption.25}\protected@file@percent }
-\newlabel{fig:waterfall}{{7}{23}{优化技术堆叠瀑布图（80B 8\,GB cgroup）\relax }{figure.caption.25}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Q4\_K\_M vs IQ4\_XS 量化格式性能对比\relax }}{23}{figure.caption.26}\protected@file@percent }
-\newlabel{fig:quant_compare}{{8}{23}{Q4\_K\_M vs IQ4\_XS 量化格式性能对比\relax }{figure.caption.26}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces 优化技术堆叠瀑布图（80B 8\,GB cgroup）\relax }}{25}{figure.caption.27}\protected@file@percent }
+\newlabel{fig:waterfall}{{7}{25}{优化技术堆叠瀑布图（80B 8\,GB cgroup）\relax }{figure.caption.27}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Q4\_K\_M vs IQ4\_XS 量化格式性能对比\relax }}{25}{figure.caption.28}\protected@file@percent }
+\newlabel{fig:quant_compare}{{8}{25}{Q4\_K\_M vs IQ4\_XS 量化格式性能对比\relax }{figure.caption.28}{}}
 \bibcite{scoutattention2024}{4}
 \bibcite{mobilemoe2024}{5}
 \bibcite{moeprism2024}{6}
@@ -173,7 +179,7 @@
 \bibcite{llamacpp2024}{9}
 \bibcite{streamingllm2024}{10}
 \bibcite{solidattention2026}{11}
-\newlabel{LastPage}{{}{24}{}{page.24}{}}
-\xdef\lastpage@lastpage{24}
-\xdef\lastpage@lastpageHy{24}
-\gdef \@abspage@last{25}
+\newlabel{LastPage}{{}{26}{}{page.26}{}}
+\xdef\lastpage@lastpage{26}
+\xdef\lastpage@lastpageHy{26}
+\gdef \@abspage@last{27}
