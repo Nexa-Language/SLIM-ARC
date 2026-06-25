@@ -40,42 +40,42 @@
 \contentsline {subsection}{\numberline {4.5}模型量化策略}{11}{subsection.4.5}%
 \contentsline {section}{\numberline {5}实验评估}{12}{section.5}%
 \contentsline {subsection}{\numberline {5.1}FlashAttention 优化}{12}{subsection.5.1}%
-\contentsline {subsection}{\numberline {5.2}实验设置}{12}{subsection.5.2}%
-\contentsline {subsubsection}{\numberline {5.2.1}硬件与软件环境}{12}{subsubsection.5.2.1}%
-\contentsline {subsubsection}{\numberline {5.2.2}测试模型}{12}{subsubsection.5.2.2}%
+\contentsline {subsection}{\numberline {5.2}实验设置}{13}{subsection.5.2}%
+\contentsline {subsubsection}{\numberline {5.2.1}硬件与软件环境}{13}{subsubsection.5.2.1}%
+\contentsline {subsubsection}{\numberline {5.2.2}测试模型}{13}{subsubsection.5.2.2}%
 \contentsline {subsubsection}{\numberline {5.2.3}测试方法}{13}{subsubsection.5.2.3}%
-\contentsline {subsection}{\numberline {5.3}核心实验：80B 在三档环境下的性能}{13}{subsection.5.3}%
-\contentsline {subsubsection}{\numberline {5.3.1}Q4\_K\_M 量化（45\,GB）}{13}{subsubsection.5.3.1}%
-\contentsline {subsubsection}{\numberline {5.3.2}IQ4\_XS 量化（40\,GB）}{14}{subsubsection.5.3.2}%
-\contentsline {subsubsection}{\numberline {5.3.3}端到端文本生成验证}{14}{subsubsection.5.3.3}%
-\contentsline {subsection}{\numberline {5.4}消融实验}{15}{subsection.5.4}%
-\contentsline {subsubsection}{\numberline {5.4.1}四组单点消融（80B Q4\_K\_M, 8\,GB, pp16+tg4）}{15}{subsubsection.5.4.1}%
-\contentsline {subsubsection}{\numberline {5.4.2}6\,GB 环境验证}{16}{subsubsection.5.4.2}%
-\contentsline {subsection}{\numberline {5.5}小模型实验}{16}{subsection.5.5}%
-\contentsline {subsubsection}{\numberline {5.5.1}Qwen3-4B（Dense, 2.4\,GB）}{16}{subsubsection.5.5.1}%
-\contentsline {subsubsection}{\numberline {5.5.2}OLMoE-1B-7B（MoE, 3.9\,GB）}{17}{subsubsection.5.5.2}%
-\contentsline {subsection}{\numberline {5.6}数据波动分析}{17}{subsection.5.6}%
-\contentsline {subsection}{\numberline {5.7}KV Cache 量化效果}{18}{subsection.5.7}%
-\contentsline {subsection}{\numberline {5.8}StreamingLLM KV Eviction}{18}{subsection.5.8}%
-\contentsline {subsubsection}{\numberline {5.8.1}机制}{18}{subsubsection.5.8.1}%
-\contentsline {subsubsection}{\numberline {5.8.2}验证结果（Qwen3-4B, 32\,GB, 4 threads, n=300）}{18}{subsubsection.5.8.2}%
-\contentsline {subsubsection}{\numberline {5.8.3}80B eviction 消融（IQ4\_XS, 32\,GB, 8 threads, KV q4\_0）}{19}{subsubsection.5.8.3}%
-\contentsline {subsection}{\numberline {5.9}模型精度验证}{20}{subsection.5.9}%
-\contentsline {subsubsection}{\numberline {5.9.1}Qwen3-4B-Q4\_K\_M 困惑度}{20}{subsubsection.5.9.1}%
-\contentsline {subsubsection}{\numberline {5.9.2}GSM8K 推理精度（综述 ALEM 协议）}{20}{subsubsection.5.9.2}%
-\contentsline {subsection}{\numberline {5.10}Speculative Decoding 负面结果}{21}{subsection.5.10}%
-\contentsline {subsubsection}{\numberline {5.10.1}实验配置}{21}{subsubsection.5.10.1}%
-\contentsline {subsubsection}{\numberline {5.10.2}结果}{21}{subsubsection.5.10.2}%
-\contentsline {section}{\numberline {6}总结与未来展望}{22}{section.6}%
-\contentsline {subsection}{\numberline {6.1}工作总结}{22}{subsection.6.1}%
-\contentsline {subsubsection}{\numberline {6.1.1}核心技术贡献}{22}{subsubsection.6.1.1}%
-\contentsline {subsubsection}{\numberline {6.1.2}实验验证}{22}{subsubsection.6.1.2}%
-\contentsline {subsection}{\numberline {6.2}诚实评估与局限性}{22}{subsection.6.2}%
-\contentsline {subsubsection}{\numberline {6.2.1}prefetch\_scheduler 的冗余}{22}{subsubsection.6.2.1}%
-\contentsline {subsubsection}{\numberline {6.2.2}数据波动问题}{23}{subsubsection.6.2.2}%
-\contentsline {subsubsection}{\numberline {6.2.3}Phase 2b KV Cache 换页的未完成}{23}{subsubsection.6.2.3}%
-\contentsline {subsubsection}{\numberline {6.2.4}动态 MADV 切换的失效}{23}{subsubsection.6.2.4}%
-\contentsline {subsection}{\numberline {6.3}未来展望}{23}{subsection.6.3}%
-\contentsline {subsubsection}{\numberline {6.3.1}短期优化方向}{23}{subsubsection.6.3.1}%
-\contentsline {subsubsection}{\numberline {6.3.2}中长期研究方向}{23}{subsubsection.6.3.2}%
-\contentsline {subsection}{\numberline {6.4}结论}{24}{subsection.6.4}%
+\contentsline {subsection}{\numberline {5.3}核心实验：80B 在三档环境下的性能}{14}{subsection.5.3}%
+\contentsline {subsubsection}{\numberline {5.3.1}Q4\_K\_M 量化（45\,GB）}{14}{subsubsection.5.3.1}%
+\contentsline {subsubsection}{\numberline {5.3.2}IQ4\_XS 量化（40\,GB）}{15}{subsubsection.5.3.2}%
+\contentsline {subsubsection}{\numberline {5.3.3}端到端文本生成验证}{15}{subsubsection.5.3.3}%
+\contentsline {subsection}{\numberline {5.4}消融实验}{16}{subsection.5.4}%
+\contentsline {subsubsection}{\numberline {5.4.1}四组单点消融（80B Q4\_K\_M, 8\,GB, pp16+tg4）}{16}{subsubsection.5.4.1}%
+\contentsline {subsubsection}{\numberline {5.4.2}6\,GB 环境验证}{17}{subsubsection.5.4.2}%
+\contentsline {subsection}{\numberline {5.5}小模型实验}{17}{subsection.5.5}%
+\contentsline {subsubsection}{\numberline {5.5.1}Qwen3-4B（Dense, 2.4\,GB）}{17}{subsubsection.5.5.1}%
+\contentsline {subsubsection}{\numberline {5.5.2}OLMoE-1B-7B（MoE, 3.9\,GB）}{18}{subsubsection.5.5.2}%
+\contentsline {subsection}{\numberline {5.6}数据波动分析}{18}{subsection.5.6}%
+\contentsline {subsection}{\numberline {5.7}KV Cache 量化效果}{19}{subsection.5.7}%
+\contentsline {subsection}{\numberline {5.8}StreamingLLM KV Eviction}{19}{subsection.5.8}%
+\contentsline {subsubsection}{\numberline {5.8.1}机制}{19}{subsubsection.5.8.1}%
+\contentsline {subsubsection}{\numberline {5.8.2}验证结果（Qwen3-4B, 32\,GB, 4 threads, n=300）}{19}{subsubsection.5.8.2}%
+\contentsline {subsubsection}{\numberline {5.8.3}80B eviction 消融（IQ4\_XS, 32\,GB, 8 threads, KV q4\_0）}{20}{subsubsection.5.8.3}%
+\contentsline {subsection}{\numberline {5.9}模型精度验证}{21}{subsection.5.9}%
+\contentsline {subsubsection}{\numberline {5.9.1}Qwen3-4B-Q4\_K\_M 困惑度}{21}{subsubsection.5.9.1}%
+\contentsline {subsubsection}{\numberline {5.9.2}GSM8K 推理精度（综述 ALEM 协议）}{21}{subsubsection.5.9.2}%
+\contentsline {subsection}{\numberline {5.10}Speculative Decoding 负面结果}{22}{subsection.5.10}%
+\contentsline {subsubsection}{\numberline {5.10.1}实验配置}{22}{subsubsection.5.10.1}%
+\contentsline {subsubsection}{\numberline {5.10.2}结果}{22}{subsubsection.5.10.2}%
+\contentsline {section}{\numberline {6}总结与未来展望}{23}{section.6}%
+\contentsline {subsection}{\numberline {6.1}工作总结}{23}{subsection.6.1}%
+\contentsline {subsubsection}{\numberline {6.1.1}核心技术贡献}{23}{subsubsection.6.1.1}%
+\contentsline {subsubsection}{\numberline {6.1.2}实验验证}{23}{subsubsection.6.1.2}%
+\contentsline {subsection}{\numberline {6.2}诚实评估与局限性}{23}{subsection.6.2}%
+\contentsline {subsubsection}{\numberline {6.2.1}prefetch\_scheduler 的冗余}{23}{subsubsection.6.2.1}%
+\contentsline {subsubsection}{\numberline {6.2.2}数据波动问题}{24}{subsubsection.6.2.2}%
+\contentsline {subsubsection}{\numberline {6.2.3}Phase 2b KV Cache 换页的未完成}{24}{subsubsection.6.2.3}%
+\contentsline {subsubsection}{\numberline {6.2.4}动态 MADV 切换的失效}{24}{subsubsection.6.2.4}%
+\contentsline {subsection}{\numberline {6.3}未来展望}{24}{subsection.6.3}%
+\contentsline {subsubsection}{\numberline {6.3.1}短期优化方向}{24}{subsubsection.6.3.1}%
+\contentsline {subsubsection}{\numberline {6.3.2}中长期研究方向}{24}{subsubsection.6.3.2}%
+\contentsline {subsection}{\numberline {6.4}结论}{25}{subsection.6.4}%

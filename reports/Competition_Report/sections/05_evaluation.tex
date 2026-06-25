@@ -22,6 +22,15 @@
 
 \texttt{-fa auto} 让模型自选最优 attention 实现，decode 吞吐量从 3.01 提升至 5.16 t/s（+71.4\%）。FlashAttention 通过 IO-aware tiling 融合，将 attention 的 QK$^T$ 和 softmax(P)V 合并为单个 kernel，避免中间矩阵的显存读写，对 memory-bound 的 decode 阶段效果尤为显著。此优化零代码改动、零精度损失，应作为默认配置。
 
+FlashAttention 的 prefill 吞吐量随 prompt 长度增长而提升（pp256 达 17.82 t/s vs pp64 的 12.99 t/s），因为更长的 prompt 能更好地 amortize 固定开销并利用 tiling 的并行性。TTFT 相应地从 4.93s（pp64）降至 14.4s（pp256），但仍处于可接受范围。
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_flashattn_scaling.png}
+    \caption{(a) FlashAttention prefill 吞吐量与 TTFT 随 prompt 长度变化 (b) 80B 从 baseline 到 FlashAttention 的完整优化链（decode 0.08→5.16 t/s，64.5×）}
+    \label{fig:fa_scaling}
+\end{figure}
+
 \subsection{实验设置}
 
 \subsubsection{硬件与软件环境}

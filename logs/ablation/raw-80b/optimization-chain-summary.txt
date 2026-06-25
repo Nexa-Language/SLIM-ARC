@@ -1,0 +1,7 @@
+
+Configuration progression (80B IQ4_XS, 32GB, 8 threads, KV q4_0):
+1. Baseline (upstream, no opt):       pp64=5.89  tg48=3.01 t/s
+2. + FlashAttention (-fa auto):       pp64=12.99 tg48=5.16 t/s (+71.4%)
+3. + KV eviction (sink=4,window=32):  pp64=4.85  tg48=3.30 t/s (conflicts with fa)
+4. Optimal = fa auto only:            pp64=12.99 tg48=5.16 t/s
+
