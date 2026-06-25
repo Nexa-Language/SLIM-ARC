@@ -3,7 +3,7 @@
 
 \subsection{设计思路总述}
 
-SLIM-ARC 的设计遵循"发现问题 $\to$ 用设计解决 $\to$ 实验测量 $\to$ 得出结论"的逻辑闭环。第 2 节的问题定义提出了五个子问题（权重内存墙、MoE 稀疏性利用、KV Cache 膨胀、I/O 带宽竞争、精度保持），本节的设计逐一对应解决，第 5 节的实验针对性验证，第 6 节的结论总结各设计的实际效果。表\ref{tab:design_logic}展示了这一对应关系。
+SLIM-ARC 的设计遵循“发现问题 $\to$ 用设计解决 $\to$ 实验测量 $\to$ 得出结论”的逻辑闭环。第 2 节的问题定义提出了五个子问题（权重内存墙、MoE 稀疏性利用、KV Cache 膨胀、I/O 带宽竞争、精度保持），本节的设计逐一对应解决，第 5 节的实验针对性验证，第 6 节的结论总结各设计的实际效果。表\ref{tab:design_logic}展示了这一对应关系。
 
 \begin{table}[H]
     \centering
@@ -22,7 +22,7 @@ SLIM-ARC 的设计遵循"发现问题 $\to$ 用设计解决 $\to$ 实验测量 $
     \end{tabular}
 \end{table}
 
-\textbf{新颖性强调}：与现有工作相比，SLIM-ARC 的核心创新在于\textbf{利用操作系统虚拟内存机制作为 MoE 稀疏性的天然接口}。FlexInfer~\cite{flexinfer2025}在用户态重新实现 Direct I/O + 手动 buffer 管理，复杂度高且未利用 MoE 稀疏性；PowerInfer~\cite{powerinfer2024}利用 ReLU 激活稀疏性但需要修改模型结构；MobileMoE~\cite{mobilemoe2024}假设专家为独立张量，与 llama.cpp 的合并存储不兼容。SLIM-ARC 通过 \texttt{posix\_madvise(MADV\_RANDOM)} 这一标准 POSIX 接口，让内核的 demand paging 与 MoE Router 的 2\% 激活率天然匹配，\textbf{零模型修改、零用户态内存管理}即可将 45\,GB 模型的 RSS 降至 2\,GB。此外，我们首次在端侧 MoE 场景集成了 FlashAttention（+71.4\%）和 StreamingLLM eviction（+9.6\%），并通过 GSM8K 标准精度 benchmark 发现了"IQ4\_XS 保持流畅性但推理崩溃"的非线性量化损害现象——这一发现对端侧模型选择有直接指导意义。
+\textbf{新颖性强调}：与现有工作相比，SLIM-ARC 的核心创新在于\textbf{利用操作系统虚拟内存机制作为 MoE 稀疏性的天然接口}。FlexInfer~\cite{flexinfer2025}在用户态重新实现 Direct I/O + 手动 buffer 管理，复杂度高且未利用 MoE 稀疏性；PowerInfer~\cite{powerinfer2024}利用 ReLU 激活稀疏性但需要修改模型结构；MobileMoE~\cite{mobilemoe2024}假设专家为独立张量，与 llama.cpp 的合并存储不兼容。SLIM-ARC 通过 \texttt{posix\_madvise(MADV\_RANDOM)} 这一标准 POSIX 接口，让内核的 demand paging 与 MoE Router 的 2\% 激活率天然匹配，\textbf{零模型修改、零用户态内存管理}即可将 45\,GB 模型的 RSS 降至 2\,GB。此外，我们首次在端侧 MoE 场景集成了 FlashAttention（+71.4\%）和 StreamingLLM eviction（+9.6\%），并通过 GSM8K 标准精度 benchmark 发现了“IQ4\_XS 保持流畅性但推理崩溃”的非线性量化损害现象——这一发现对端侧模型选择有直接指导意义。
 
 \subsection{整体架构}
 

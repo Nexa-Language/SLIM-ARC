@@ -34,7 +34,7 @@
     \end{tabular}
 \end{table}
 
-表\ref{tab:eval_env}展示了实验环境与三档受限环境。选择 i9-13900H 是因为它是典型的高端移动端 CPU，支持 AVX2 和 AVX\_VNNI 指令集（AVX512 在 WSL2 中不暴露）。使用 cgroups v2~\cite{cgroupsv2}创建三档受限环境：Low 档（8\,GB + 4 核）模拟 Raspberry Pi 5 或低端 Android 设备；Mid 档（12\,GB + 6 核）模拟中端智能手机或迷你 PC；High 档（16\,GB + 8 核）模拟高端移动设备或 AIPC。这三档覆盖了端侧 LLM 部署的典型硬件范围，且 80B 模型（45\,GB）在所有档位都远超物理内存，构成"内存墙"场景。无限制的 32\,GB 环境作为热缓存基线，用于测量理论最优性能。
+表\ref{tab:eval_env}展示了实验环境与三档受限环境。选择 i9-13900H 是因为它是典型的高端移动端 CPU，支持 AVX2 和 AVX\_VNNI 指令集（AVX512 在 WSL2 中不暴露）。使用 cgroups v2~\cite{cgroupsv2}创建三档受限环境：Low 档（8\,GB + 4 核）模拟 Raspberry Pi 5 或低端 Android 设备；Mid 档（12\,GB + 6 核）模拟中端智能手机或迷你 PC；High 档（16\,GB + 8 核）模拟高端移动设备或 AIPC。这三档覆盖了端侧 LLM 部署的典型硬件范围，且 80B 模型（45\,GB）在所有档位都远超物理内存，构成“内存墙”场景。无限制的 32\,GB 环境作为热缓存基线，用于测量理论最优性能。
 
 \subsubsection{测试模型}
 
