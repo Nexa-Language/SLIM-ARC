@@ -1,0 +1,57 @@
+% SLIM-ARC: 学术报告 - 引言
+\section{引言}
+
+\subsection{研究动机}
+
+大语言模型（LLM）在端侧设备上的部署面临严峻的\textbf{内存墙}问题：80B 参数的 MoE 模型量化后仍达 40--45\,GB，而典型端侧设备仅有 8--16\,GB RAM。现有工作或依赖复杂的用户态内存管理（FlexInfer~\cite{flexinfer2025}的 Direct I/O），或需要修改模型结构（PowerInfer~\cite{powerinfer2024}的 ReLU 稀疏化），且各优化技术彼此独立、缺乏协同。
+
+本文提出 \textbf{SLIM-ARC}，核心思路是\textbf{利用操作系统虚拟内存机制作为 MoE 稀疏性的天然接口}，并将多个优化技术有机集成、协同调度。图\ref{fig:overview}展示了 SLIM-ARC 的优化全景与分类。
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.95\textwidth]{figures/architecture.png}
+    \caption{SLIM-ARC 优化全景与分类。三类优化协同工作：A. 内核协同类（MADV\_RANDOM 按需加载 + REPACK 禁用）释放物理内存；B. 量化压缩类（IQ4\_XS 权重 + KV q4\_0）从算法侧降低内存需求；C. 计算融合类（FlashAttention + StreamingLLM eviction）减少计算与 KV 开销。三类优化之间存在协同促进关系（A 释放内存 $\to$ B 获得更多 cache $\to$ C 加速 attention）。}
+    \label{fig:overview}
+\end{figure}
+
+\subsection{优化分类与协同 Insight}
+
+SLIM-ARC 的优化技术按机制分为三类，且各优化之间存在\textbf{协同促进}关系（优化 A 促进 B），如表\ref{tab:optimization_synergy}所示。
+
+\begin{table}[H]
+    \centering
+    \caption{优化技术分类与协同关系}
+    \label{tab:optimization_synergy}
+    \begin{tabular}{p{3cm}p{4cm}p{4cm}p{3cm}}
+        \toprule
+        \textbf{类别} & \textbf{优化技术} & \textbf{作用机制} & \textbf{协同促进} \\
+        \midrule
+        \multicolumn{4}{l}{\textbf{A. 内核协同类}（释放物理内存）} \\
+        \midrule
+        & MADV\_RANDOM 按需加载 & 禁用预读，仅 page fault 加载激活专家 & $\to$ B（释放 RAM 给量化权重） \\
+        & GGML\_CPU\_REPACK=OFF & 禁用重打包，避免 45$\to$90GB 翻倍 & $\to$ B（避免 OOM） \\
+        \midrule
+        \multicolumn{4}{l}{\textbf{B. 量化压缩类}（降低内存需求）} \\
+        \midrule
+        & IQ4\_XS 权重量化 & 45$\to$40\,GB，提升 cache 命中率 & $\to$ C（更小模型更快 attention） \\
+        & KV q4\_0 量化 & KV 内存减半，腾出 RAM & $\to$ A（更多 RAM 给权重 cache） \\
+        \midrule
+        \multicolumn{4}{l}{\textbf{C. 计算融合类}（减少计算/KV 开销）} \\
+        \midrule
+        & FlashAttention & IO-aware tiling，融合 attention kernel & 独立 +71.4\% \\
+        & StreamingLLM eviction & sink+window，KV 内存 $O(1)$ & $\otimes$ 与 FA 冲突（见 Sec 5） \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\textbf{关键协同 Insight}：MADV\_RANDOM（A 类）通过仅加载 2\% 激活专家，释放了 98\% 的物理内存，这些内存被 B 类量化权重利用（cache 命中率提升），进而加速 C 类的 attention 计算。这种"A 释放 $\to$ B 利用 $\to$ C 加速"的级联效应是 SLIM-ARC 的核心协同价值。同时，我们也发现 FlashAttention 与 KV eviction 存在冲突（eviction 的 \texttt{seq\_rm} 干扰 FA 的 KV 布局），这一负面结果在 Sec 5.4 诚实记录。
+
+\subsection{贡献总结}
+
+本文的主要贡献包括：
+\begin{enumerate}
+    \item \textbf{发现} OS 虚拟内存机制（\texttt{MADV\_RANDOM}）与 MoE 稀疏性的天然匹配，仅加载 2\% 激活专家权重；
+    \item \textbf{集成} 三类 6 项优化技术，形成完整优化链，累计 64.5$\times$ decode 加速；
+    \item \textbf{揭示} 优化间的协同促进关系与冲突边界（FA vs eviction）；
+    \item \textbf{验证} 通过 GSM8K ALEM 协议发现量化对推理的非线性损害（IQ4\_XS 推理崩溃 vs Q4\_K\_M 保持 50\%）。
+\end{enumerate}

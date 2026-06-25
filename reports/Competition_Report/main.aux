@@ -18,29 +18,38 @@
 \HyPL@Entry{0<</S/D>>}
 \providecommand \oddpage@label [2]{}
 \HyPL@Entry{1<</S/D>>}
+\citation{flexinfer2025}
+\citation{powerinfer2024}
+\@writefile{toc}{\contentsline {section}{\numberline {1}摘要}{3}{section.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {2}引言}{3}{section.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}研究动机}{3}{subsection.2.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces SLIM-ARC 优化全景与分类。三类优化协同工作：A. 内核协同类（MADV\_RANDOM 按需加载 + REPACK 禁用）释放物理内存；B. 量化压缩类（IQ4\_XS 权重 + KV q4\_0）从算法侧降低内存需求；C. 计算融合类（FlashAttention + StreamingLLM eviction）减少计算与 KV 开销。三类优化之间存在协同促进关系（A 释放内存 $\to $ B 获得更多 cache $\to $ C 加速 attention）。\relax }}{4}{figure.caption.2}\protected@file@percent }
+\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
+\newlabel{fig:overview}{{1}{4}{SLIM-ARC 优化全景与分类。三类优化协同工作：A. 内核协同类（MADV\_RANDOM 按需加载 + REPACK 禁用）释放物理内存；B. 量化压缩类（IQ4\_XS 权重 + KV q4\_0）从算法侧降低内存需求；C. 计算融合类（FlashAttention + StreamingLLM eviction）减少计算与 KV 开销。三类优化之间存在协同促进关系（A 释放内存 $\to $ B 获得更多 cache $\to $ C 加速 attention）。\relax }{figure.caption.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}优化分类与协同 Insight}{4}{subsection.2.2}\protected@file@percent }
 \citation{brown2020gpt3,touvron2023llama,qwen3_2025}
 \citation{qwen3next2024}
 \citation{survey2026}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces 优化技术分类与协同关系\relax }}{5}{table.caption.3}\protected@file@percent }
+\newlabel{tab:optimization_synergy}{{1}{5}{优化技术分类与协同关系\relax }{table.caption.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}贡献总结}{5}{subsection.2.3}\protected@file@percent }
 \citation{survey2026}
 \citation{survey2026}
-\@writefile{toc}{\contentsline {section}{\numberline {1}摘要}{3}{section.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {2}背景与相关工作}{3}{section.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.1}端侧 LLM 推理的内存墙挑战}{3}{subsection.2.1}\protected@file@percent }
 \citation{shazeer2017moe,fedus2022switch}
 \citation{qwen3next2024}
 \citation{llamacpp2024}
 \citation{mobilemoe2024}
 \citation{moeprism2024}
 \citation{flexinfer2025}
+\@writefile{toc}{\contentsline {section}{\numberline {3}背景与相关工作}{6}{section.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}端侧 LLM 推理的内存墙挑战}{6}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}MoE 模型的稀疏性机遇}{6}{subsection.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}相关工作}{6}{subsection.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.1}权重卸载与按需加载}{6}{subsubsection.3.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{FlexInfer}{6}{section*.4}\protected@file@percent }
 \citation{llamacpp2024}
 \citation{powerinfer2024}
 \citation{powerinfer2_2024}
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.2}MoE 模型的稀疏性机遇}{4}{subsection.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.3}相关工作}{4}{subsection.2.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.1}权重卸载与按需加载}{4}{subsubsection.2.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{FlexInfer}{4}{section*.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{llama.cpp 的 mmap 机制}{4}{section*.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{PowerInfer / PowerInfer-2}{4}{section*.4}\protected@file@percent }
 \citation{dualblade2024}
 \citation{hillinfer2024}
 \citation{scoutattention2024}
@@ -49,207 +58,211 @@
 \citation{think2024}
 \citation{survey2026}
 \citation{mobilemoe2024}
+\@writefile{toc}{\contentsline {paragraph}{llama.cpp 的 mmap 机制}{7}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{PowerInfer / PowerInfer-2}{7}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.2}KV Cache 管理与量化}{7}{subsubsection.3.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{DUAL-BLADE}{7}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{HillInfer}{7}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{ScoutAttention}{7}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{KVQuant / KIVI / ThinK}{7}{section*.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.3}MoE 稀疏性利用}{7}{subsubsection.3.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{MobileMoE}{7}{section*.11}\protected@file@percent }
 \citation{moeprism2024}
 \citation{emoe2025}
 \citation{promoe2025}
 \citation{flashattention2022,flashattention2_2023}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.2}KV Cache 管理与量化}{5}{subsubsection.2.3.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{DUAL-BLADE}{5}{section*.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{HillInfer}{5}{section*.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{ScoutAttention}{5}{section*.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{KVQuant / KIVI / ThinK}{5}{section*.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.3}MoE 稀疏性利用}{5}{subsubsection.2.3.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{MobileMoE}{5}{section*.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{MoE-Prism}{5}{section*.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{eMoE / ProMoE}{5}{section*.11}\protected@file@percent }
 \citation{streamingllm2024}
 \citation{solidattention2026}
 \citation{pagedattention2023}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {2.3.4}Attention 优化与 KV Eviction}{6}{subsubsection.2.3.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{FlashAttention}{6}{section*.12}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{StreamingLLM}{6}{section*.13}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{SolidAttention}{6}{section*.14}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{PagedAttention}{6}{section*.15}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {2.4}问题定义与期望解决方法}{6}{subsection.2.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {3}核心设计}{6}{section.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}设计思路总述}{6}{subsection.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{MoE-Prism}{8}{section*.12}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{eMoE / ProMoE}{8}{section*.13}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.4}Attention 优化与 KV Eviction}{8}{subsubsection.3.3.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{FlashAttention}{8}{section*.14}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{StreamingLLM}{8}{section*.15}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{SolidAttention}{8}{section*.16}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{PagedAttention}{8}{section*.17}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}问题定义与期望解决方法}{8}{subsection.3.4}\protected@file@percent }
 \citation{flexinfer2025}
 \citation{powerinfer2024}
 \citation{mobilemoe2024}
 \citation{flexinfer2025}
 \citation{posix_madvise}
 \citation{llamacpp2024}
+\@writefile{toc}{\contentsline {section}{\numberline {4}核心设计}{9}{section.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}设计思路总述}{9}{subsection.4.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces 问题 $\to $ 设计 $\to $ 实验 $\to $ 结论 的逻辑对应\relax }}{9}{table.caption.18}\protected@file@percent }
+\newlabel{tab:design_logic}{{2}{9}{问题 $\to $ 设计 $\to $ 实验 $\to $ 结论 的逻辑对应\relax }{table.caption.18}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}整体架构}{9}{subsection.4.2}\protected@file@percent }
 \citation{mobilemoe2024}
 \citation{flashattention2022}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces 问题 $\to $ 设计 $\to $ 实验 $\to $ 结论 的逻辑对应\relax }}{7}{table.caption.16}\protected@file@percent }
-\providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
-\newlabel{tab:design_logic}{{1}{7}{问题 $\to $ 设计 $\to $ 实验 $\to $ 结论 的逻辑对应\relax }{table.caption.16}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}整体架构}{7}{subsection.3.2}\protected@file@percent }
 \citation{llamacpp2024}
 \citation{qwen3next2024}
 \citation{powerinfer2024}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces SLIM-ARC 整体架构。三层自底向上：内核协同层通过 mmap 将 45\,GB GGUF 映射到虚拟地址空间，用 madvise 控制页面预取策略；运行时调度层基于 MoE Router 输出和计算阶段动态调度预取；量化优化层从算法侧降低内存和带宽需求。MADV\_RANDOM 是核心：它让内核的 demand paging 与 MoE 2\% 的稀疏激活率匹配，仅加载被 Router 选中的专家权重。\relax }}{10}{figure.caption.19}\protected@file@percent }
+\newlabel{fig:architecture}{{2}{10}{SLIM-ARC 整体架构。三层自底向上：内核协同层通过 mmap 将 45\,GB GGUF 映射到虚拟地址空间，用 madvise 控制页面预取策略；运行时调度层基于 MoE Router 输出和计算阶段动态调度预取；量化优化层从算法侧降低内存和带宽需求。MADV\_RANDOM 是核心：它让内核的 demand paging 与 MoE 2\% 的稀疏激活率匹配，仅加载被 Router 选中的专家权重。\relax }{figure.caption.19}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}mmap + MADV\_RANDOM 按需加载机制}{10}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.1}设计动机}{10}{subsubsection.4.3.1}\protected@file@percent }
 \citation{posix_madvise}
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces SLIM-ARC 整体架构。三层自底向上：内核协同层通过 mmap 将 45\,GB GGUF 映射到虚拟地址空间，用 madvise 控制页面预取策略；运行时调度层基于 MoE Router 输出和计算阶段动态调度预取；量化优化层从算法侧降低内存和带宽需求。MADV\_RANDOM 是核心：它让内核的 demand paging 与 MoE 2\% 的稀疏激活率匹配，仅加载被 Router 选中的专家权重。\relax }}{8}{figure.caption.17}\protected@file@percent }
-\newlabel{fig:architecture}{{1}{8}{SLIM-ARC 整体架构。三层自底向上：内核协同层通过 mmap 将 45\,GB GGUF 映射到虚拟地址空间，用 madvise 控制页面预取策略；运行时调度层基于 MoE Router 输出和计算阶段动态调度预取；量化优化层从算法侧降低内存和带宽需求。MADV\_RANDOM 是核心：它让内核的 demand paging 与 MoE 2\% 的稀疏激活率匹配，仅加载被 Router 选中的专家权重。\relax }{figure.caption.17}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}mmap + MADV\_RANDOM 按需加载机制}{8}{subsection.3.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.1}设计动机}{8}{subsubsection.3.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.2}机制设计}{8}{subsubsection.3.3.2}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces MADV\_RANDOM 按需加载机制。默认 WILLNEED 策略下，内核预读整个 mmap 区域（45\,GB），导致 8\,GB 环境 OOM；MADV\_RANDOM 禁用预读，仅在被 Router 激活的专家页面被访问时触发 page fault，物理内存占用降至 $\sim $2\,GB（10/512 $\times $ 45\,GB $\approx $ 0.88\,GB + 非专家权重）。\relax }}{9}{figure.caption.18}\protected@file@percent }
-\newlabel{fig:madv_random}{{2}{9}{MADV\_RANDOM 按需加载机制。默认 WILLNEED 策略下，内核预读整个 mmap 区域（45\,GB），导致 8\,GB 环境 OOM；MADV\_RANDOM 禁用预读，仅在被 Router 激活的专家页面被访问时触发 page fault，物理内存占用降至 $\sim $2\,GB（10/512 $\times $ 45\,GB $\approx $ 0.88\,GB + 非专家权重）。\relax }{figure.caption.18}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.3.3}prefill/decode 的 tradeoff}{9}{subsubsection.3.3.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}禁用 GGML\_CPU\_REPACK}{9}{subsection.3.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.1}问题发现}{9}{subsubsection.3.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.2}解决方案}{9}{subsubsection.3.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}层感知预取调度器}{10}{subsection.3.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.1}架构设计}{10}{subsubsection.3.5.1}\protected@file@percent }
-\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces prefetch\_scheduler 调度循环\relax }}{10}{algorithm.1}\protected@file@percent }
-\newlabel{alg:prefetch}{{1}{10}{prefetch\_scheduler 调度循环\relax }{algorithm.1}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.2}MoE Router Hook 与跨层专家预测}{10}{subsubsection.3.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.2}机制设计}{11}{subsubsection.4.3.2}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces MADV\_RANDOM 按需加载机制。默认 WILLNEED 策略下，内核预读整个 mmap 区域（45\,GB），导致 8\,GB 环境 OOM；MADV\_RANDOM 禁用预读，仅在被 Router 激活的专家页面被访问时触发 page fault，物理内存占用降至 $\sim $2\,GB（10/512 $\times $ 45\,GB $\approx $ 0.88\,GB + 非专家权重）。\relax }}{11}{figure.caption.20}\protected@file@percent }
+\newlabel{fig:madv_random}{{3}{11}{MADV\_RANDOM 按需加载机制。默认 WILLNEED 策略下，内核预读整个 mmap 区域（45\,GB），导致 8\,GB 环境 OOM；MADV\_RANDOM 禁用预读，仅在被 Router 激活的专家页面被访问时触发 page fault，物理内存占用降至 $\sim $2\,GB（10/512 $\times $ 45\,GB $\approx $ 0.88\,GB + 非专家权重）。\relax }{figure.caption.20}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.3}prefill/decode 的 tradeoff}{11}{subsubsection.4.3.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.3.4}prefill/decode 的 I/O 占比量化}{11}{subsubsection.4.3.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces 80B IQ4\_XS 各阶段 I/O 与计算占比（32\,GB, 8 threads, KV q4\_0, fa auto）\relax }}{12}{table.caption.21}\protected@file@percent }
+\newlabel{tab:prefill_decode_io}{{3}{12}{80B IQ4\_XS 各阶段 I/O 与计算占比（32\,GB, 8 threads, KV q4\_0, fa auto）\relax }{table.caption.21}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}禁用 GGML\_CPU\_REPACK}{12}{subsection.4.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.1}问题发现}{12}{subsubsection.4.4.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.4.2}解决方案}{12}{subsubsection.4.4.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}层感知预取调度器}{12}{subsection.4.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.1}架构设计}{12}{subsubsection.4.5.1}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces prefetch\_scheduler 调度循环\relax }}{13}{algorithm.1}\protected@file@percent }
+\newlabel{alg:prefetch}{{1}{13}{prefetch\_scheduler 调度循环\relax }{algorithm.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.2}MoE Router Hook 与跨层专家预测}{13}{subsubsection.4.5.2}\protected@file@percent }
 \citation{kvquant2024}
 \citation{kivi2024}
 \citation{survey2026}
 \citation{dualblade2024}
 \citation{survey2026}
-\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces MoE Router Hook 跨层专家预测。llama.cpp 计算图中的 \texttt  {ffn\_moe\_topk} 张量包含 Router 输出的 top-k expert IDs。SLIM-ARC 在每层计算后提取该张量，缓存 expert IDs，用于预测下一层的激活专家并提前 \texttt  {madvise(WILLNEED)}。由于 Qwen3-Next-80B 的专家权重以 \texttt  {[dim, dim, 512]} 的 3D 合并张量存储，每个专家占 \texttt  {total\_size / 512} 的连续子区域，通过计算偏移量 \texttt  {expert\_addr = base + expert\_id $\times $ per\_expert\_size} 可精确预取。\relax }}{11}{figure.caption.19}\protected@file@percent }
-\newlabel{fig:moe_router_hook}{{3}{11}{MoE Router Hook 跨层专家预测。llama.cpp 计算图中的 \texttt {ffn\_moe\_topk} 张量包含 Router 输出的 top-k expert IDs。SLIM-ARC 在每层计算后提取该张量，缓存 expert IDs，用于预测下一层的激活专家并提前 \texttt {madvise(WILLNEED)}。由于 Qwen3-Next-80B 的专家权重以 \texttt {[dim, dim, 512]} 的 3D 合并张量存储，每个专家占 \texttt {total\_size / 512} 的连续子区域，通过计算偏移量 \texttt {expert\_addr = base + expert\_id $\times $ per\_expert\_size} 可精确预取。\relax }{figure.caption.19}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}KV Cache 量化}{11}{subsection.3.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.7}统一 I/O 带宽预算调度器}{11}{subsection.3.7}\protected@file@percent }
 \citation{survey2026}
 \citation{flashattention2022}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces MoE Router Hook 跨层专家预测。llama.cpp 计算图中的 \texttt  {ffn\_moe\_topk} 张量包含 Router 输出的 top-k expert IDs。SLIM-ARC 在每层计算后提取该张量，缓存 expert IDs，用于预测下一层的激活专家并提前 \texttt  {madvise(WILLNEED)}。由于 Qwen3-Next-80B 的专家权重以 \texttt  {[dim, dim, 512]} 的 3D 合并张量存储，每个专家占 \texttt  {total\_size / 512} 的连续子区域，通过计算偏移量 \texttt  {expert\_addr = base + expert\_id $\times $ per\_expert\_size} 可精确预取。\relax }}{14}{figure.caption.22}\protected@file@percent }
+\newlabel{fig:moe_router_hook}{{4}{14}{MoE Router Hook 跨层专家预测。llama.cpp 计算图中的 \texttt {ffn\_moe\_topk} 张量包含 Router 输出的 top-k expert IDs。SLIM-ARC 在每层计算后提取该张量，缓存 expert IDs，用于预测下一层的激活专家并提前 \texttt {madvise(WILLNEED)}。由于 Qwen3-Next-80B 的专家权重以 \texttt {[dim, dim, 512]} 的 3D 合并张量存储，每个专家占 \texttt {total\_size / 512} 的连续子区域，通过计算偏移量 \texttt {expert\_addr = base + expert\_id $\times $ per\_expert\_size} 可精确预取。\relax }{figure.caption.22}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}KV Cache 量化}{14}{subsection.4.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}统一 I/O 带宽预算调度器}{14}{subsection.4.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces 统一 I/O 带宽分配比例\relax }}{14}{table.caption.23}\protected@file@percent }
+\newlabel{tab:budget_ratios}{{4}{14}{统一 I/O 带宽分配比例\relax }{table.caption.23}{}}
 \citation{survey2026}
 \citation{streamingllm2024}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces 统一 I/O 带宽分配比例\relax }}{12}{table.caption.20}\protected@file@percent }
-\newlabel{tab:budget_ratios}{{2}{12}{统一 I/O 带宽分配比例\relax }{table.caption.20}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.8}FlashAttention 集成}{12}{subsection.3.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.9}StreamingLLM KV Eviction}{12}{subsection.3.9}\protected@file@percent }
-\@writefile{loa}{\contentsline {algorithm}{\numberline {2}{\ignorespaces StreamingLLM KV Eviction\relax }}{12}{algorithm.2}\protected@file@percent }
-\newlabel{alg:eviction}{{2}{12}{StreamingLLM KV Eviction\relax }{algorithm.2}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces StreamingLLM KV Eviction 机制。保留前 4 个 token 作为 attention sink（稳定 softmax 分母，避免 PPL 暴增）和最近 $W$ 个 token 作为 sliding window，驱逐中间所有 token。KV Cache 内存从 $O(\text  {context\_length})$ 降至 $O(\text  {sink} + \text  {window})$，实现恒定内存下的长上下文推理。该机制通过 \texttt  {llama\_memory\_seq\_rm} 接口实现，无需修改 attention kernel。\relax }}{13}{figure.caption.21}\protected@file@percent }
-\newlabel{fig:kv_eviction}{{4}{13}{StreamingLLM KV Eviction 机制。保留前 4 个 token 作为 attention sink（稳定 softmax 分母，避免 PPL 暴增）和最近 $W$ 个 token 作为 sliding window，驱逐中间所有 token。KV Cache 内存从 $O(\text {context\_length})$ 降至 $O(\text {sink} + \text {window})$，实现恒定内存下的长上下文推理。该机制通过 \texttt {llama\_memory\_seq\_rm} 接口实现，无需修改 attention kernel。\relax }{figure.caption.21}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {4}实现}{13}{section.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}开发环境与基础框架}{13}{subsection.4.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.1}与 upstream llama.cpp 的集成方式}{13}{subsubsection.4.1.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.2}cgroups v2 三档环境}{13}{subsubsection.4.1.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces 三档 cgroups v2 环境配置\relax }}{14}{table.caption.22}\protected@file@percent }
-\newlabel{tab:cgroups_config}{{3}{14}{三档 cgroups v2 环境配置\relax }{table.caption.22}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}代码模块结构}{14}{subsection.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.1}SLIM-ARC 独立模块（6 个文件）}{14}{subsubsection.4.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.2}llama.cpp 源文件修改（4 个文件）}{14}{subsubsection.4.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}环境变量接口}{15}{subsection.4.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces SLIM-ARC 环境变量接口\relax }}{15}{table.caption.23}\protected@file@percent }
-\newlabel{tab:env_vars}{{4}{15}{SLIM-ARC 环境变量接口\relax }{table.caption.23}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}构建与复现流程}{15}{subsection.4.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}模型量化策略}{15}{subsection.4.5}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces 80B 模型量化格式对比\relax }}{15}{table.caption.24}\protected@file@percent }
-\newlabel{tab:quant_comparison}{{5}{15}{80B 模型量化格式对比\relax }{table.caption.24}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.8}FlashAttention 集成}{15}{subsection.4.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.9}StreamingLLM KV Eviction}{15}{subsection.4.9}\protected@file@percent }
+\@writefile{loa}{\contentsline {algorithm}{\numberline {2}{\ignorespaces StreamingLLM KV Eviction\relax }}{15}{algorithm.2}\protected@file@percent }
+\newlabel{alg:eviction}{{2}{15}{StreamingLLM KV Eviction\relax }{algorithm.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces StreamingLLM KV Eviction 机制。保留前 4 个 token 作为 attention sink（稳定 softmax 分母，避免 PPL 暴增）和最近 $W$ 个 token 作为 sliding window，驱逐中间所有 token。KV Cache 内存从 $O(\text  {context\_length})$ 降至 $O(\text  {sink} + \text  {window})$，实现恒定内存下的长上下文推理。该机制通过 \texttt  {llama\_memory\_seq\_rm} 接口实现，无需修改 attention kernel。\relax }}{16}{figure.caption.24}\protected@file@percent }
+\newlabel{fig:kv_eviction}{{5}{16}{StreamingLLM KV Eviction 机制。保留前 4 个 token 作为 attention sink（稳定 softmax 分母，避免 PPL 暴增）和最近 $W$ 个 token 作为 sliding window，驱逐中间所有 token。KV Cache 内存从 $O(\text {context\_length})$ 降至 $O(\text {sink} + \text {window})$，实现恒定内存下的长上下文推理。该机制通过 \texttt {llama\_memory\_seq\_rm} 接口实现，无需修改 attention kernel。\relax }{figure.caption.24}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}实现}{16}{section.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}开发环境与基础框架}{16}{subsection.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.1}与 upstream llama.cpp 的集成方式}{16}{subsubsection.5.1.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.2}cgroups v2 三档环境}{16}{subsubsection.5.1.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces 三档 cgroups v2 环境配置\relax }}{17}{table.caption.25}\protected@file@percent }
+\newlabel{tab:cgroups_config}{{5}{17}{三档 cgroups v2 环境配置\relax }{table.caption.25}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}代码模块结构}{17}{subsection.5.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.1}SLIM-ARC 独立模块（6 个文件）}{17}{subsubsection.5.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}llama.cpp 源文件修改（4 个文件）}{17}{subsubsection.5.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}环境变量接口}{18}{subsection.5.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces SLIM-ARC 环境变量接口\relax }}{18}{table.caption.26}\protected@file@percent }
+\newlabel{tab:env_vars}{{6}{18}{SLIM-ARC 环境变量接口\relax }{table.caption.26}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}构建与复现流程}{18}{subsection.5.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}模型量化策略}{18}{subsection.5.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces 80B 模型量化格式对比\relax }}{18}{table.caption.27}\protected@file@percent }
+\newlabel{tab:quant_comparison}{{7}{18}{80B 模型量化格式对比\relax }{table.caption.27}{}}
 \citation{cgroupsv2}
-\@writefile{toc}{\contentsline {section}{\numberline {5}实验评估}{16}{section.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.1}实验设置}{16}{subsection.5.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.1}硬件与软件环境}{16}{subsubsection.5.1.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces 实验环境配置与三档受限环境\relax }}{16}{table.caption.25}\protected@file@percent }
-\newlabel{tab:eval_env}{{6}{16}{实验环境配置与三档受限环境\relax }{table.caption.25}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.2}测试模型}{16}{subsubsection.5.1.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {7}{\ignorespaces 测试模型规格\relax }}{16}{table.caption.26}\protected@file@percent }
-\newlabel{tab:eval_models}{{7}{16}{测试模型规格\relax }{table.caption.26}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {6}实验评估}{19}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}实验设置}{19}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.1.1}硬件与软件环境}{19}{subsubsection.6.1.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces 实验环境配置与三档受限环境\relax }}{19}{table.caption.28}\protected@file@percent }
+\newlabel{tab:eval_env}{{8}{19}{实验环境配置与三档受限环境\relax }{table.caption.28}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.1.2}测试模型}{19}{subsubsection.6.1.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces 测试模型规格\relax }}{19}{table.caption.29}\protected@file@percent }
+\newlabel{tab:eval_models}{{9}{19}{测试模型规格\relax }{table.caption.29}{}}
 \citation{survey2026}
 \citation{gsm8k2021}
 \citation{wikitext2016}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.3}测试方法与数据集}{17}{subsubsection.5.1.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.4}对比维度与基线}{17}{subsubsection.5.1.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.2}核心实验：80B 性能与优化链}{17}{subsection.5.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.1}三档环境性能对比}{17}{subsubsection.5.2.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {8}{\ignorespaces Qwen3-Next-80B Q4\_K\_M 三档环境性能对比\relax }}{17}{table.caption.27}\protected@file@percent }
-\newlabel{tab:q4km_3tier}{{8}{17}{Qwen3-Next-80B Q4\_K\_M 三档环境性能对比\relax }{table.caption.27}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces SLIM-ARC 性能全景。(a) 三档环境 decode 对比，8\,GB 环境从 0.08 提升至 0.76 t/s；(b) 优化堆叠瀑布图，展示每步增益；(c) 量化格式对比，IQ4\_XS 在 32\,GB 达 2.45 t/s；(d) prefill vs decode 权衡，prefill 受 MADV\_RANDOM 影响（-57\%）但 decode 大幅提升（+850\%）。\relax }}{18}{figure.caption.28}\protected@file@percent }
-\newlabel{fig:landscape}{{5}{18}{SLIM-ARC 性能全景。(a) 三档环境 decode 对比，8\,GB 环境从 0.08 提升至 0.76 t/s；(b) 优化堆叠瀑布图，展示每步增益；(c) 量化格式对比，IQ4\_XS 在 32\,GB 达 2.45 t/s；(d) prefill vs decode 权衡，prefill 受 MADV\_RANDOM 影响（-57\%）但 decode 大幅提升（+850\%）。\relax }{figure.caption.28}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.2}IQ4\_XS 量化与端到端验证}{18}{subsubsection.5.2.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {9}{\ignorespaces Qwen3-Next-80B IQ4\_XS 性能对比\relax }}{18}{table.caption.29}\protected@file@percent }
-\newlabel{tab:iq4xs_results}{{9}{18}{Qwen3-Next-80B IQ4\_XS 性能对比\relax }{table.caption.29}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.1.3}测试方法与数据集}{20}{subsubsection.6.1.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.1.4}对比维度与基线}{20}{subsubsection.6.1.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}核心实验：80B 性能与优化链}{20}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.1}三档环境性能对比}{20}{subsubsection.6.2.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces Qwen3-Next-80B Q4\_K\_M 三档环境性能对比\relax }}{20}{table.caption.30}\protected@file@percent }
+\newlabel{tab:q4km_3tier}{{10}{20}{Qwen3-Next-80B Q4\_K\_M 三档环境性能对比\relax }{table.caption.30}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces SLIM-ARC 性能全景。(a) 三档环境 decode 对比，8\,GB 环境从 0.08 提升至 0.76 t/s；(b) 优化堆叠瀑布图，展示每步增益；(c) 量化格式对比，IQ4\_XS 在 32\,GB 达 2.45 t/s；(d) prefill vs decode 权衡，prefill 受 MADV\_RANDOM 影响（-57\%）但 decode 大幅提升（+850\%）。\relax }}{21}{figure.caption.31}\protected@file@percent }
+\newlabel{fig:landscape}{{6}{21}{SLIM-ARC 性能全景。(a) 三档环境 decode 对比，8\,GB 环境从 0.08 提升至 0.76 t/s；(b) 优化堆叠瀑布图，展示每步增益；(c) 量化格式对比，IQ4\_XS 在 32\,GB 达 2.45 t/s；(d) prefill vs decode 权衡，prefill 受 MADV\_RANDOM 影响（-57\%）但 decode 大幅提升（+850\%）。\relax }{figure.caption.31}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.2}IQ4\_XS 量化与端到端验证}{21}{subsubsection.6.2.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Qwen3-Next-80B IQ4\_XS 性能对比\relax }}{21}{table.caption.32}\protected@file@percent }
+\newlabel{tab:iq4xs_results}{{11}{21}{Qwen3-Next-80B IQ4\_XS 性能对比\relax }{table.caption.32}{}}
 \citation{flashattention2022}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.2.3}FlashAttention 加速}{19}{subsubsection.5.2.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {10}{\ignorespaces FlashAttention 对 80B IQ4\_XS 性能影响（32\,GB, 8 threads, KV q4\_0, pp64+tg48）\relax }}{19}{table.caption.30}\protected@file@percent }
-\newlabel{tab:eval_flashattn}{{10}{19}{FlashAttention 对 80B IQ4\_XS 性能影响（32\,GB, 8 threads, KV q4\_0, pp64+tg48）\relax }{table.caption.30}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces (a) FlashAttention prefill 吞吐量与 TTFT 随 prompt 长度变化。pp256 达 17.82 t/s，TTFT 14.4s；pp64 为 12.99 t/s，TTFT 4.93s。更长 prompt 能更好地 amortize 固定开销并利用 tiling 并行性。(b) 80B 完整优化链：从 baseline 0.08 t/s 到 FlashAttention 5.16 t/s，累计 64.5$\times $ 提升。每步增益：MADV\_RANDOM +425\%，KV q4\_0 +81\%，IQ4\_XS +98\%，FlashAttention +71\%。\relax }}{20}{figure.caption.31}\protected@file@percent }
-\newlabel{fig:fa_scaling}{{6}{20}{(a) FlashAttention prefill 吞吐量与 TTFT 随 prompt 长度变化。pp256 达 17.82 t/s，TTFT 14.4s；pp64 为 12.99 t/s，TTFT 4.93s。更长 prompt 能更好地 amortize 固定开销并利用 tiling 并行性。(b) 80B 完整优化链：从 baseline 0.08 t/s 到 FlashAttention 5.16 t/s，累计 64.5$\times $ 提升。每步增益：MADV\_RANDOM +425\%，KV q4\_0 +81\%，IQ4\_XS +98\%，FlashAttention +71\%。\relax }{figure.caption.31}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.3}附属实验}{20}{subsection.5.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.1}小模型验证（Qwen3-4B 与 OLMoE）}{20}{subsubsection.5.3.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {11}{\ignorespaces Qwen3-4B（Dense, 2.4\,GB）三档冷启动消融\relax }}{20}{table.caption.32}\protected@file@percent }
-\newlabel{tab:eval_qwen3_4b}{{11}{20}{Qwen3-4B（Dense, 2.4\,GB）三档冷启动消融\relax }{table.caption.32}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.3}FlashAttention 加速}{22}{subsubsection.6.2.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces FlashAttention 对 80B IQ4\_XS 性能影响（32\,GB, 8 threads, KV q4\_0, pp64+tg48）\relax }}{22}{table.caption.33}\protected@file@percent }
+\newlabel{tab:eval_flashattn}{{12}{22}{FlashAttention 对 80B IQ4\_XS 性能影响（32\,GB, 8 threads, KV q4\_0, pp64+tg48）\relax }{table.caption.33}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces (a) FlashAttention prefill 吞吐量与 TTFT 随 prompt 长度变化。pp256 达 17.82 t/s，TTFT 14.4s；pp64 为 12.99 t/s，TTFT 4.93s。更长 prompt 能更好地 amortize 固定开销并利用 tiling 并行性。(b) 80B 完整优化链：从 baseline 0.08 t/s 到 FlashAttention 5.16 t/s，累计 64.5$\times $ 提升。每步增益：MADV\_RANDOM +425\%，KV q4\_0 +81\%，IQ4\_XS +98\%，FlashAttention +71\%。\relax }}{23}{figure.caption.34}\protected@file@percent }
+\newlabel{fig:fa_scaling}{{7}{23}{(a) FlashAttention prefill 吞吐量与 TTFT 随 prompt 长度变化。pp256 达 17.82 t/s，TTFT 14.4s；pp64 为 12.99 t/s，TTFT 4.93s。更长 prompt 能更好地 amortize 固定开销并利用 tiling 并行性。(b) 80B 完整优化链：从 baseline 0.08 t/s 到 FlashAttention 5.16 t/s，累计 64.5$\times $ 提升。每步增益：MADV\_RANDOM +425\%，KV q4\_0 +81\%，IQ4\_XS +98\%，FlashAttention +71\%。\relax }{figure.caption.34}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}附属实验}{23}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.1}小模型验证（Qwen3-4B 与 OLMoE）}{23}{subsubsection.6.3.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces Qwen3-4B（Dense, 2.4\,GB）三档冷启动消融\relax }}{23}{table.caption.35}\protected@file@percent }
+\newlabel{tab:eval_qwen3_4b}{{13}{23}{Qwen3-4B（Dense, 2.4\,GB）三档冷启动消融\relax }{table.caption.35}{}}
 \citation{kvquant2024}
 \citation{kivi2024}
-\@writefile{lot}{\contentsline {table}{\numberline {12}{\ignorespaces OLMoE-1B-7B（MoE, 3.9\,GB）三档冷启动消融\relax }}{21}{table.caption.33}\protected@file@percent }
-\newlabel{tab:eval_olmoe}{{12}{21}{OLMoE-1B-7B（MoE, 3.9\,GB）三档冷启动消融\relax }{table.caption.33}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces 小模型实验。(a) Qwen3-4B Dense 在三档环境的表现，SLIM-ARC 与 baseline 持平（模型可全量驻留）；(b) OLMoE-1B-7B MoE 三档对比，8\,GB 环境 SLIM-ARC 有 +8.7\% prefill 提升。两个小模型都验证了 SLIM-ARC 的自适应阈值机制：模型 $<$6\,GB 时自动跳过 MADV\_RANDOM，避免副作用。\relax }}{21}{figure.caption.34}\protected@file@percent }
-\newlabel{fig:small_models}{{7}{21}{小模型实验。(a) Qwen3-4B Dense 在三档环境的表现，SLIM-ARC 与 baseline 持平（模型可全量驻留）；(b) OLMoE-1B-7B MoE 三档对比，8\,GB 环境 SLIM-ARC 有 +8.7\% prefill 提升。两个小模型都验证了 SLIM-ARC 的自适应阈值机制：模型 $<$6\,GB 时自动跳过 MADV\_RANDOM，避免副作用。\relax }{figure.caption.34}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.2}KV Cache 量化对比}{21}{subsubsection.5.3.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {13}{\ignorespaces KV Cache 量化类型对比（80B 16\,GB, 8 线程）\relax }}{21}{table.caption.35}\protected@file@percent }
-\newlabel{tab:eval_kv_quant}{{13}{21}{KV Cache 量化类型对比（80B 16\,GB, 8 线程）\relax }{table.caption.35}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces OLMoE-1B-7B（MoE, 3.9\,GB）三档冷启动消融\relax }}{24}{table.caption.36}\protected@file@percent }
+\newlabel{tab:eval_olmoe}{{14}{24}{OLMoE-1B-7B（MoE, 3.9\,GB）三档冷启动消融\relax }{table.caption.36}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces 小模型实验。(a) Qwen3-4B Dense 在三档环境的表现，SLIM-ARC 与 baseline 持平（模型可全量驻留）；(b) OLMoE-1B-7B MoE 三档对比，8\,GB 环境 SLIM-ARC 有 +8.7\% prefill 提升。两个小模型都验证了 SLIM-ARC 的自适应阈值机制：模型 $<$6\,GB 时自动跳过 MADV\_RANDOM，避免副作用。\relax }}{24}{figure.caption.37}\protected@file@percent }
+\newlabel{fig:small_models}{{8}{24}{小模型实验。(a) Qwen3-4B Dense 在三档环境的表现，SLIM-ARC 与 baseline 持平（模型可全量驻留）；(b) OLMoE-1B-7B MoE 三档对比，8\,GB 环境 SLIM-ARC 有 +8.7\% prefill 提升。两个小模型都验证了 SLIM-ARC 的自适应阈值机制：模型 $<$6\,GB 时自动跳过 MADV\_RANDOM，避免副作用。\relax }{figure.caption.37}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.2}KV Cache 量化对比}{24}{subsubsection.6.3.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces KV Cache 量化类型对比（80B 16\,GB, 8 线程）\relax }}{24}{table.caption.38}\protected@file@percent }
+\newlabel{tab:eval_kv_quant}{{15}{24}{KV Cache 量化类型对比（80B 16\,GB, 8 线程）\relax }{table.caption.38}{}}
 \citation{powerinfer2_2024}
-\@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces KV 量化类型扩展对比（含 FlashAttention，80B IQ4\_XS, 32\,GB, fa auto）\relax }}{22}{table.caption.36}\protected@file@percent }
-\newlabel{tab:eval_kv_quant_ext}{{14}{22}{KV 量化类型扩展对比（含 FlashAttention，80B IQ4\_XS, 32\,GB, fa auto）\relax }{table.caption.36}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces (a) KV Cache 量化类型对比（带误差棒）。Q4\_0 在 decode 阶段显著优于 F16 和 Q8\_0，因为 0.5$\times $ 内存占用为权重缓存腾出更多空间。(b) 线程数扩展性分析。8 线程最优，超过 8 线程后由于 memory-bound 特性无额外收益。\relax }}{22}{figure.caption.37}\protected@file@percent }
-\newlabel{fig:kv_quant}{{8}{22}{(a) KV Cache 量化类型对比（带误差棒）。Q4\_0 在 decode 阶段显著优于 F16 和 Q8\_0，因为 0.5$\times $ 内存占用为权重缓存腾出更多空间。(b) 线程数扩展性分析。8 线程最优，超过 8 线程后由于 memory-bound 特性无额外收益。\relax }{figure.caption.37}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.3}StreamingLLM KV Eviction}{22}{subsubsection.5.3.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces KV Eviction 消融（Qwen3-4B-Q4\_K\_M, sink=4, window=256, 32\,GB, n=300）\relax }}{22}{table.caption.38}\protected@file@percent }
-\newlabel{tab:eval_kv_evict}{{15}{22}{KV Eviction 消融（Qwen3-4B-Q4\_K\_M, sink=4, window=256, 32\,GB, n=300）\relax }{table.caption.38}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces KV 量化类型扩展对比（含 FlashAttention，80B IQ4\_XS, 32\,GB, fa auto）\relax }}{25}{table.caption.39}\protected@file@percent }
+\newlabel{tab:eval_kv_quant_ext}{{16}{25}{KV 量化类型扩展对比（含 FlashAttention，80B IQ4\_XS, 32\,GB, fa auto）\relax }{table.caption.39}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces (a) KV Cache 量化类型对比（带误差棒）。Q4\_0 在 decode 阶段显著优于 F16 和 Q8\_0，因为 0.5$\times $ 内存占用为权重缓存腾出更多空间。(b) 线程数扩展性分析。8 线程最优，超过 8 线程后由于 memory-bound 特性无额外收益。\relax }}{25}{figure.caption.40}\protected@file@percent }
+\newlabel{fig:kv_quant}{{9}{25}{(a) KV Cache 量化类型对比（带误差棒）。Q4\_0 在 decode 阶段显著优于 F16 和 Q8\_0，因为 0.5$\times $ 内存占用为权重缓存腾出更多空间。(b) 线程数扩展性分析。8 线程最优，超过 8 线程后由于 memory-bound 特性无额外收益。\relax }{figure.caption.40}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.3}StreamingLLM KV Eviction}{25}{subsubsection.6.3.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {17}{\ignorespaces KV Eviction 消融（Qwen3-4B-Q4\_K\_M, sink=4, window=256, 32\,GB, n=300）\relax }}{25}{table.caption.41}\protected@file@percent }
+\newlabel{tab:eval_kv_evict}{{17}{25}{KV Eviction 消融（Qwen3-4B-Q4\_K\_M, sink=4, window=256, 32\,GB, n=300）\relax }{table.caption.41}{}}
 \citation{survey2026}
 \citation{survey2026}
 \citation{gsm8k2021}
-\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces 80B KV Eviction 消融（IQ4\_XS, 32\,GB, 8 threads, KV q4\_0, pp64+tg48）\relax }}{23}{table.caption.39}\protected@file@percent }
-\newlabel{tab:eval_kv_evict_80b}{{16}{23}{80B KV Eviction 消融（IQ4\_XS, 32\,GB, 8 threads, KV q4\_0, pp64+tg48）\relax }{table.caption.39}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces StreamingLLM KV Eviction 效果。小模型（Qwen3-4B）场景 eviction 开销极低（-2.9\%），验证机制正确性；80B 场景 eviction 实际加速 decode（+9.6\%），因为释放的 KV 内存改善了权重 cache 命中率。sink=4 token 稳定 softmax 分母，window 控制近期上下文。\relax }}{23}{figure.caption.40}\protected@file@percent }
-\newlabel{fig:kv_eviction_result}{{9}{23}{StreamingLLM KV Eviction 效果。小模型（Qwen3-4B）场景 eviction 开销极低（-2.9\%），验证机制正确性；80B 场景 eviction 实际加速 decode（+9.6\%），因为释放的 KV 内存改善了权重 cache 命中率。sink=4 token 稳定 softmax 分母，window 控制近期上下文。\relax }{figure.caption.40}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.3.4}模型精度验证}{23}{subsubsection.5.3.4}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {17}{\ignorespaces Qwen3-4B-Q4\_K\_M 在 WikiTest-2 上的困惑度（n\_ctx=2048）\relax }}{23}{table.caption.42}\protected@file@percent }
-\newlabel{tab:eval_ppl}{{17}{23}{Qwen3-4B-Q4\_K\_M 在 WikiTest-2 上的困惑度（n\_ctx=2048）\relax }{table.caption.42}{}}
-\@writefile{toc}{\contentsline {paragraph}{Qwen3-4B-Q4\_K\_M 困惑度}{23}{table.caption.42}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{GSM8K 推理精度（ALEM 协议）}{23}{section*.43}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {18}{\ignorespaces GSM8K 推理精度对比（8-shot, temp=0.2, 综述 ALEM 协议）\relax }}{24}{table.caption.44}\protected@file@percent }
-\newlabel{tab:eval_gsm8k}{{18}{24}{GSM8K 推理精度对比（8-shot, temp=0.2, 综述 ALEM 协议）\relax }{table.caption.44}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.4}消融实验}{24}{subsection.5.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.1}四组单点消融（80B Q4\_K\_M, 8\,GB, pp16+tg4）}{24}{subsubsection.5.4.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {19}{\ignorespaces 四组单点消融实验结果\relax }}{24}{table.caption.45}\protected@file@percent }
-\newlabel{tab:ablation_4way}{{19}{24}{四组单点消融实验结果\relax }{table.caption.45}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {18}{\ignorespaces 80B KV Eviction 消融（IQ4\_XS, 32\,GB, 8 threads, KV q4\_0, pp64+tg48）\relax }}{26}{table.caption.42}\protected@file@percent }
+\newlabel{tab:eval_kv_evict_80b}{{18}{26}{80B KV Eviction 消融（IQ4\_XS, 32\,GB, 8 threads, KV q4\_0, pp64+tg48）\relax }{table.caption.42}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces StreamingLLM KV Eviction 效果。小模型（Qwen3-4B）场景 eviction 开销极低（-2.9\%），验证机制正确性；80B 场景 eviction 实际加速 decode（+9.6\%），因为释放的 KV 内存改善了权重 cache 命中率。sink=4 token 稳定 softmax 分母，window 控制近期上下文。\relax }}{26}{figure.caption.43}\protected@file@percent }
+\newlabel{fig:kv_eviction_result}{{10}{26}{StreamingLLM KV Eviction 效果。小模型（Qwen3-4B）场景 eviction 开销极低（-2.9\%），验证机制正确性；80B 场景 eviction 实际加速 decode（+9.6\%），因为释放的 KV 内存改善了权重 cache 命中率。sink=4 token 稳定 softmax 分母，window 控制近期上下文。\relax }{figure.caption.43}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.4}模型精度验证}{26}{subsubsection.6.3.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {19}{\ignorespaces Qwen3-4B-Q4\_K\_M 在 WikiTest-2 上的困惑度（n\_ctx=2048）\relax }}{26}{table.caption.45}\protected@file@percent }
+\newlabel{tab:eval_ppl}{{19}{26}{Qwen3-4B-Q4\_K\_M 在 WikiTest-2 上的困惑度（n\_ctx=2048）\relax }{table.caption.45}{}}
+\@writefile{toc}{\contentsline {paragraph}{Qwen3-4B-Q4\_K\_M 困惑度}{26}{table.caption.45}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{GSM8K 推理精度（ALEM 协议）}{26}{section*.46}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {20}{\ignorespaces GSM8K 推理精度对比（8-shot, temp=0.2, 综述 ALEM 协议）\relax }}{27}{table.caption.47}\protected@file@percent }
+\newlabel{tab:eval_gsm8k}{{20}{27}{GSM8K 推理精度对比（8-shot, temp=0.2, 综述 ALEM 协议）\relax }{table.caption.47}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}消融实验}{27}{subsection.6.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.4.1}四组单点消融（80B Q4\_K\_M, 8\,GB, pp16+tg4）}{27}{subsubsection.6.4.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {21}{\ignorespaces 四组单点消融实验结果\relax }}{27}{table.caption.48}\protected@file@percent }
+\newlabel{tab:ablation_4way}{{21}{27}{四组单点消融实验结果\relax }{table.caption.48}{}}
 \citation{speculative_decoding2023}
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces 四组单点消融 diverging bar。正值（绿色）表示加速，负值（红色）表示减速。MADV only 和 SLIM-ARC 全开在 decode 阶段均有大幅正向贡献（+262\%），而 prefetch only 在 decode 阶段几乎无贡献（-12\%）。prefill 阶段所有配置均有负面影响，因为 MADV\_RANDOM 阻止了顺序预读。\relax }}{25}{figure.caption.46}\protected@file@percent }
-\newlabel{fig:ablation_4way}{{10}{25}{四组单点消融 diverging bar。正值（绿色）表示加速，负值（红色）表示减速。MADV only 和 SLIM-ARC 全开在 decode 阶段均有大幅正向贡献（+262\%），而 prefetch only 在 decode 阶段几乎无贡献（-12\%）。prefill 阶段所有配置均有负面影响，因为 MADV\_RANDOM 阻止了顺序预读。\relax }{figure.caption.46}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.2}6\,GB 极端环境验证}{25}{subsubsection.5.4.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {20}{\ignorespaces 6\,GB 极端环境验证（80B IQ4\_XS, SLIM-ARC + KV q4\_0）\relax }}{25}{table.caption.47}\protected@file@percent }
-\newlabel{tab:eval_6gb}{{20}{25}{6\,GB 极端环境验证（80B IQ4\_XS, SLIM-ARC + KV q4\_0）\relax }{table.caption.47}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.3}Speculative Decoding 负面结果}{25}{subsubsection.5.4.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {21}{\ignorespaces Speculative Decoding 负面结果（80B MoE, self-draft, ngram-simple）\relax }}{25}{table.caption.48}\protected@file@percent }
-\newlabel{tab:eval_spec_dec}{{21}{25}{Speculative Decoding 负面结果（80B MoE, self-draft, ngram-simple）\relax }{table.caption.48}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.4}数据波动分析}{26}{subsubsection.5.4.4}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces (a) 数据波动箱线图+散点。80B 16\,GB 同配置 tg8 从 0.28 到 1.03，波动源于 page cache 命中率的系统状态依赖。(b) 多维度优化评估雷达图，展示 SLIM-ARC 在速度、内存、精度、稳定性四个维度的综合表现。\relax }}{26}{figure.caption.49}\protected@file@percent }
-\newlabel{fig:volatility}{{11}{26}{(a) 数据波动箱线图+散点。80B 16\,GB 同配置 tg8 从 0.28 到 1.03，波动源于 page cache 命中率的系统状态依赖。(b) 多维度优化评估雷达图，展示 SLIM-ARC 在速度、内存、精度、稳定性四个维度的综合表现。\relax }{figure.caption.49}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces 四组单点消融 diverging bar。正值（绿色）表示加速，负值（红色）表示减速。MADV only 和 SLIM-ARC 全开在 decode 阶段均有大幅正向贡献（+262\%），而 prefetch only 在 decode 阶段几乎无贡献（-12\%）。prefill 阶段所有配置均有负面影响，因为 MADV\_RANDOM 阻止了顺序预读。\relax }}{28}{figure.caption.49}\protected@file@percent }
+\newlabel{fig:ablation_4way}{{11}{28}{四组单点消融 diverging bar。正值（绿色）表示加速，负值（红色）表示减速。MADV only 和 SLIM-ARC 全开在 decode 阶段均有大幅正向贡献（+262\%），而 prefetch only 在 decode 阶段几乎无贡献（-12\%）。prefill 阶段所有配置均有负面影响，因为 MADV\_RANDOM 阻止了顺序预读。\relax }{figure.caption.49}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.4.2}6\,GB 极端环境验证}{28}{subsubsection.6.4.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {22}{\ignorespaces 6\,GB 极端环境验证（80B IQ4\_XS, SLIM-ARC + KV q4\_0）\relax }}{28}{table.caption.50}\protected@file@percent }
+\newlabel{tab:eval_6gb}{{22}{28}{6\,GB 极端环境验证（80B IQ4\_XS, SLIM-ARC + KV q4\_0）\relax }{table.caption.50}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.4.3}Speculative Decoding 负面结果}{28}{subsubsection.6.4.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {23}{\ignorespaces Speculative Decoding 负面结果（80B MoE, self-draft, ngram-simple）\relax }}{28}{table.caption.51}\protected@file@percent }
+\newlabel{tab:eval_spec_dec}{{23}{28}{Speculative Decoding 负面结果（80B MoE, self-draft, ngram-simple）\relax }{table.caption.51}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.4.4}数据波动分析}{29}{subsubsection.6.4.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces (a) 数据波动箱线图+散点。80B 16\,GB 同配置 tg8 从 0.28 到 1.03，波动源于 page cache 命中率的系统状态依赖。(b) 多维度优化评估雷达图，展示 SLIM-ARC 在速度、内存、精度、稳定性四个维度的综合表现。\relax }}{29}{figure.caption.52}\protected@file@percent }
+\newlabel{fig:volatility}{{12}{29}{(a) 数据波动箱线图+散点。80B 16\,GB 同配置 tg8 从 0.28 到 1.03，波动源于 page cache 命中率的系统状态依赖。(b) 多维度优化评估雷达图，展示 SLIM-ARC 在速度、内存、精度、稳定性四个维度的综合表现。\relax }{figure.caption.52}{}}
 \citation{survey2026}
-\@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces 优化技术渐进提升 dumbbell 图。三档环境（8/16/32\,GB）从 baseline $\to $ SLIM-ARC $\to $ Full（含 FlashAttention）的完整优化链。8\,GB: 0.08$\to $0.42$\to $0.76（9.5$\times $）；16\,GB: 0.18$\to $0.90$\to $1.12（6.2$\times $）；32\,GB: 3.01$\to $3.30$\to $5.16（1.7$\times $）。对数 x 轴展示跨数量级提升。\relax }}{27}{figure.caption.50}\protected@file@percent }
-\newlabel{fig:opt_dumbbell}{{12}{27}{优化技术渐进提升 dumbbell 图。三档环境（8/16/32\,GB）从 baseline $\to $ SLIM-ARC $\to $ Full（含 FlashAttention）的完整优化链。8\,GB: 0.08$\to $0.42$\to $0.76（9.5$\times $）；16\,GB: 0.18$\to $0.90$\to $1.12（6.2$\times $）；32\,GB: 3.01$\to $3.30$\to $5.16（1.7$\times $）。对数 x 轴展示跨数量级提升。\relax }{figure.caption.50}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {6}总结与未来展望}{27}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}工作总结}{27}{subsection.6.1}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {13}{\ignorespaces 优化技术渐进提升 dumbbell 图。三档环境（8/16/32\,GB）从 baseline $\to $ SLIM-ARC $\to $ Full（含 FlashAttention）的完整优化链。8\,GB: 0.08$\to $0.42$\to $0.76（9.5$\times $）；16\,GB: 0.18$\to $0.90$\to $1.12（6.2$\times $）；32\,GB: 3.01$\to $3.30$\to $5.16（1.7$\times $）。对数 x 轴展示跨数量级提升。\relax }}{30}{figure.caption.53}\protected@file@percent }
+\newlabel{fig:opt_dumbbell}{{13}{30}{优化技术渐进提升 dumbbell 图。三档环境（8/16/32\,GB）从 baseline $\to $ SLIM-ARC $\to $ Full（含 FlashAttention）的完整优化链。8\,GB: 0.08$\to $0.42$\to $0.76（9.5$\times $）；16\,GB: 0.18$\to $0.90$\to $1.12（6.2$\times $）；32\,GB: 3.01$\to $3.30$\to $5.16（1.7$\times $）。对数 x 轴展示跨数量级提升。\relax }{figure.caption.53}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {7}总结与未来展望}{30}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}工作总结}{30}{subsection.7.1}\protected@file@percent }
 \citation{cgroupsv2}
 \citation{solidattention2026}
 \citation{survey2026}
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}诚实评估与局限性}{28}{subsection.6.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{prefetch\_scheduler 的冗余与 OS 底层绕开思路}{28}{section*.51}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{数据波动问题}{28}{section*.52}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Speculative Decoding 的不适用}{28}{section*.53}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{KV Eviction 与 FlashAttention 的冲突}{28}{section*.54}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}未来展望}{28}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}诚实评估与局限性}{31}{subsection.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{prefetch\_scheduler 的冗余与 OS 底层绕开思路}{31}{section*.54}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{数据波动问题}{31}{section*.55}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Speculative Decoding 的不适用}{31}{section*.56}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{KV Eviction 与 FlashAttention 的冲突}{31}{section*.57}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}未来展望}{31}{subsection.7.3}\protected@file@percent }
 \bibstyle{IEEEtran}
 \bibdata{reference}
-\bibcite{brown2020gpt3}{1}
-\bibcite{touvron2023llama}{2}
-\bibcite{qwen3_2025}{3}
-\bibcite{qwen3next2024}{4}
-\bibcite{survey2026}{5}
-\bibcite{shazeer2017moe}{6}
-\bibcite{fedus2022switch}{7}
-\bibcite{llamacpp2024}{8}
-\bibcite{mobilemoe2024}{9}
-\bibcite{moeprism2024}{10}
-\bibcite{flexinfer2025}{11}
-\bibcite{powerinfer2024}{12}
+\bibcite{flexinfer2025}{1}
+\bibcite{powerinfer2024}{2}
+\bibcite{brown2020gpt3}{3}
+\bibcite{touvron2023llama}{4}
+\bibcite{qwen3_2025}{5}
+\bibcite{qwen3next2024}{6}
+\bibcite{survey2026}{7}
+\bibcite{shazeer2017moe}{8}
+\bibcite{fedus2022switch}{9}
+\bibcite{llamacpp2024}{10}
+\bibcite{mobilemoe2024}{11}
+\bibcite{moeprism2024}{12}
 \bibcite{powerinfer2_2024}{13}
 \bibcite{dualblade2024}{14}
 \bibcite{hillinfer2024}{15}
@@ -269,7 +282,7 @@
 \bibcite{gsm8k2021}{29}
 \bibcite{wikitext2016}{30}
 \bibcite{speculative_decoding2023}{31}
-\newlabel{LastPage}{{}{31}{}{page.31}{}}
-\xdef\lastpage@lastpage{31}
-\xdef\lastpage@lastpageHy{31}
-\gdef \@abspage@last{32}
+\newlabel{LastPage}{{}{34}{}{page.34}{}}
+\xdef\lastpage@lastpage{34}
+\xdef\lastpage@lastpageHy{34}
+\gdef \@abspage@last{35}

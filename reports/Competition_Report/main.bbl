@@ -21,6 +21,18 @@
 \providecommand{\BIBdecl}{\relax}
 \BIBdecl
 
+\bibitem{flexinfer2025}
+H.~Du, S.~Wu, A.~Kharlamova, N.~Guan, and C.~J. Xue, ``Flexinfer: Breaking
+  memory constraint via flexible and efficient offloading for on-device {LLM}
+  inference,'' in \emph{Proceedings of the 5th Workshop on Machine Learning and
+  Systems (EuroMLSys '25)}.\hskip 1em plus 0.5em minus 0.4em\relax ACM, 2025,
+  pp. 56--65.
+
+\bibitem{powerinfer2024}
+Y.~Song, Z.~Mi, H.~Xie, and H.~Chen, ``{PowerInfer}: Fast large language model
+  serving with a consumer-grade {GPU},'' in \emph{Proceedings of the ACM SIGOPS
+  30th Symposium on Operating Systems Principles (SOSP)}, 2024.
+
 \bibitem{brown2020gpt3}
 T.~B. Brown, B.~Mann, N.~Ryder, M.~Subbiah, J.~Kaplan, P.~Dhariwal,
   A.~Neelakantan, P.~Shyam, G.~Sastry, A.~Askell \emph{et~al.}, ``Language
@@ -69,18 +81,6 @@ J.~Chen, Z.~Wang, K.~Zhang, and Y.~Meng, ``{MobileMoE}: Scaling on-device
 C.~Wei \emph{et~al.}, ``{MoE-Prism}: Disentangling monolithic experts for
   elastic {MoE} services via model-system co-designs,'' in \emph{Advances in
   Neural Information Processing Systems (NeurIPS)}, 2024.
-
-\bibitem{flexinfer2025}
-H.~Du, S.~Wu, A.~Kharlamova, N.~Guan, and C.~J. Xue, ``Flexinfer: Breaking
-  memory constraint via flexible and efficient offloading for on-device {LLM}
-  inference,'' in \emph{Proceedings of the 5th Workshop on Machine Learning and
-  Systems (EuroMLSys '25)}.\hskip 1em plus 0.5em minus 0.4em\relax ACM, 2025,
-  pp. 56--65.
-
-\bibitem{powerinfer2024}
-Y.~Song, Z.~Mi, H.~Xie, and H.~Chen, ``{PowerInfer}: Fast large language model
-  serving with a consumer-grade {GPU},'' in \emph{Proceedings of the ACM SIGOPS
-  30th Symposium on Operating Systems Principles (SOSP)}, 2024.
 
 \bibitem{powerinfer2_2024}
 Z.~Xue, Y.~Song, Z.~Mi, X.~Zheng, Y.~Xia, and H.~Chen, ``{PowerInfer-2}: Fast
