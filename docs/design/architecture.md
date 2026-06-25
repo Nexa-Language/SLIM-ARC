@@ -1,131 +1,208 @@
-# SLIM-ARC 代码架构文档
+# SLIM-ARC 架构设计
 
-> 本文档面向开发者，描述 SLIM-ARC 的代码结构、模块职责、调用关系与构建方式。
-> 面向阅读源码的工程师，非项目计划。
+## 1. 设计目标
 
-## 1. 源码组织
+在纯 CPU、受限内存（8-16GB）环境下，为端侧 LLM 推理提供统一的 I/O 调度框架，实现：
 
-SLIM-ARC 的代码分为两部分：
+1. **低内存占用**: 通过权重卸载和 KV 换页，使大模型在受限内存下可运行
+2. **高吞吐量**: 通过预取掩盖 I/O 延迟，逼近"计算无等待"的理想流水线
+3. **低延迟**: 优化 TTFT 和 TPOT，满足交互式场景需求
+4. **精度保持**: 换页和量化不显著影响输出质量（PPL 损失 < 1%）
 
-### 1.1 独立模块（`src/llama-upstream/src/slim-arc-*.h/.cpp`）
-
-这些文件是 SLIM-ARC 原创，独立于 llama.cpp upstream，通过 CMake 编译为 llama 静态库的一部分。
-
-| 文件 | 职责 | 行数 |
-|------|------|------|
-| `slim-arc-prefetch.h/.cpp` | 层感知预取调度器、MoE Router Hook、mmap 区域管理、MADV 切换 | ~300 |
-| `slim-arc-unified-scheduler.h/.cpp` | 统一 I/O 带宽预算调度器 | ~170 |
-| `slim-arc-kv-eviction.h/.cpp` | KV Cache 分层驱逐管理器（sink+window+cold） | ~160 |
-| `slim-arc-on-demand.h/.cpp` | 按需加载控制（预留，当前由 prefetch 覆盖） | ~280 |
-
-### 1.2 llama.cpp 源文件修改（通过 `scripts/apply-slim-arc.py` 集成）
-
-| 上游文件 | 修改点 | 作用 |
-|---------|--------|------|
-| `llama-model-loader.cpp` | 模型加载后注册 mmap 区域、创建 scheduler | 在 `init_mappings` 末尾插入 SLIM-ARC 初始化 |
-| `llama-context.cpp` | `graph_compute` 前后插入 hook | 预取调度 + MoE Router 提取 + KV eviction |
-| `llama-kv-cache.cpp` | `clear()` 中加 `MADV_DONTNEED` | KV 清空时释放物理页 |
-| `CMakeLists.txt` | 添加 SLIM-ARC 源文件 | 编译集成 |
-
-## 2. 模块依赖关系
+## 2. 整体架构
 
 ```
-llama-model-loader (加载模型)
+┌─────────────────────────────────────────────────────────────┐
+│                    SLIM-ARC 统一调度层                       │
+│                                                             │
+│  ┌──────────┐  ┌───────────┐  ┌──────────────────┐         │
+│  │ 权重卸载  │  │ KV 换页    │  │ MoE 专家预测预取  │         │
+│  │ 模块     │  │ 模块       │  │ 模块              │         │
+│  │(FlexInfer)│  │(DUAL-BLADE)│  │  (MobileMoE)    │         │
+│  └─────┬────┘  └─────┬─────┘  └────────┬────────┘         │
+│        └──────────────┼──────────────────┘                  │
+│               ┌───────▼───────┐                             │
+│               │ 统一 I/O 调度器│ ← 核心创新点                 │
+│               │ (带宽预算分配) │                             │
+│               └───────┬───────┘                             │
+│        ┌──────────────┼──────────────────┐                 │
+│   ┌────▼────┐  ┌─────▼─────┐  ┌────────▼─────┐             │
+│   │Tile流水线│  │动态锁定    │  │投机解码       │             │
+│   │+融合反量化│ │(Prefill/   │  │(Draft-Verify) │             │
+│   │         │  │ Decode)    │  │              │             │
+│   └─────────┘  └───────────┘  └──────────────┘             │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    FlexInfer / ggml 底层                     │
+│  (张量级异步预取 · 均衡内存锁定 · Direct I/O · GGUF 格式)     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## 3. 核心模块
+
+### 3.1 权重卸载模块（继承自 FlexInfer）
+
+**职责**: 将模型权重卸载到 SSD，按需通过 Direct I/O 加载到内存。
+
+**关键机制**:
+- 张量级异步多线程预取（默认窗口 = 3）
+- 均衡内存锁定（mlock 固定物理页）
+- 灵活张量保留（Algorithm 1，静态启发式决定 FFN/Attention 保留比例）
+
+**SLIM-ARC 改造点**:
+- 将静态 Algorithm 1 升级为运行时动态策略（见 3.6）
+- 预取线程池统一纳入调度器管理（见 3.5）
+
+### 3.2 KV Cache 换页模块
+
+**职责**: 将长上下文中低注意力分数的 KV Block 换出到 SSD，需要时预取回内存。
+
+**参考**: DUAL-BLADE（NVMe-direct 双路）、ScoutAttention（层前 CPU 预计算）、HillInfer（分层 KV 驱逐）
+
+**关键机制**:
+- KV Block 级注意力分数追踪（轻量，不引入额外计算）
+- 冷热分级：sink token（永久驻留）+ sliding window（热区）+ cold block（可换出）
+- 异步换出/换入流水线（复用 FlexInfer prefetch 线程池）
+
+**设计决策**:
+- 不引入 SmartSSD 等特殊硬件（保持纯 CPU + NVMe）
+- 换出策略基于注意力分数阈值，非固定窗口，适应不同 prompt 模式
+
+### 3.3 MoE 专家预测预取模块
+
+**职责**: 对 MoE 模型，提前预测激活专家，仅预取所需权重，降低 I/O 带宽需求。
+
+**参考**: MobileMoE（端侧 MoE 扩展）、MoE-Prism（专家解耦）、Distributed MoE Expert Placement
+
+**关键机制**:
+- 轻量级 Router Predictor（基于上一层 Router 输出 + 薄 MLP）
+- 提前 1-2 层预测，预留 I/O 时间
+- 预测失败时的 fallback（退化为保守预取 + 延迟容忍）
+
+**验证模型**: Qwen3-Next-A3B（3B 总参，稀疏激活）
+
+### 3.4 Tile 级微流水线 + 融合反量化
+
+**职责**: 将张量切分为 Cache 友好的 Tile，I/O 与计算交错；反量化与 MatMul 融合。
+
+**参考**: flexinfer-optimize.md（自主论证）
+
+**关键机制**:
+- Tile 大小对齐 L2/L3 Cache 行（典型 64KB-256KB）
+- 双缓冲：I/O 线程读 Tile-N 时计算线程处理 Tile-N-1
+- 融合反量化：数据从 SSD 流入 CPU Cache 时即时反量化，不写回内存
+
+### 3.5 统一 I/O 带宽预算调度器（核心创新）
+
+**职责**: 运行时监控三路 I/O 需求（权重、KV、专家），基于阶段动态分配带宽。
+
+**问题定义**:
+```
+maximize  吞吐量
+s.t.     Σ bandwidth_i(t) ≤ B_total       # 带宽上限
+         latency_weight(t) ≤ L_max         # 权重延迟约束
+         latency_kv(t) ≤ L_max             # KV 延迟约束
+         latency_expert(t) ≤ L_max         # 专家延迟约束
+```
+
+**调度策略**（启发式，非最优求解）:
+
+| 阶段 | 权重优先级 | KV 优先级 | 专家优先级 | 说明 |
+|------|----------|---------|----------|------|
+| Prefill（短） | 高 | 低 | 中 | 计算密集，I/O 易掩盖 |
+| Prefill（长） | 高 | 中 | 中 | KV 开始增长 |
+| Decode（短） | 高 | 低 | 中 | 访存密集，权重是瓶颈 |
+| Decode（长） | 中 | 高 | 中 | KV 成为主瓶颈 |
+| MoE Decode | 中 | 中 | 高 | 专家稀疏性可利用 |
+
+**实现**: 轻量级运行时监控器，基于历史 I/O 延迟和计算吞吐量动态调整预算比例。
+
+### 3.6 Prefill/Decode 动态锁定
+
+**职责**: 将 FlexInfer 的静态 Algorithm 1 升级为运行时动态策略。
+
+**机制**:
+- 阶段检测器：基于 batch size 和序列长度判断 Prefill/Decode
+- Prefill 模式：少保留（计算密集，I/O 易掩盖）
+- Decode 模式：多保留（访存密集，减少 I/O）
+- 长上下文模式：FFN 内存配额让渡给 KV Cache
+
+## 4. 数据流
+
+### 4.1 Prefill 阶段
+
+```
+用户输入 prompt
     │
-    ├── register_mmap_region() ──→ slim-arc-prefetch (mmap 区域注册表)
-    ├── set_global_prefetch_scheduler() ──→ prefetch_scheduler 单例
-    └── set_global_unified_scheduler() ──→ unified_io_scheduler 单例
-                                            │
-llama-context::graph_compute (每层计算)     │
-    │                                       │
-    ├── tensor_layer_from_name() ──→ slim-arc-prefetch (解析层级)
-    ├── notify_layer_compute() ──→ prefetch_scheduler (触发预取)
-    ├── cache_router_experts() ──→ prefetch_scheduler (缓存 router 输出)
-    ├── prefetch_experts() ──→ prefetch_scheduler (选择性专家预取)
-    ├── get_cached_experts() ──→ prefetch_scheduler (获取预测)
-    ├── unified tick() ──→ unified_io_scheduler (带宽预算调度)
-    └── switch_madvise_all() ──→ slim-arc-prefetch (动态 MADV 切换)
+    ▼
+Tokenize ──► Embedding
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│  Layer 0                                │
+│  ┌─────────┐  ┌─────────┐  ┌────────┐ │
+│  │预取 L1   │  │计算 L0   │  │换出冷KV│ │
+│  │权重+KV  │  │权重+KV  │  │(异步)  │ │
+│  └─────────┘  └─────────┘  └────────┘ │
+└─────────────────────────────────────────┘
+    │
+    ▼
+  ... (重复 N 层)
+    │
+    ▼
+Logits ──► Sample ──► 首 token
 ```
 
-## 3. 关键数据结构
+### 4.2 Decode 阶段
 
-### 3.1 `tensor_prefetch_info`（slim-arc-prefetch.h）
-```c
-struct tensor_prefetch_info {
-    void *   addr;      // mmap 地址
-    size_t   size;      // 张量字节数
-    int      layer;     // 层级（blk.N 中的 N，-1 为非层张量）
-    uint64_t signature; // 图变化检测
-};
+```
+上一 token
+    │
+    ▼
+┌─────────────────────────────────────────┐
+│  Layer 0                                │
+│  ┌──────────┐  ┌──────────┐  ┌───────┐ │
+│  │预取 L1   │  │计算 L0   │  │预测L2 │ │
+│  │权重(仅   │  │+ 读KV   │  │专家   │ │
+│  │激活专家) │  │         │  │       │ │
+│  └──────────┘  └──────────┘  └───────┘ │
+└─────────────────────────────────────────┘
+    │
+    ▼
+  ... (重复 N 层)
+    │
+    ▼
+Logits ──► Sample ──► 下一 token
 ```
 
-### 3.2 `expert_tensor_info`（slim-arc-prefetch.h）
-```c
-struct expert_tensor_info {
-    void * base_addr;       // 3D 合并张量起始地址
-    size_t total_size;      // 所有专家总大小
-    int    n_experts;       // 专家数（如 512）
-    size_t per_expert_size; // total_size / n_experts
-};
-```
-用于 MoE 专家的子区域预取：`expert_addr = base_addr + expert_id * per_expert_size`。
+## 5. 与现有工作的差异
 
-### 3.3 `kv_eviction_config`（slim-arc-kv-eviction.h）
-```c
-struct kv_eviction_config {
-    size_t sink_tokens   = 4;       // 永久热 token 数
-    size_t window_tokens = 4096;    // 滑动窗口大小
-    size_t budget_bytes  = 0;       // 内存预算（0=无限）
-    double evict_threshold = 0.01;  // attention 分数驱逐阈值
-    bool   enable_offload = false;  // 是否 offload 到 SSD
-    std::string offload_path;       // mmap 临时文件路径
-};
-```
+| 维度 | FlexInfer | DUAL-BLADE | MobileMoE | **SLIM-ARC** |
+|------|-----------|------------|-----------|---------------|
+| 权重卸载 | ✓ | ✗ | ✗ | ✓ |
+| KV 换页 | ✗ | ✓ | ✗ | ✓ |
+| MoE 预取 | ✗ | ✗ | ✓ | ✓ |
+| 统一调度 | ✗ | ✗ | ✗ | **✓** |
+| 纯 CPU | ✓ | ✗（NVMe-direct） | 部分 | ✓ |
+| 开源可复现 | ✓ | ✗ | 部分 | ✓ |
 
-## 4. 运行时控制（环境变量）
+## 6. 技术指标目标
 
-| 环境变量 | 默认 | 作用 |
-|---------|------|------|
-| `SLIM_ARC_DISABLE` | 未设置 | 设置后禁用所有 SLIM-ARC 优化 |
-| `SLIM_ARC_NO_MADV_RANDOM` | 未设置 | 设置后不设 MADV_RANDOM（仅 WILLNEED） |
-| `SLIM_ARC_DYNAMIC_MADV` | 未设置 | 设置后启用 prefill/decode 动态 MADV 切换 |
-| `SLIM_ARC_KV_EVICT` | 未设置 | 设置后启用 StreamingLLM KV eviction |
-| `SLIM_ARC_KV_SINK` | 4 | attention sink token 数 |
-| `SLIM_ARC_KV_WINDOW` | 1024 | KV 滑动窗口大小 |
+| 指标 | FlexInfer Baseline | SLIM-ARC 目标 | 提升幅度 |
+|------|-------------------|--------------|---------|
+| 吞吐量 (8G) | X tok/s | 1.5X tok/s | +50% |
+| TTFT (16K) | Y ms | 0.7Y ms | -30% |
+| 峰值内存 | Z GB | 0.85Z GB | -15% |
+| PPL 损失 | 0 | < 0.5 | 可接受 |
 
-## 5. 构建与复现
+*具体数值待 Phase 0 baseline 跑出后确定*
 
-```bash
-# 1. 克隆 upstream llama.cpp
-git clone https://github.com/ggml-org/llama.cpp src/llama-upstream
+## 7. 演进路线
 
-# 2. 应用 SLIM-ARC 修改
-python3 scripts/apply-slim-arc.py
-
-# 3. 构建（禁用 repack 避免 OOM）
-cd src/llama-upstream
-cmake -B build -DGGML_CPU_REPACK=OFF -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j$(nproc)
-
-# 4. 运行 80B
-LD_LIBRARY_PATH=build/bin ./build/bin/llama-cli \
-    -m ../../data/models/Qwen3-Next-80B-A3B-Instruct-IQ4_XS.gguf \
-    -t 8 -c 256 -ctk q4_0 -ctv q4_0 -fa auto -p "prompt"
-```
-
-## 6. 测试脚本
-
-| 脚本 | 用途 |
-|------|------|
-| `scripts/bench/run-80b-bench.sh` | 80B benchmark（三档） |
-| `scripts/bench/run-gsm8k-api.py` | GSM8K 精度测试（通过 llama-server API） |
-| `scripts/bench/run-ablation.sh` | 四组消融实验 |
-| `scripts/env/setup-cgroups.sh` | cgroups v2 三档环境配置 |
-
-## 7. 模块详细文档
-
-- [prefetch_scheduler API](phase2a-moe-expert-prediction.md) — 预取调度器
-- [KV Cache eviction](phase2b-kv-cache-offload.md) — KV 分层驱逐
-- [动态 MADV 切换](phase2c-dynamic-locking.md) — prefill/decode 策略切换
-- [Tile 流水线](phase2d-tile-pipeline.md) — 设计草案（未实现）
-- [统一 I/O 调度器](phase3-unified-io-scheduler.md) — 带宽预算
+1. **Phase 0-1**: 复现 FlexInfer，建立 baseline，完成访存 profiling
+2. **Phase 2**: 单点优化（各模块独立验证）
+3. **Phase 3**: 统一调度器集成
+4. **Phase 4**: 全矩阵消融实验
+5. **Phase 5**: Agent 场景适配（后期）

@@ -100,8 +100,8 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.4}禁用 GGML\_CPU\_REPACK}{9}{subsection.3.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.1}问题发现}{9}{subsubsection.3.4.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.2}解决方案}{9}{subsubsection.3.4.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}层感知预取调度器}{9}{subsection.3.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.1}架构设计}{9}{subsubsection.3.5.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}层感知预取调度器}{10}{subsection.3.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.1}架构设计}{10}{subsubsection.3.5.1}\protected@file@percent }
 \@writefile{loa}{\contentsline {algorithm}{\numberline {1}{\ignorespaces prefetch\_scheduler 调度循环\relax }}{10}{algorithm.1}\protected@file@percent }
 \newlabel{alg:prefetch}{{1}{10}{prefetch\_scheduler 调度循环\relax }{algorithm.1}{}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.5.2}MoE Router Hook 与跨层专家预测}{10}{subsubsection.3.5.2}\protected@file@percent }
@@ -110,17 +110,17 @@
 \citation{survey2026}
 \citation{dualblade2024}
 \citation{survey2026}
-\citation{survey2026}
-\citation{flashattention2022}
 \@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces MoE Router Hook 跨层专家预测。llama.cpp 计算图中的 \texttt  {ffn\_moe\_topk} 张量包含 Router 输出的 top-k expert IDs。SLIM-ARC 在每层计算后提取该张量，缓存 expert IDs，用于预测下一层的激活专家并提前 \texttt  {madvise(WILLNEED)}。由于 Qwen3-Next-80B 的专家权重以 \texttt  {[dim, dim, 512]} 的 3D 合并张量存储，每个专家占 \texttt  {total\_size / 512} 的连续子区域，通过计算偏移量 \texttt  {expert\_addr = base + expert\_id $\times $ per\_expert\_size} 可精确预取。\relax }}{11}{figure.caption.19}\protected@file@percent }
 \newlabel{fig:moe_router_hook}{{3}{11}{MoE Router Hook 跨层专家预测。llama.cpp 计算图中的 \texttt {ffn\_moe\_topk} 张量包含 Router 输出的 top-k expert IDs。SLIM-ARC 在每层计算后提取该张量，缓存 expert IDs，用于预测下一层的激活专家并提前 \texttt {madvise(WILLNEED)}。由于 Qwen3-Next-80B 的专家权重以 \texttt {[dim, dim, 512]} 的 3D 合并张量存储，每个专家占 \texttt {total\_size / 512} 的连续子区域，通过计算偏移量 \texttt {expert\_addr = base + expert\_id $\times $ per\_expert\_size} 可精确预取。\relax }{figure.caption.19}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.6}KV Cache 量化}{11}{subsection.3.6}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.7}统一 I/O 带宽预算调度器}{11}{subsection.3.7}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces 统一 I/O 带宽分配比例\relax }}{11}{table.caption.20}\protected@file@percent }
-\newlabel{tab:budget_ratios}{{2}{11}{统一 I/O 带宽分配比例\relax }{table.caption.20}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.8}FlashAttention 集成}{11}{subsection.3.8}\protected@file@percent }
+\citation{survey2026}
+\citation{flashattention2022}
 \citation{survey2026}
 \citation{streamingllm2024}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces 统一 I/O 带宽分配比例\relax }}{12}{table.caption.20}\protected@file@percent }
+\newlabel{tab:budget_ratios}{{2}{12}{统一 I/O 带宽分配比例\relax }{table.caption.20}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.8}FlashAttention 集成}{12}{subsection.3.8}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.9}StreamingLLM KV Eviction}{12}{subsection.3.9}\protected@file@percent }
 \@writefile{loa}{\contentsline {algorithm}{\numberline {2}{\ignorespaces StreamingLLM KV Eviction\relax }}{12}{algorithm.2}\protected@file@percent }
 \newlabel{alg:eviction}{{2}{12}{StreamingLLM KV Eviction\relax }{algorithm.2}{}}
@@ -130,20 +130,20 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.1}开发环境与基础框架}{13}{subsection.4.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.1}与 upstream llama.cpp 的集成方式}{13}{subsubsection.4.1.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {4.1.2}cgroups v2 三档环境}{13}{subsubsection.4.1.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces 三档 cgroups v2 环境配置\relax }}{13}{table.caption.22}\protected@file@percent }
-\newlabel{tab:cgroups_config}{{3}{13}{三档 cgroups v2 环境配置\relax }{table.caption.22}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces 三档 cgroups v2 环境配置\relax }}{14}{table.caption.22}\protected@file@percent }
+\newlabel{tab:cgroups_config}{{3}{14}{三档 cgroups v2 环境配置\relax }{table.caption.22}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}代码模块结构}{14}{subsection.4.2}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.1}SLIM-ARC 独立模块（6 个文件）}{14}{subsubsection.4.2.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {4.2.2}llama.cpp 源文件修改（4 个文件）}{14}{subsubsection.4.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}环境变量接口}{14}{subsection.4.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}环境变量接口}{15}{subsection.4.3}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces SLIM-ARC 环境变量接口\relax }}{15}{table.caption.23}\protected@file@percent }
 \newlabel{tab:env_vars}{{4}{15}{SLIM-ARC 环境变量接口\relax }{table.caption.23}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.4}构建与复现流程}{15}{subsection.4.4}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.5}模型量化策略}{15}{subsection.4.5}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces 80B 模型量化格式对比\relax }}{15}{table.caption.24}\protected@file@percent }
 \newlabel{tab:quant_comparison}{{5}{15}{80B 模型量化格式对比\relax }{table.caption.24}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}实验评估}{15}{section.5}\protected@file@percent }
 \citation{cgroupsv2}
+\@writefile{toc}{\contentsline {section}{\numberline {5}实验评估}{16}{section.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.1}实验设置}{16}{subsection.5.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.1}硬件与软件环境}{16}{subsubsection.5.1.1}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces 实验环境配置与三档受限环境\relax }}{16}{table.caption.25}\protected@file@percent }
