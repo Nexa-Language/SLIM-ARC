@@ -1,171 +1,73 @@
-# Phase 3: Unified I/O Bandwidth Budget Scheduler
+# unified_io_scheduler API 文档
 
-## SLIM-ARC Core Innovation
+> 源码：`src/llama-upstream/src/slim-arc-unified-scheduler.h` / `.cpp`
 
-### Problem Statement
+## 概述
 
-Existing approaches optimize I/O for individual data types independently:
-- FlexInfer: prefetches model weights only
-- DUAL-BLADE: offloads KV Cache only
-- MobileMoE: predicts expert activation only
+`unified_io_scheduler` 协调权重预取、KV Cache 换页、专家预取三路 I/O 竞争，根据运行时阶段动态分配带宽预算。
 
-When these techniques coexist, they **compete** for the same I/O bandwidth
-without coordination, leading to:
-1. Bandwidth oversubscription (all three prefetch simultaneously)
-2. Priority inversion (low-priority I/O blocks critical path)
-3. Suboptimal global throughput (locally optimal ≠ globally optimal)
-
-### Core Insight
-
-> **In a memory-constrained edge device, weight offloading, KV cache
-> paging, and MoE expert prefetch all share the same NVMe bandwidth.
-> Optimal performance requires a unified scheduler that allocates bandwidth
-> based on runtime phase (Prefill/Decode), context length, and model
-> architecture.**
-
-### Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│              Unified I/O Bandwidth Scheduler                 │
-│                                                             │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │           Bandwidth Budget Allocator                │   │
-│  │                                                      │   │
-│  │  Phase     │ Weight │ KV Cache │ MoE Expert │ Total│   │
-│  │  ─────────┼────────┼──────────┼────────────┼──────│   │
-│  │  Prefill  │  60%   │   10%    │    30%     │ 100% │   │
-│  │  Decode-S │  70%   │   20%    │    10%     │ 100% │   │
-│  │  Decode-L │  30%   │   60%    │    10%     │ 100% │   │
-│  │  MoE-Dec  │  20%   │   20%    │    60%     │ 100% │   │
-│  └──────────────────────────────────────────────────────┘   │
-│                                                             │
-│  ┌──────────┐  ┌───────────┐  ┌──────────────────┐         │
-│  │ Weight    │  │ KV Cache  │  │ MoE Expert       │         │
-│  │ Prefetch  │  │ Swap Mgr  │  │ Predictor         │         │
-│  │ Module    │  │ Module    │  │ Module            │         │
-│  └─────┬────┘  └─────┬─────┘  └────────┬────────┘         │
-│        └──────────────┼──────────────────┘                  │
-│               ┌───────▼───────┐                             │
-│               │  Async I/O    │                             │
-│               │  Thread Pool   │                             │
-│               └───────┬───────┘                             │
-│                       │                                     │
-│               ┌───────▼───────┐                             │
-│               │  NVMe SSD      │                             │
-│               └───────────────┘                             │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### Bandwidth Allocation Algorithm
-
-```python
-def allocate_bandwidth(phase, context_len, is_moe, budget):
-    """Allocate I/O bandwidth across weight, KV, and expert prefetch."""
-    weights = {
-        "prefill_short":  (0.60, 0.10, 0.30),  # compute-bound
-        "prefill_long":   (0.50, 0.20, 0.30),  # KV growing
-        "decode_short":   (0.70, 0.20, 0.10),  # weight-bound
-        "decode_long":    (0.30, 0.60, 0.10),  # KV-bound
-        "moe_decode":     (0.20, 0.20, 0.60),  # expert-bound
-    }
-
-    if is_moe and phase == "decode":
-        key = "moe_decode"
-    elif phase == "prefill":
-        key = "prefill_long" if context_len > 4096 else "prefill_short"
-    else:  # decode
-        key = "decode_long" if context_len > 4096 else "decode_short"
-
-    w_weight, w_kv, w_expert = weights[key]
-    return {
-        "weight":  budget * w_weight,
-        "kv":      budget * w_kv,
-        "expert":  budget * w_expert,
-    }
-```
-
-### Dynamic Adaptation
-
-The scheduler monitors real-time I/O latency and adjusts allocation:
-
-```
- every 100ms:
-   1. Measure actual bandwidth consumed per category
-   2. If weight prefetch is stalling compute → increase weight budget
-   3. If KV swap-in is causing page faults → increase KV budget
-   4. If MoE expert miss rate > 20% → increase expert budget
-   5. Rebalance to fill total budget (avoid idle bandwidth)
-```
-
-### Implementation
-
-#### Data Structures
+## 运行时阶段
 
 ```cpp
-struct io_budget {
-    size_t weight_bytes;   // weight prefetch budget
-    size_t kv_bytes;       // KV cache swap budget
-    size_t expert_bytes;   // expert prefetch budget
-    size_t total_bytes;    // total I/O budget per cycle
-};
-
-struct io_stats {
-    double weight_latency;     // avg weight prefetch latency
-    double kv_latency;         // avg KV swap latency
-    double expert_miss_rate;   // expert prediction miss rate
-    double bandwidth_utilization;  // actual / budget
+enum class runtime_phase {
+    PREFILL_SHORT,   // 短 prompt prefill（<512 tokens）
+    PREFILL_LONG,    // 长 prompt prefill（>=512 tokens）
+    DECODE_SHORT,    // 短上下文 decode（<1024 tokens）
+    DECODE_LONG,     // 长上下文 decode（>=1024 tokens）
+    MOE_DECODE,      // MoE 模型 decode（专家预取主导）
 };
 ```
 
-#### Scheduler Loop
+## 带宽分配比例
+
+| 阶段 | 权重 | KV Cache | 专家 |
+|------|------|----------|------|
+| PREFILL_SHORT | 60% | 10% | 30% |
+| PREFILL_LONG  | 50% | 20% | 30% |
+| DECODE_SHORT  | 70% | 20% | 10% |
+| DECODE_LONG   | 30% | 60% | 10% |
+| MOE_DECODE    | 40% | 10% | 50% |
+
+设计依据：prefill 阶段顺序读取权重为主，KV 压力小；decode 阶段访存稀疏但 KV 随上下文增长；MoE decode 需要专家预测预取。
+
+## 类接口
 
 ```cpp
-void unified_scheduler::tick() {
-    auto budget = allocate_budget(phase_, context_len_, is_moe_);
+class unified_io_scheduler {
+public:
+    unified_io_scheduler(size_t total_bandwidth,
+                         prefetch_scheduler * prefetch,
+                         kv_eviction_manager * kv);
+    ~unified_io_scheduler();
 
-    // Issue prefetch requests within budget
-    weight_prefetcher_.prefetch_within(budget.weight_bytes);
-    kv_swapper_.swap_within(budget.kv_bytes);
-    expert_predictor_.prefetch_within(budget.expert_bytes);
+    void set_phase(runtime_phase phase);
+    void tick(int current_layer, int lookahead);
 
-    // Monitor and adapt
-    if (++tick_count_ % 10 == 0) {
-        adapt_allocation();
-    }
+    // 带宽分配查询
+    size_t weight_budget() const;
+    size_t kv_budget() const;
+    size_t expert_budget() const;
+};
+```
+
+## 全局单例
+
+```cpp
+unified_io_scheduler * get_global_unified_scheduler();
+void set_global_unified_scheduler(unified_io_scheduler * s);
+```
+
+## 调用流程
+
+在 `llama-context.cpp` 的 `graph_compute` 中：
+```cpp
+if (auto * u = get_global_unified_scheduler()) {
+    u->set_phase(batched ? PREFILL_SHORT : MOE_DECODE);
+    u->tick(min_layer, 3);  // 预取后续 3 层
+    // tick 内部调用 prefetch_scheduler 和 kv_eviction_manager
 }
 ```
 
-### Expected Benefits
+## 当前实现状态
 
-| Scenario | Without Scheduler | With Scheduler | Improvement |
-|----------|------------------|----------------|------------|
-| Dense, short context | Weight-only prefetch | Weight-prioritized | +5-10% |
-| Dense, long context | Weight + KV contention | KV-prioritized decode | +20-30% |
-| MoE, short context | All experts loaded | Expert prediction | +40-60% |
-| MoE, long context | Triple contention | Balanced allocation | +50-80% |
-
-### Evaluation Plan
-
-1. **Microbenchmark**: Each module in isolation vs unified
-2. **Ablation**: Remove one module at a time
-3. **End-to-end**: Full pipeline with all modules + unified scheduler
-4. **Adaptation**: Measure convergence speed of dynamic allocation
-
-### Novelty vs Prior Work
-
-| Feature | FlexInfer | DUAL-BLADE | MobileMoE | **SLIM-ARC** |
-|---------|-----------|------------|-----------|--------------|
-| Weight prefetch | ✓ | ✗ | ✗ | ✓ |
-| KV offloading | ✗ | ✓ | ✗ | ✓ |
-| Expert prediction | ✗ | ✗ | ✓ | ✓ |
-| Unified scheduling | ✗ | ✗ | ✗ | **✓** |
-| Dynamic adaptation | ✗ | ✗ | ✗ | **✓** |
-| Phase awareness | ✗ | ✗ | ✗ | **✓** |
-
-## References
-
-- FlexInfer: Weight-only prefetch (EuroMLSys 2025)
-- DUAL-BLADE: KV-only NVMe-direct offloading
-- MobileMoE: Expert-only prediction
-- PowerInfer-2: Smartphone hybrid inference (closest competitor)
+接口完整，`tick()` 会调用 `prefetch_scheduler->notify_layer_compute()` 和 `kv_eviction_manager->run_eviction()`。但由于 prefetch 在当前场景冗余（MADV_RANDOM 已足够），且 KV eviction 深度集成未完成，统一调度器的"协同 > 单点之和"效果尚未验证。设计为决赛阶段的三路竞争场景预留。

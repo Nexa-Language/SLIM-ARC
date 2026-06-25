@@ -1,90 +1,56 @@
-# Phase 2d: Tile 级微流水线 + 融合反量化
+# Tile 级微流水线设计文档（未实现）
 
-## 1. 背景与动机
+> 状态：**设计草案**，初赛未实现，列为决赛方向。
 
-传统张量级加载：整个权重 tensor 加载完才开始计算。对于大 tensor（如 4096×4096 权重），需要等整个 tensor 在 RAM 才能开始 GEMM。
+## 动机
 
-Tile 级流水线：把 tensor 切分成 Tile（对齐 CPU L2/L3 cache 行），I/O 线程读 Tile-N 时计算线程处理 Tile-N-1，实现 I/O-计算重叠。
+当前 SLIM-ARC 依赖内核 page cache 的隐式 Tile 机制：page fault 以 4KB 页粒度加载。但 4KB 对于 L2/L3 cache 行（64B-128B）而言过大，且内核的预读窗口（default 128KB）可能不匹配 MoE 的稀疏访问模式。
 
-## 2. 当前方案的 Tile 特性
+显式 Tile 级控制可以：
+1. 将权重张量切分为对齐 L2 cache（256KB-1MB）的 Tile
+2. I/O 线程读 Tile-N 时，计算线程处理 Tile-N-1（软件流水线）
+3. 预计带来 20-40% 的 cache 命中率提升
 
-SLIM-ARC 的 mmap + MADV_RANDOM 方案**天然具备 Tile 级特性**：
-- 内核 page fault 按 4KB page 粒度（类似 Tile）
-- `madvise(WILLNEED)` 触发异步预读，内核在后台读 page
-- 计算线程访问已加载的 page 时，I/O 线程在加载后续 page
-- 这就是隐式的 Tile 级流水线（Tile = 4KB page）
+## 设计
 
-## 3. 显式 Tile 流水线设计（待实现）
-
-### 3.1 Tile 切分策略
-
-```
-权重 tensor [M, N] 切分为 Tile [T_M, T_N]:
-- T_M = 64 (对齐 AVX-512 行)
-- T_N = 256 (对齐 L2 cache 行)
-- 每 Tile: 64 × 256 × sizeof(Q4_K_block) = 2MB (L3 cache 友好)
-
-切分后:
-| Tile[0,0] | Tile[0,1] | ... | Tile[0, N/T_N-1] |
-| Tile[1,0] | Tile[1,1] | ... | ...              |
-| ...                                                |
-```
-
-### 3.2 流水线调度
-
-```
-时间轴:
-  I/O线程:  [读 Tile 0] [读 Tile 1] [读 Tile 2] ...
-  计算线程:              [算 Tile 0] [算 Tile 1] [算 Tile 2] ...
-
-overlap = min(I/O_time, compute_time) / max(I/O_time, compute_time)
-```
-
-### 3.3 融合反量化
-
-Q4_K 权重计算时需要先反量化成 F32 再做 GEMM。传统方式：反量化整个 tensor → GEMM。融合方式：逐 Tile 反量化 → GEMM → 丢弃。
-
+### 数据结构
 ```cpp
-for (tile_i = 0; tile_i < n_tiles; ++tile_i) {
-    // 异步预取下一个 Tile
-    if (tile_i + 1 < n_tiles)
-        madvise(tile_addr[tile_i+1], tile_size, WILLNEED);
-
-    // 反量化 + GEMM 当前 Tile
-    dequantize_q4_k(tile_data, temp_f32, tile_m, tile_n);
-    gemm_f32(temp_f32, activation, output);
-
-    // 释放当前 Tile（mmap 页可被回收）
-    madvise(tile_addr[tile_i], tile_size, DONTNEED);
-}
+struct weight_tile {
+    void *  mmap_addr;      // Tile 在 mmap 中的地址
+    size_t  size;           // Tile 大小（对齐 L2 cache，如 512KB）
+    int     layer;
+    int     tile_idx;       // 层内 Tile 序号
+};
 ```
 
-## 4. 与当前 mmap 方案的关系
+### 流水线调度
+```
+I/O Thread:  [读 Tile 0] [读 Tile 1] [读 Tile 2] ...
+Compute:                [算 Tile 0] [算 Tile 1] [算 Tile 2] ...
+                         ↑ I/O 与计算重叠
+```
 
-当前方案已通过 `madvise(WILLNEED)` 实现了**隐式 Tile 流水线**：
-1. `prefetch_scheduler` 在计算 layer N 时预取 layer N+1..N+window（相当于读 Tile-N+1）
-2. 内核 page cache 实现 L2/L3 友好的 4KB page 粒度
-3. MADV_RANDOM 避免预读过多（精确按需）
+### 接口草案
+```cpp
+class tile_pipeline {
+public:
+    void register_tiles(const char * tensor_name, void * base, size_t total,
+                        size_t tile_size, int layer);
+    void start_pipeline(int layer);  // 启动 I/O 线程
+    void * acquire_tile(int tile_idx);  // 计算线程获取已加载的 Tile
+    void release_tile(int tile_idx);    // 释放供下一轮复用
+};
+```
 
-显式 Tile 流水线（切分 tensor + 手动双缓冲）的额外收益有限，且需要修改 ggml GEMM 内核，复杂度高。
+## 未实现原因
 
-## 5. 实现路线图
+1. 需要修改 llama.cpp 的 GEMM kernel 以支持 Tile 粒度输入（而非整层张量）
+2. 线程同步开销可能抵消 cache 命中率提升
+3. MADV_RANDOM 已将 RSS 降至 2GB，cache 压力不大
 
-### 5.1 已实现（隐式 Tile 流水线）
-- mmap + MADV_RANDOM: 4KB page 粒度按需加载
-- prefetch_scheduler: WILLNEED 预取后续层
-- evict_layer: DONTNEED 释放已完成层
+## 决赛规划
 
-### 5.2 待实现（显式 Tile 流水线）
-- 修改 ggml GEMM kernel 支持逐 Tile 计算
-- 实现双缓冲：I/O buffer + compute buffer
-- 融合反量化 kernel
-
-### 5.3 预期收益
-- L2/L3 cache hit rate 提升 20-40%
-- I/O-计算 overlap 提升至 80%+
-- 但实现复杂度高，ROI 低于 Phase 2a/2b
-
-## 6. 结论
-
-当前 mmap 方案已通过内核 page cache 实现了隐式 Tile 流水线，满足比赛需求。显式 Tile 流水线作为后续优化方向，预期收益 20-40% 但复杂度高，不在初赛范围内。
+- 先实现权重张量的 Tile 切分（不改 kernel，仅切分 mmap 区域）
+- 用 `posix_madvise(WILLNEED)` 对下一 Tile 预取
+- 对比 cache miss 率（用 `perf stat -e cache-misses`）
+- 若有效，再改 kernel 支持 Tile 输入

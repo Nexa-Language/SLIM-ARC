@@ -1,111 +1,134 @@
-# Phase 2a: MoE 专家选择性预取 - 设计分析与收益评估
+# prefetch_scheduler API 文档
 
-## 1. 背景与动机
+> 源码：`src/llama-upstream/src/slim-arc-prefetch.h` / `.cpp`
 
-MoE（Mixture of Experts）模型是端侧推理的关键场景：Qwen3-Next-80B 有 512 专家，OLMoE-1B-7B 有 64 专家，但每 token 仅激活极少数（10/512 ≈ 2%，8/64 = 12.5%）。传统全量加载浪费 87-98% 带宽。
+## 概述
 
-FlexInfer 论文只调度全量权重，未利用 MoE 稀疏性。SLIM-ARC 的核心创新之一是**专家级选择性预取**。
+`prefetch_scheduler` 是 SLIM-ARC 的核心运行时组件，负责：
+1. 注册所有权重张量的 mmap 地址和层级信息
+2. 在每次 `graph_compute` 时，对后续层发 `madvise(WILLNEED)` 异步预取
+3. 通过 MoE Router Hook 提取激活专家 ID，选择性预取 3D 合并张量的子区域
+4. 管理动态 MADV 切换（prefill↔decode）
 
-## 2. 模型架构分析
+## 类接口
 
-### OLMoE-1B-7B
-- 16 层，每层 64 专家，激活 8 个/token
-- 稀疏率：87.5%
-- 专家权重组织：**3D 合并 tensor**
-  - `blk.{l}.ffn_gate_exps.weight` [2048, 1024, 64] Q4_K
-  - `blk.{l}.ffn_up_exps.weight`   [2048, 1024, 64] Q4_K
-  - `blk.{l}.ffn_down_exps.weight` [1024, 2048, 64] Q4_K
-- 每专家 ~3.9 MiB，每层 249 MiB
+```cpp
+class prefetch_scheduler {
+public:
+    explicit prefetch_scheduler(int n_threads = 2, int window = 3);
+    ~prefetch_scheduler();
 
-### Qwen3-Next-80B-A3B
-- 48 层，每层 512 专家，激活 10 个/token
-- 稀疏率：98%
-- 每专家 1.8 MiB
+    // === 张量注册 ===
+    void register_tensor(const char * name, void * addr, size_t size, int layer);
+    void register_expert_tensor(const char * name, void * addr, size_t total_size,
+                                int layer, int n_experts);
 
-## 3. 技术方案
+    // === MoE Router 预测 ===
+    void cache_router_experts(int layer, const int * expert_ids, int n_experts);
+    const int * get_cached_experts(int layer, int * out_n) const;
+    void prefetch_experts(int layer, const int * expert_ids, int n_experts);
 
-### 3.1 挑战：合并 Tensor 的子区域预取
+    // === 运行时调度 ===
+    void notify_layer_compute(int current_layer);
+    void evict_layer(int layer);
+    void set_phase(compute_phase phase);  // PREFILL / DECODE
+    void set_memory_budget(size_t budget_bytes);
+    void set_enabled(bool enabled);
 
-MoE 专家权重在 GGUF 中存储为 3D 合并 tensor（所有专家连续排列）。这意味着：
-- 无法对单个专家独立 `mmap`（它们共享一个 tensor）
-- 但可以利用 `madvise` 的**地址范围参数**，对 tensor 内的子区域发 `WILLNEED`
-
-### 3.2 设计：层间 Router 预测预取
-
-```
-Layer N 计算:
-  1. Router(f fn_gate_inp) 输出 → top-8 expert IDs [e1..e8]
-  2. 用 expert IDs 计算下一层(N+1)的预测激活专家
-  3. 对 layer N+1 的 ffn_*_exps.weight 中
-     对应 [e1..e8] 的地址范围发 madvise(WILLNEED)
-  4. Layer N+1 计算时，激活专家已预取到 page cache
-
-预测策略:
-  - 简单: 上一层 top-8 直接用于下一层（跨层相关性假设）
-  - 进阶: 轻量 MLP predictor（上一层 router 输出 → 预测下一层）
+    // === 统计 ===
+    size_t total_prefetched_bytes() const;
+    int    total_prefetch_calls() const;
+    int    effective_window() const;
+};
 ```
 
-### 3.3 地址映射
+## 全局单例
 
-对于 `blk.{l}.ffn_gate_exps.weight` [2048, 1024, 64]：
-- 单专家大小 = 2048 × 1024 × sizeof(Q4_K_block) / 64
-- 专家 e 的地址范围 = tensor_base + e × per_expert_size, 长度 per_expert_size
+```cpp
+prefetch_scheduler * get_global_prefetch_scheduler();
+void set_global_prefetch_scheduler(prefetch_scheduler * s);
+```
 
-## 4. 收益评估（理论分析）
+在 `llama-model-loader.cpp` 的 `init_mappings` 末尾创建并设置：
+```cpp
+static slim_arc::prefetch_scheduler s_scheduler(2, 3);
+slim_arc::set_global_prefetch_scheduler(&s_scheduler);
+```
 
-### OLMoE-1B-7B (64 experts, active 8)
+## 关键方法详解
 
-| 策略 | 每层预取带宽 | 带宽节省 |
-|------|------------|---------|
-| 全专家预取（当前） | 249 MiB | 0% |
-| 选择性预取（top-8） | 31 MiB | **87.5%** |
-| Oracle 预取（完美预测） | 31 MiB | 87.5% |
+### `register_expert_tensor`
+注册 MoE 3D 合并张量，计算每专家偏移：
+```
+per_expert_size = total_size / n_experts
+expert_addr(i) = base_addr + i * per_expert_size
+```
+后续 `prefetch_experts` 对指定 expert_id 的子区域发 `madvise(WILLNEED)`。
 
-预测准确率对带宽节省的影响：
-| 预测准确率 | 实际带宽 | 相对全预取节省 |
-|-----------|---------|--------------|
-| 100% (Oracle) | 31 MiB | 87.5% |
-| 80% | 31 + 0.2×218 = 74.6 MiB | 70% |
-| 60% | 31 + 0.4×218 = 118 MiB | 52.6% |
-| 40% | 31 + 0.6×218 = 162 MiB | 34.9% |
+### `cache_router_experts` / `get_cached_experts`
+缓存 layer N 的 Router 输出（top-k expert IDs），供 layer N+1 预测使用。
+- **调用时机**：`graph_compute` 完成后，从 `ffn_moe_topk` 张量提取
+- **参数**：`expert_ids` 数组，`n_experts` 长度
+- **返回**：`get_cached_experts` 返回指针，`out_n` 输出长度；无缓存返回 nullptr
 
-即使预测准确率只有 40%，仍能节省 35% 带宽。
+### `prefetch_experts`
+对指定层级的专家子区域发 `madvise(WILLNEED)`：
+```cpp
+for each expert_id in expert_ids:
+    addr = base + expert_id * per_expert_size
+    posix_madvise(addr, per_expert_size, POSIX_MADV_WILLNEED)
+```
+仅预取激活的 10/512 专家，节省 98% I/O。
 
-### Qwen3-Next-80B (512 experts, active 10)
+### `notify_layer_compute`
+触发当前层 + 窗口内后续层的异步预取。内部用独立线程池避免阻塞计算。
 
-| 策略 | 每层预取带宽 | 带宽节省 |
-|------|------------|---------|
-| 全专家预取 | 921 MiB | 0% |
-| 选择性预取（top-10） | 18 MiB | **98%** |
+### `set_phase`
+- `PREFILL`：窗口=4（计算密集，I/O 可隐藏）
+- `DECODE`：窗口=1（访存密集，精确预取）
 
-## 5. 实现路线图
+## 辅助函数
 
-### 5.1 当前实现（已完成）
-- `prefetch_scheduler` 对整个 expert tensor 发 `WILLNEED`（全专家预取）
-- 在 8GB cgroup 下 OLMoE 已实现 pp +63.2%, tg +53.1% 的提升
+### `tensor_layer_from_name`
+```cpp
+int tensor_layer_from_name(const char * name);
+```
+从张量名 `blk.{N}.ffn_*` 解析层级 N，非层张量返回 -1。
 
-### 5.2 短期实现（选择性预取）
-1. 在 `graph_compute` 中 hook router 输出节点
-2. 实现 `prefetch_expert_range(layer, expert_ids)` 接口
-3. 层间传递 router 预测
+### `register_mmap_region` / `switch_madvise_all`
+```cpp
+void register_mmap_region(void * addr, size_t size);
+void switch_madvise_all(int advice);  // 0=WILLNEED, 1=RANDOM, 2=DONTNEED
+```
+注册 mmap 区域供动态 MADV 切换。`switch_madvise_all` 对所有注册区域批量发 madvise。
 
-### 5.3 进阶实现（统一调度器集成）
-- Phase 3 统一调度器中，MoE 专家预取作为一路 I/O 需求
-- 与权重预取、KV 换页竞争带宽预算
+## 调用流程（graph_compute 中）
 
-## 6. 对比 MobileMoE 论文
+```cpp
+// llama-context.cpp graph_compute 开头
+int min_layer, max_layer = extract_layer_range(graph);
+if (auto * s = get_global_prefetch_scheduler()) {
+    s->set_phase(batched ? PREFILL : DECODE);
+    s->notify_layer_compute(min_layer);
+    // 预取窗口内后续层
+    for (int l = min_layer + s->effective_window() + 1; l <= max_layer; l++)
+        s->notify_layer_compute(l);
+    // 用上一层 router 输出预测当前层专家
+    for (int l = min_layer; l <= max_layer; l++) {
+        int nc; const int * ce = s->get_cached_experts(l - 1, &nc);
+        if (ce) s->prefetch_experts(l, ce, nc);
+    }
+}
+// ... ggml_backend_sched_graph_compute_async ...
+// graph_compute 结尾：提取 ffn_moe_topk
+if (auto * s = get_global_prefetch_scheduler()) {
+    for each tensor t in graph:
+        if (t->name contains "ffn_moe_topk"):
+            s->cache_router_experts(layer, t->data, t->ne[0]);
+            break;
+}
+```
 
-MobileMoE 用专家缓存 + 预测，但假设每个专家是独立 tensor。SLIM-ARC 的创新在于：
-- 利用 `madvise` 地址范围参数，对合并 tensor 子区域预取
-- 无需修改 GGUF 格式或拆分 tensor
-- 与内核 page cache 协同，无需用户态缓存管理
+## 实验验证
 
-## 7. 验证计划
-
-1. 实现 router hook + expert range prefetch
-2. 消融对比：全专家预取 vs 选择性预取 vs Oracle
-3. 测量：带宽节省、吞吐提升、预测准确率
-
-## 8. 结论
-
-Phase 2a 的选择性专家预取在理论上可节省 87-98% 专家带宽。当前的全专家预取已在 8GB 环境实现显著提升（OLMoE +53-63%），选择性预取将进一步降低内存压力，让 45GB 模型在 8GB 下更快完成推理。
+四组单点消融实验表明，在有 MADV_RANDOM 时 prefetch 无额外贡献（内核 page fault 已足够），在无 MADV_RANDOM 时等价 baseline。详见 `reports/Competition_Report/sections/05_evaluation.tex` 消融实验部分。

@@ -49,7 +49,7 @@ def fig_performance_landscape():
     """4-panel figure: (a) 3-tier bar, (b) optimization stacking, 
     (c) quantization comparison, (d) pp vs tg scatter"""
     fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    fig.suptitle('SLIM-ARC Performance Landscape: Qwen3-Next-80B', fontsize=16, fontweight='bold', y=0.98)
+    fig.suptitle('SLIM-ARC Performance Landscape: Qwen3-Next-80B', fontsize=20, fontweight='bold', y=0.98)
     
     # --- Panel (a): Three-tier bar chart ---
     ax = axes[0, 0]
@@ -66,11 +66,11 @@ def fig_performance_landscape():
     bars2 = ax.bar(x, tg_16gb, width, label='16GB (8 cores)', color=COLORS['slimarc'], alpha=0.85, edgecolor='white', linewidth=0.5)
     bars3 = ax.bar(x + width, tg_32gb, width, label='32GB (warm)', color=COLORS['iq4xs'], alpha=0.85, edgecolor='white', linewidth=0.5)
     
-    ax.set_ylabel('Decode (tokens/s)', fontsize=11)
-    ax.set_title('(a) Decode Throughput Across Environments', fontsize=12, fontweight='bold')
+    ax.set_ylabel('Decode (tokens/s)', fontsize=15)
+    ax.set_title('(a) Decode Throughput Across Environments', fontsize=16, fontweight='bold')
     ax.set_xticks(x)
-    ax.set_xticklabels(configs, fontsize=8)
-    ax.legend(fontsize=8, loc='upper left')
+    ax.set_xticklabels(configs, fontsize=12)
+    ax.legend(fontsize=12, loc='upper left')
     ax.set_ylim(0, 3.0)
     
     for bars in [bars1, bars2, bars3]:
@@ -78,7 +78,7 @@ def fig_performance_landscape():
             h = bar.get_height()
             if h > 0.01:
                 ax.text(bar.get_x() + bar.get_width()/2, h + 0.03, f'{h:.2f}', 
-                       ha='center', va='bottom', fontsize=7, fontweight='bold')
+                       ha='center', va='bottom', fontsize=11, fontweight='bold')
     
     # --- Panel (b): Optimization stacking waterfall ---
     ax = axes[0, 1]
@@ -95,15 +95,15 @@ def fig_performance_landscape():
                      color=colors_w[i], alpha=0.85, edgecolor='white', linewidth=1, width=0.6)
         total = cumulative[i]
         ax.plot([i-0.35, i+0.35], [total, total], 'k-', linewidth=1.5, alpha=0.4)
-        ax.text(i, total + 0.015, f'{total:.2f}', ha='center', va='bottom', fontsize=9, fontweight='bold')
+        ax.text(i, total + 0.015, f'{total:.2f}', ha='center', va='bottom', fontsize=13, fontweight='bold')
         if deltas[i] > 0.01:
             ax.text(i, bottom + deltas[i]/2, f'+{deltas[i]:.2f}', ha='center', va='center', 
-                    fontsize=8, fontweight='bold', color='white')
+                    fontsize=12, fontweight='bold', color='white')
     
     ax.set_xticks(range(len(stages)))
-    ax.set_xticklabels(stages, fontsize=9)
-    ax.set_ylabel('Decode (tokens/s)', fontsize=11)
-    ax.set_title('(b) Optimization Stacking (8GB cgroup)', fontsize=12, fontweight='bold')
+    ax.set_xticklabels(stages, fontsize=13)
+    ax.set_ylabel('Decode (tokens/s)', fontsize=15)
+    ax.set_title('(b) Optimization Stacking (8GB cgroup)', fontsize=16, fontweight='bold')
     ax.set_ylim(0, 0.95)
     
     # --- Panel (c): Quantization format comparison (horizontal bar) ---
@@ -123,10 +123,10 @@ def fig_performance_landscape():
     ax.barh(y + 1.5*h, tg_32, h, label='tg8 (32GB)', color=COLORS['accent5'], alpha=0.85)
     
     ax.set_yticks(y)
-    ax.set_yticklabels(quants, fontsize=10)
-    ax.set_xlabel('Throughput (tokens/s)', fontsize=11)
-    ax.set_title('(c) Quantization Format Impact', fontsize=12, fontweight='bold')
-    ax.legend(fontsize=8, loc='lower right')
+    ax.set_yticklabels(quants, fontsize=14)
+    ax.set_xlabel('Throughput (tokens/s)', fontsize=15)
+    ax.set_title('(c) Quantization Format Impact', fontsize=16, fontweight='bold')
+    ax.legend(fontsize=12, loc='lower right')
     ax.set_xlim(0, 3.2)
     
     # --- Panel (d): Prefill vs Decode scatter ---
@@ -147,16 +147,16 @@ def fig_performance_landscape():
     
     for pp, tg, label, color, size in data:
         ax.scatter(pp, tg, s=size, c=color, alpha=0.8, edgecolors='black', linewidth=0.5, zorder=5)
-        ax.annotate(label, (pp, tg), textcoords="offset points", xytext=(5, 5), fontsize=7)
+        ax.annotate(label, (pp, tg), textcoords="offset points", xytext=(5, 5), fontsize=11)
     
     # Diagonal reference line
     max_val = max(max(d[0] for d in data), max(d[1] for d in data))
     ax.plot([0, max_val*1.1], [0, max_val*1.1], 'k--', alpha=0.3, linewidth=1, label='pp = tg')
     
-    ax.set_xlabel('Prefill (tokens/s)', fontsize=11)
-    ax.set_ylabel('Decode (tokens/s)', fontsize=11)
-    ax.set_title('(d) Prefill vs Decode Trade-off', fontsize=12, fontweight='bold')
-    ax.legend(fontsize=8, loc='upper left')
+    ax.set_xlabel('Prefill (tokens/s)', fontsize=15)
+    ax.set_ylabel('Decode (tokens/s)', fontsize=15)
+    ax.set_title('(d) Prefill vs Decode Trade-off', fontsize=16, fontweight='bold')
+    ax.legend(fontsize=12, loc='upper left')
     
     fig.tight_layout(rect=[0, 0, 1, 0.96])
     fig.savefig(os.path.join(OUTPUT_DIR, 'fig_performance_landscape.png'), bbox_inches='tight')
@@ -184,30 +184,30 @@ def fig_ablation_diverging():
     bars1 = ax1.barh(range(len(configs)), pp_speedup, color=colors_pp, alpha=0.85, edgecolor='white', linewidth=0.5, height=0.6)
     ax1.axvline(0, color='black', linewidth=1)
     ax1.set_yticks(range(len(configs)))
-    ax1.set_yticklabels(configs, fontsize=10)
-    ax1.set_xlabel('Prefill Speedup vs Baseline', fontsize=12)
-    ax1.set_title('(a) Prefill (pp16) Impact', fontsize=13, fontweight='bold')
+    ax1.set_yticklabels(configs, fontsize=14)
+    ax1.set_xlabel('Prefill Speedup vs Baseline', fontsize=16)
+    ax1.set_title('(a) Prefill (pp16) Impact', fontsize=17, fontweight='bold')
     
     for i, (bar, val) in enumerate(zip(bars1, pp_speedup)):
         x_text = val + 0.02 if val >= 0 else val - 0.02
         ha = 'left' if val >= 0 else 'right'
-        ax1.text(x_text, i, f'{val*100:+.0f}%', va='center', ha=ha, fontsize=10, fontweight='bold')
+        ax1.text(x_text, i, f'{val*100:+.0f}%', va='center', ha=ha, fontsize=14, fontweight='bold')
     
     # Decode speedup
     colors_tg = [COLORS['accent3'] if s < 0 else COLORS['iq4xs'] for s in tg_speedup]
     bars2 = ax2.barh(range(len(configs)), tg_speedup, color=colors_tg, alpha=0.85, edgecolor='white', linewidth=0.5, height=0.6)
     ax2.axvline(0, color='black', linewidth=1)
     ax2.set_yticks(range(len(configs)))
-    ax2.set_yticklabels(configs, fontsize=10)
-    ax2.set_xlabel('Decode Speedup vs Baseline', fontsize=12)
-    ax2.set_title('(b) Decode (tg4) Impact', fontsize=13, fontweight='bold')
+    ax2.set_yticklabels(configs, fontsize=14)
+    ax2.set_xlabel('Decode Speedup vs Baseline', fontsize=16)
+    ax2.set_title('(b) Decode (tg4) Impact', fontsize=17, fontweight='bold')
     
     for i, (bar, val) in enumerate(zip(bars2, tg_speedup)):
         x_text = val + 0.1 if val >= 0 else val - 0.1
         ha = 'left' if val >= 0 else 'right'
-        ax2.text(x_text, i, f'{val*100:+.0f}%', va='center', ha=ha, fontsize=10, fontweight='bold')
+        ax2.text(x_text, i, f'{val*100:+.0f}%', va='center', ha=ha, fontsize=14, fontweight='bold')
     
-    fig.suptitle('Four-Way Ablation: Component Contribution Analysis (80B Q4_K_M, 8GB)', fontsize=14, fontweight='bold')
+    fig.suptitle('Four-Way Ablation: Component Contribution Analysis (80B Q4_K_M, 8GB)', fontsize=18, fontweight='bold')
     fig.tight_layout(rect=[0, 0, 1, 0.93])
     fig.savefig(os.path.join(OUTPUT_DIR, 'fig_ablation_diverging.png'), bbox_inches='tight')
     plt.close(fig)
@@ -237,36 +237,36 @@ def fig_kv_and_threads():
                     color=COLORS['kvq4'], alpha=0.85, capsize=5, edgecolor='white', linewidth=0.5)
     
     ax1.set_xticks(x)
-    ax1.set_xticklabels(kv_types, fontsize=11)
-    ax1.set_ylabel('Throughput (tokens/s)', fontsize=12)
-    ax1.set_title('(a) KV Cache Quantization (80B IQ4_XS, 16GB)', fontsize=13, fontweight='bold')
-    ax1.legend(fontsize=10)
+    ax1.set_xticklabels(kv_types, fontsize=15)
+    ax1.set_ylabel('Throughput (tokens/s)', fontsize=16)
+    ax1.set_title('(a) KV Cache Quantization (80B IQ4_XS, 16GB)', fontsize=17, fontweight='bold')
+    ax1.legend(fontsize=14)
     
     for bars, means in [(bars1, pp_mean), (bars2, tg_mean)]:
         for bar, val in zip(bars, means):
             ax1.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.05, 
-                    f'{val:.2f}', ha='center', va='bottom', fontsize=9, fontweight='bold')
+                    f'{val:.2f}', ha='center', va='bottom', fontsize=13, fontweight='bold')
     
     # --- Panel (b): Thread scaling ---
     threads = [4, 6, 8, 14]
     tg_vals = [0.76, 0.85, 1.03, 0.77]
     pp_vals = [0.35, 0.55, 1.34, 1.85]
     
-    ax2.plot(threads, tg_vals, 'o-', color=COLORS['kvq4'], linewidth=2, markersize=8, label='Decode (tg)')
-    ax2.plot(threads, pp_vals, 's--', color=COLORS['slimarc'], linewidth=2, markersize=8, label='Prefill (pp)')
+    ax2.plot(threads, tg_vals, 'o-', color=COLORS['kvq4'], linewidth=2, markersize=10, label='Decode (tg)')
+    ax2.plot(threads, pp_vals, 's--', color=COLORS['slimarc'], linewidth=2, markersize=10, label='Prefill (pp)')
     
-    ax2.set_xlabel('Thread Count', fontsize=12)
-    ax2.set_ylabel('Throughput (tokens/s)', fontsize=12)
-    ax2.set_title('(b) Thread Scaling (80B IQ4_XS, 16GB, KV q4_0)', fontsize=13, fontweight='bold')
-    ax2.legend(fontsize=10)
+    ax2.set_xlabel('Thread Count', fontsize=16)
+    ax2.set_ylabel('Throughput (tokens/s)', fontsize=16)
+    ax2.set_title('(b) Thread Scaling (80B IQ4_XS, 16GB, KV q4_0)', fontsize=17, fontweight='bold')
+    ax2.legend(fontsize=14)
     ax2.set_xticks(threads)
     
     # Annotate optimal
     ax2.annotate(f'Optimal: 8 threads\n(tg={1.03:.2f})', xy=(8, 1.03), xytext=(10, 1.1),
-                fontsize=10, fontweight='bold', color=COLORS['kvq4'],
+                fontsize=14, fontweight='bold', color=COLORS['kvq4'],
                 arrowprops=dict(arrowstyle='->', color=COLORS['kvq4'], lw=1.5))
     ax2.annotate('14 threads slower\n(memory-bound)', xy=(14, 0.77), xytext=(11, 0.55),
-                fontsize=9, fontstyle='italic', color=COLORS['accent3'],
+                fontsize=13, fontstyle='italic', color=COLORS['accent3'],
                 arrowprops=dict(arrowstyle='->', color='gray', lw=1))
     
     fig.tight_layout()
@@ -301,13 +301,13 @@ def fig_volatility_radar():
         x = np.random.normal(i + 1, 0.04, size=len(data))
         ax1.scatter(x, data, alpha=0.7, s=40, zorder=3, color=colors_b[i], edgecolors='black', linewidth=0.5)
     
-    ax1.set_ylabel('Decode Throughput (tg8, tokens/s)', fontsize=12)
-    ax1.set_title('(a) Data Volatility Across Runs', fontsize=13, fontweight='bold')
+    ax1.set_ylabel('Decode Throughput (tg8, tokens/s)', fontsize=16)
+    ax1.set_title('(a) Data Volatility Across Runs', fontsize=17, fontweight='bold')
     
     # Add median annotations
     medians = [np.median(data_16gb), np.median(data_32gb)]
     for i, med in enumerate(medians):
-        ax1.text(i + 1, med, f'  median={med:.2f}', va='center', fontsize=9, fontweight='bold', color='white',
+        ax1.text(i + 1, med, f'  median={med:.2f}', va='center', fontsize=13, fontweight='bold', color='white',
                 bbox=dict(boxstyle='round,pad=0.2', facecolor=colors_b[i], alpha=0.8))
     
     # --- Panel (b): Radar chart ---
@@ -331,16 +331,16 @@ def fig_volatility_radar():
         (full_opt, 'Full SLIM-ARC', COLORS['iq4xs'])
     ]:
         values = data + data[:1]
-        ax2.plot(angles, values, 'o-', linewidth=2, label=label, color=color, markersize=5)
+        ax2.plot(angles, values, 'o-', linewidth=2, label=label, color=color, markersize=7)
         ax2.fill(angles, values, alpha=0.12, color=color)
     
     ax2.set_xticks(angles[:-1])
-    ax2.set_xticklabels(categories, fontsize=9)
+    ax2.set_xticklabels(categories, fontsize=13)
     ax2.set_ylim(0, 1.05)
     ax2.set_yticks([0.2, 0.4, 0.6, 0.8, 1.0])
-    ax2.set_yticklabels(['0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=8)
-    ax2.set_title('(b) Multi-Dimensional Evaluation', fontsize=13, fontweight='bold', pad=20)
-    ax2.legend(loc='upper right', bbox_to_anchor=(1.35, 1.1), fontsize=8)
+    ax2.set_yticklabels(['0.2', '0.4', '0.6', '0.8', '1.0'], fontsize=12)
+    ax2.set_title('(b) Multi-Dimensional Evaluation', fontsize=17, fontweight='bold', pad=20)
+    ax2.legend(loc='upper right', bbox_to_anchor=(1.35, 1.1), fontsize=12)
     
     fig.tight_layout()
     fig.savefig(os.path.join(OUTPUT_DIR, 'fig_volatility_radar.png'), bbox_inches='tight')
@@ -371,10 +371,10 @@ def fig_small_models():
     ax1.bar(x + 1.5*w, qwen_tg_slim, w, label='tg16 SLIM-ARC', color=COLORS['kvq4'], alpha=0.8, edgecolor='white', linewidth=0.5)
     
     ax1.set_xticks(x)
-    ax1.set_xticklabels(tiers, fontsize=10)
-    ax1.set_ylabel('Throughput (tokens/s)', fontsize=12)
-    ax1.set_title('(a) Qwen3-4B (Dense, 2.4GB)', fontsize=13, fontweight='bold')
-    ax1.legend(fontsize=8, loc='upper left')
+    ax1.set_xticklabels(tiers, fontsize=14)
+    ax1.set_ylabel('Throughput (tokens/s)', fontsize=16)
+    ax1.set_title('(a) Qwen3-4B (Dense, 2.4GB)', fontsize=17, fontweight='bold')
+    ax1.legend(fontsize=12, loc='upper left')
     
     # --- Panel (b): OLMoE ---
     olmoe_pp_base = [88.27, 100.09, 116.97]
@@ -388,12 +388,12 @@ def fig_small_models():
     ax2.bar(x + 1.5*w, olmoe_tg_slim, w, label='tg16 SLIM-ARC', color=COLORS['kvq4'], alpha=0.8, edgecolor='white', linewidth=0.5)
     
     ax2.set_xticks(x)
-    ax2.set_xticklabels(tiers, fontsize=10)
-    ax2.set_ylabel('Throughput (tokens/s)', fontsize=12)
-    ax2.set_title('(b) OLMoE-1B-7B (MoE, 3.9GB)', fontsize=13, fontweight='bold')
-    ax2.legend(fontsize=8, loc='upper right')
+    ax2.set_xticklabels(tiers, fontsize=14)
+    ax2.set_ylabel('Throughput (tokens/s)', fontsize=16)
+    ax2.set_title('(b) OLMoE-1B-7B (MoE, 3.9GB)', fontsize=17, fontweight='bold')
+    ax2.legend(fontsize=12, loc='upper right')
     
-    fig.suptitle('Small Model Ablation: Cold-Start Performance (drop_caches before each run)', fontsize=14, fontweight='bold')
+    fig.suptitle('Small Model Ablation: Cold-Start Performance (drop_caches before each run)', fontsize=18, fontweight='bold')
     fig.tight_layout(rect=[0, 0, 1, 0.93])
     fig.savefig(os.path.join(OUTPUT_DIR, 'fig_small_models.png'), bbox_inches='tight')
     plt.close(fig)
@@ -404,72 +404,45 @@ def fig_small_models():
 # Figure 6: Optimization waterfall (dumbbell plot)
 # ============================================================
 def fig_optimization_dumbbell():
-    """Dumbbell plot showing progressive improvement from baseline to full optimization.
-    Uses log x-axis to show wide range (0.08 to 5.16 t/s) clearly."""
-    environments = ['8GB\n(4 cores)\npp4+tg1', '16GB\n(8 cores)\npp32+tg8', '32GB\n(8 cores)\npp64+tg48']
+    """Grouped bar chart: 3 subplots (one per env) to avoid log-axis compression."""
+    fig, axes = plt.subplots(1, 3, figsize=(16, 6))
     
-    # Updated data: 32GB baseline now measured (3.01), full includes FlashAttention (5.16)
-    baseline_tg = [0.08, 0.18, 3.01]   # 32GB baseline (fa off) now measured
-    slimarc_tg = [0.42, 0.90, 3.30]    # +KV eviction
-    full_tg = [0.76, 1.12, 5.16]       # +FlashAttention (fa auto)
+    envs = ['8GB\n(4 cores)', '16GB\n(8 cores)', '32GB\n(8 cores, warm)']
+    baseline = [0.08, 0.18, 3.01]
+    slimarc  = [0.42, 0.90, 3.30]
+    full     = [0.76, 1.12, 5.16]
     
-    fig, ax = plt.subplots(figsize=(13, 7))
+    x = np.arange(3)
+    width = 0.28
     
-    y = np.arange(len(environments))
-    
-    for i in range(len(environments)):
-        # Baseline to SLIM-ARC (blue line)
-        if baseline_tg[i] > 0 and slimarc_tg[i] > 0:
-            ax.plot([baseline_tg[i], slimarc_tg[i]], [i, i], color=COLORS['slimarc'], linewidth=4, alpha=0.7, solid_capstyle='round')
-            ax.scatter(baseline_tg[i], i, s=180, c=COLORS['baseline'], zorder=5, edgecolors='black', linewidth=1.5)
-            ax.scatter(slimarc_tg[i], i, s=180, c=COLORS['slimarc'], zorder=5, edgecolors='black', linewidth=1.5)
+    for i, (ax, env) in enumerate(zip(axes, envs)):
+        vals = [baseline[i], slimarc[i], full[i]]
+        colors = [COLORS['baseline'], COLORS['slimarc'], COLORS['iq4xs']]
+        labels = ['Baseline', 'SLIM-ARC', 'Full\n(+FA)']
+        bars = ax.bar(x, vals, width*2.5, color=colors, alpha=0.88, edgecolor='black', linewidth=0.8)
+        ax.set_xticks(x)
+        ax.set_xticklabels(labels, fontsize=13)
+        ax.set_title(env, fontsize=16, fontweight='bold')
+        ax.set_ylabel('Decode (t/s)', fontsize=14)
+        ax.grid(axis='y', alpha=0.3, linestyle='--')
         
-        # SLIM-ARC to full (purple line, with arrow)
-        if slimarc_tg[i] > 0 and full_tg[i] > 0:
-            ax.annotate('', xy=(full_tg[i], i), xytext=(slimarc_tg[i], i),
-                        arrowprops=dict(arrowstyle='->', color=COLORS['iq4xs'], lw=4))
-            ax.scatter(full_tg[i], i, s=250, c=COLORS['iq4xs'], zorder=5, edgecolors='black', linewidth=1.5, marker='*')
+        for j, (bar, v) in enumerate(zip(bars, vals)):
+            ax.text(bar.get_x() + bar.get_width()/2, v + max(vals)*0.02, f'{v:.2f}',
+                    ha='center', va='bottom', fontsize=14, fontweight='bold')
         
-        # Value annotations (offset to avoid overlap)
-        offset = (baseline_tg[i] * 0.08) if baseline_tg[i] > 0 else 0.05
-        if baseline_tg[i] > 0:
-            ax.text(baseline_tg[i] * 0.92, i - 0.18, f'{baseline_tg[i]:.2f}', ha='right', va='center', fontsize=9, fontweight='bold', color=COLORS['baseline'])
-        ax.text(slimarc_tg[i] * 1.08, i + 0.18, f'{slimarc_tg[i]:.2f}', ha='left', va='center', fontsize=9, fontweight='bold', color=COLORS['slimarc'])
-        ax.text(full_tg[i] * 1.05, i + 0.18, f'{full_tg[i]:.2f}', ha='left', va='center', fontsize=10, fontweight='bold', color=COLORS['iq4xs'])
-        
-        # Speedup annotation
-        if baseline_tg[i] > 0:
-            speedup = full_tg[i] / baseline_tg[i]
-            ax.text(full_tg[i] * 1.15, i - 0.18, f'{speedup:.1f}x', ha='left', va='center', fontsize=11, fontweight='bold', color=COLORS['iq4xs'],
-                    bbox=dict(boxstyle='round,pad=0.3', facecolor='yellow', alpha=0.3))
+        speedup = full[i] / baseline[i]
+        ax.text(0.5, 0.95, f'{speedup:.1f}x', transform=ax.transAxes, fontsize=16, fontweight='bold',
+                color=COLORS['iq4xs'], ha='center', va='top',
+                bbox=dict(boxstyle='round,pad=0.4', facecolor='yellow', alpha=0.4))
+        ax.set_ylim(0, max(vals) * 1.25)
     
-    ax.set_yticks(y)
-    ax.set_yticklabels(environments, fontsize=11)
-    ax.set_xscale('log')
-    ax.set_xlabel('Decode Throughput (tokens/s, log scale)', fontsize=12)
-    ax.set_title('Progressive Optimization: Baseline → SLIM-ARC → Full (IQ4_XS + KV q4_0 + FlashAttention)', fontsize=13, fontweight='bold')
-    ax.grid(axis='x', alpha=0.3, linestyle='--')
-    
-    # Legend
-    legend_elements = [
-        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=COLORS['baseline'], markersize=11, label='Baseline (Q4_K_M, KV f16, no fa)'),
-        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=COLORS['slimarc'], markersize=11, label='SLIM-ARC (+MADV +KV q4_0 +eviction)'),
-        plt.Line2D([0], [0], marker='*', color='w', markerfacecolor=COLORS['iq4xs'], markersize=13, label='Full (+IQ4_XS +FlashAttention)'),
-    ]
-    ax.legend(handles=legend_elements, fontsize=9, loc='upper left', framealpha=0.9)
-    
-    # Set x limits with padding
-    ax.set_xlim(0.05, 10)
-    
+    fig.suptitle('Progressive Optimization: Baseline -> SLIM-ARC -> Full (IQ4_XS + KV q4_0 + FlashAttention)',
+                 fontsize=16, fontweight='bold', y=1.02)
     fig.tight_layout()
     fig.savefig(os.path.join(OUTPUT_DIR, 'fig_optimization_dumbbell.png'), bbox_inches='tight', dpi=150)
     plt.close(fig)
     print("Generated: fig_optimization_dumbbell.png")
 
-
-# ============================================================
-# Main
-# ============================================================
 if __name__ == '__main__':
     print("Generating redesigned SLIM-ARC report figures...")
     fig_performance_landscape()

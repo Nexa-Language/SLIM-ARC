@@ -1,127 +1,96 @@
-# Phase 2b: KV Cache 异步换页 - 设计与实现方案
+# KV Cache Eviction API 文档
 
-## 1. 背景与动机
+> 源码：`src/llama-upstream/src/slim-arc-kv-eviction.h` / `.cpp`
 
-长上下文推理时，KV Cache 随序列长度线性增长。以 Qwen3-4B 为例：
-- 每层 KV: 2(K+V) × n_head × head_dim × n_tokens × 2 bytes(f16)
-- 32K 上下文: ~1GB KV/层 × 36 层 = 36GB KV（超过 8GB RAM）
+## 概述
 
-FlexInfer 只优化权重卸载，未处理 KV。DUAL-BLADE 用 NVMe-direct 换页 KV。SLIM-ARC 将 KV 换页纳入统一调度。
+`kv_eviction_manager` 实现 StreamingLLM 式的分层 KV Cache 管理：
+- **Hot（sink）**：前 N 个 token 永久驻留 RAM，稳定 softmax 分母
+- **Warm（window）**：最近 W 个 token 滑动窗口
+- **Cold**：被驱逐的中间 token，可选 offload 到 SSD mmap 文件
 
-## 2. 技术方案
-
-### 2.1 分层 KV 管理（StreamingLLM 启发）
-
-```
-KV Cache 序列位置:
-[sink tokens] [sliding window] [cold region]
-   0..3           N-3..N           4..N-4
-     ↓               ↓                ↓
-   常驻 RAM        常驻 RAM       换出到 SSD
-  (hot)           (warm)          (cold)
-```
-
-- **Hot (sink)**: 前 4 个 token，永久驻留（attention sink 现象）
-- **Warm (sliding)**: 最近 N 个 token，常驻 RAM
-- **Cold**: 超出窗口的旧 token，换出到 mmap 临时文件
-
-### 2.2 SSD 换出机制
-
-```
-evict_block(block):
-  1. memcpy(mmap_base + offset, block.ram_addr, block.size)
-  2. madvise(block.ram_addr, block.size, MADV_DONTNEED)  // 释放 RAM
-  3. block.is_cold = true, block.offload_offset = offset
-
-prefetch_block(block):
-  1. madvise(mmap_base + offset, block.size, MADV_WILLNEED)  // 异步预读
-  2. // 下次访问时 page fault 触发读入
-
-access_block(block):  // 在 graph_compute 中
-  1. if block.is_cold: prefetch_block(block); wait
-  2. read from block.ram_addr (now paged in)
-```
-
-### 2.3 注意力分数引导的驱逐
+## 配置结构
 
 ```cpp
-// 在 attention 计算后，更新每个 token 的平均注意力分数
-void update_attention_scores(int layer, const std::vector<double> & scores) {
-    for (auto & block : blocks_) {
-        if (block.layer == layer) {
-            block.avg_attn_score = scores[block.token_pos];
-        }
-    }
-}
+struct kv_eviction_config {
+    size_t sink_tokens   = 4;       // 永久热 token 数
+    size_t window_tokens = 4096;    // 滑动窗口大小
+    size_t budget_bytes  = 0;       // 内存预算（0=无限）
+    double evict_threshold = 0.01;  // attention 分数驱逐阈值
+    bool   enable_offload = false;  // 是否 offload 到 SSD
+    std::string offload_path;       // mmap 临时文件路径
+};
+```
 
-// 驱逐策略：驱逐注意力分数最低的 cold region block
-int run_eviction() {
-    if (ram_usage_ <= config_.budget_bytes) return 0;
-    // 按 avg_attn_score 升序排序，驱逐最低的
-    std::sort(blocks_, by avg_attn_score);
-    for (auto & block : blocks_) {
-        if (!block.is_hot && !block.is_cold && ram_usage_ > budget) {
-            evict_block(block);
-        }
+## 类接口
+
+```cpp
+class kv_eviction_manager {
+public:
+    explicit kv_eviction_manager(const kv_eviction_config & config);
+    ~kv_eviction_manager();
+
+    // === Block 注册 ===
+    void register_block(int32_t token_pos, int32_t layer,
+                        void * ram_addr, size_t size);
+
+    // === Attention 分数更新 ===
+    void update_attention_scores(int32_t layer,
+                                 const std::vector<double> & scores);
+
+    // === 驱逐与预取 ===
+    int run_eviction();  // 返回驱逐的 block 数
+    int prefetch_cold_blocks(int32_t current_layer, int32_t lookahead);
+
+    // === 统计 ===
+    size_t total_ram_usage() const;
+    size_t total_ssd_usage() const;
+    int    total_evictions() const;
+    int    total_prefetches() const;
+};
+```
+
+## 关键方法
+
+### `register_block`
+注册一个 KV block 的位置和大小，初始化 `is_hot`（pos < sink_tokens）或 `is_warm`。
+
+### `run_eviction`
+当 `ram_usage > budget_bytes` 时，按 attention 分数升序驱逐非 hot block：
+1. 收集所有 `!is_hot && !is_cold` 的 block
+2. 按 `avg_attn_score` 升序排序
+3. 对超出窗口或低分 block 调用 `evict_block()`
+
+### `evict_block`
+- 若 `enable_offload`：`memcpy` 到 mmap 文件，记录 `offload_offset`
+- 标记 `is_cold=true`，更新 `ram_usage -= size`
+
+### `prefetch_cold_blocks`
+对 `[current_layer, current_layer + lookahead]` 范围的 cold block，若 attention 分数高于阈值，发 `madvise(WILLNEED)` 提示内核预读。
+
+## 当前集成状态
+
+接口已完整实现，但与推理流程的深度集成（hook KV cache allocation/access 路径）**尚未完成**。当前实际使用的是 `llama-context.cpp` 中的简化版 eviction（直接调用 `memory->seq_rm`），详见环境变量 `SLIM_ARC_KV_EVICT`。
+
+## 简化版 eviction（已集成）
+
+在 `llama-context.cpp` 的 `graph_compute` 末尾：
+```cpp
+if (getenv("SLIM_ARC_KV_EVICT")) {
+    int sink = getenv("SLIM_ARC_KV_SINK") ? atoi(...) : 4;
+    int window = getenv("SLIM_ARC_KV_WINDOW") ? atoi(...) : 1024;
+    int seq_len = memory->seq_pos_max(0) + 1;
+    if (seq_len > sink + window) {
+        int p0 = max(last_evicted, sink);
+        int p1 = seq_len - window;
+        memory->seq_rm(0, p0, p1);  // 逻辑删除
     }
 }
 ```
 
-## 3. 集成路径（待实现）
+## 实验数据
 
-### 3.1 KV Cache 注册
-在 `llama-kv-cache.cpp` 的 `kv_cache_init` 后，遍历所有 KV cell，调用 `kv_eviction_manager::register_block`。
+- Qwen3-4B 32GB：eviction 开销 -2.9%，64 次驱逐，文本连贯
+- 80B IQ4_XS 32GB：decode **+9.6%**（KV 内存释放给权重缓存）
 
-### 3.2 Attention 分数更新
-在 `llama-context.cpp` 的 attention 计算后，提取每 token 的 attention weights，调用 `update_attention_scores`。
-
-### 3.3 驱逐触发
-在 `graph_compute` 的 decode 阶段，每 N 步调用 `run_eviction()`。
-
-### 3.4 预取
-在 decode 当前层前，调用 `prefetch_cold_blocks(layer, lookahead)` 预取即将访问的 cold KV。
-
-## 4. 现有实现（[`slim-arc-kv-eviction.cpp`](../../src/llama-upstream/src/slim-arc-kv-eviction.cpp)）
-
-| 组件 | 状态 |
-|------|------|
-| `kv_eviction_manager` 类 | ✅ |
-| `init_offload_file` (mmap 临时文件) | ✅ |
-| `register_block` | ✅ |
-| `update_attention_scores` | ✅ |
-| `evict_block` (RAM→SSD) | ✅ |
-| `prefetch_block` (SSD→RAM) | ✅ |
-| `run_eviction` 策略 | ✅ |
-| `prefetch_cold_blocks` | ✅ |
-| **集成到推理流程** | ❌ 待实现 |
-
-## 5. 预期收益
-
-| 场景 | Baseline KV | SLIM-ARC KV | 内存节省 |
-|------|------------|-------------|---------|
-| 8K 上下文 | 256MB/层 | 128MB(sink+window) | 50% |
-| 32K 上下文 | 1GB/层 | 128MB | 87.5% |
-| 128K 上下文 | 4GB/层 | 128MB | 96.9% |
-
-长上下文场景 KV 内存节省 87-97%，让 8GB 设备能处理 128K 上下文。
-
-## 6. 与统一调度器集成
-
-Phase 3 中，KV 换页的 I/O 需求作为 `io_budget.kv_bytes` 参与带宽竞争：
-- **短上下文 Decode**: KV 小，权重优先（budget 70% weight, 20% KV, 10% expert）
-- **长上下文 Decode**: KV 大，KV 优先（budget 30% weight, 60% KV, 10% expert）
-- **MoE Decode**: expert 优先（budget 20% weight, 20% KV, 60% expert）
-
-## 7. 风险与应对
-
-| 风险 | 应对 |
-|------|------|
-| SSD 换入延迟导致 decode 变慢 | 异步预取 + 统一调度器协调 |
-| 注意力分数无法完全预测未来访问 | 保守策略：只驱逐极低分 token |
-| mmap 临时文件空间不足 | 动态 ftruncate 扩展 |
-
-## 8. 验证计划
-
-1. 集成后，用 32K 上下文测试 OLMoE
-2. 对比：全内存 KV（OOM）vs SLIM-ARC KV 换页（能跑）
-3. 测量：KV 内存使用、decode 延迟、精度（PPL）
+详见 `reports/Competition_Report/sections/05_evaluation.tex`。

@@ -135,7 +135,7 @@ def prefetch_tick(graph, batched):
 
 \subsection{统一 I/O 带宽预算调度器}
 
-\texttt{unified\_io\_scheduler} 根据运行时阶段（PREFILL\_SHORT, PREFILL\_LONG, DECODE\_SHORT, DECODE\_LONG, MOE\_DECODE）动态分配 I/O 带宽预算，协调权重预取、KV Cache 换页和专家预取三路 I/O 竞争。其设计灵感来自 DUAL-BLADE~\cite{dualblade2024}的"带宽预算"思路和综述~\cite{survey2026}Sec 4.3 的"elastic memory hierarchy"建议。
+\texttt{unified\_io\_scheduler} 根据运行时阶段（PREFILL\_SHORT, PREFILL\_LONG, DECODE\_SHORT, DECODE\_LONG, MOE\_DECODE）动态分配 I/O 带宽预算，协调权重预取、KV Cache 换页和专家预取三路 I/O 竞争。其设计灵感来自 DUAL-BLADE~\cite{dualblade2024}的“带宽预算”思路和综述~\cite{survey2026}Sec 4.3 的“elastic memory hierarchy”建议。
 
 \begin{table}[H]
     \centering
@@ -155,11 +155,11 @@ def prefetch_tick(graph, batched):
 
 \subsection{FlashAttention 集成}
 
-受综述~\cite{survey2026}Sec 4.1 "FlashAttention~\cite{flashattention2022} fuses attention IO-aware" 启发，SLIM-ARC 启用了 llama.cpp 内置的 FlashAttention 实现（\texttt{-fa auto} 参数）。FlashAttention 通过 IO-aware tiling 融合，将 attention 的 QK$^T$ 和 softmax(P)V 合并为单个 kernel，避免中间矩阵的显存读写，对 memory-bound 的 decode 阶段效果尤为显著。实测 80B decode 吞吐量提升 71.4\%（3.01 $\to$ 5.16 t/s），零代码改动、零精度损失。
+受综述~\cite{survey2026}Sec 4.1 “FlashAttention~\cite{flashattention2022} fuses attention IO-aware” 启发，SLIM-ARC 启用了 llama.cpp 内置的 FlashAttention 实现（\texttt{-fa auto} 参数）。FlashAttention 通过 IO-aware tiling 融合，将 attention 的 QK$^T$ 和 softmax(P)V 合并为单个 kernel，避免中间矩阵的显存读写，对 memory-bound 的 decode 阶段效果尤为显著。实测 80B decode 吞吐量提升 71.4\%（3.01 $\to$ 5.16 t/s），零代码改动、零精度损失。
 
 \subsection{StreamingLLM KV Eviction}
 
-受综述~\cite{survey2026}Sec 4.3 "combine KV compression with eviction policies (e.g., window + sink tokens)" 启发，SLIM-ARC 实现了 StreamingLLM~\cite{streamingllm2024}式的 KV Cache 驱逐机制。在每次 decode step 后检查 KV 序列长度，若超过阈值 \texttt{sink + window}，则驱逐区间 \texttt{[sink, seq\_len - window)} 内的 token，仅保留 attention sinks（前 $N=4$ 个 token，稳定 softmax 分母）和 sliding window（最近 $W$ 个 token）。其算法如算法\ref{alg:eviction}所示。
+受综述~\cite{survey2026}Sec 4.3 “combine KV compression with eviction policies (e.g., window + sink tokens)” 启发，SLIM-ARC 实现了 StreamingLLM~\cite{streamingllm2024}式的 KV Cache 驱逐机制。在每次 decode step 后检查 KV 序列长度，若超过阈值 \texttt{sink + window}，则驱逐区间 \texttt{[sink, seq\_len - window)} 内的 token，仅保留 attention sinks（前 $N=4$ 个 token，稳定 softmax 分母）和 sliding window（最近 $W$ 个 token）。其算法如算法\ref{alg:eviction}所示。
 
 \begin{lstlisting}[caption={StreamingLLM KV Eviction 伪代码}, label={alg:eviction}, language=Python, basicstyle=\footnotesize\ttfamily]
 # Called after each decode step (batched=False)

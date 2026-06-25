@@ -140,8 +140,8 @@
 \@writefile{toc}{\contentsline {section}{\numberline {5}实验评估}{14}{section.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.1}实验设置}{14}{subsection.5.1}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.1.1}硬件与软件环境}{14}{subsubsection.5.1.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces 实验环境配置\relax }}{14}{table.caption.24}\protected@file@percent }
-\newlabel{tab:eval_env}{{5}{14}{实验环境配置\relax }{table.caption.24}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces 实验环境配置与三档受限环境\relax }}{14}{table.caption.24}\protected@file@percent }
+\newlabel{tab:eval_env}{{5}{14}{实验环境配置与三档受限环境\relax }{table.caption.24}{}}
 \citation{survey2026}
 \citation{gsm8k2021}
 \citation{wikitext2016}
@@ -216,22 +216,23 @@
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.4.4}数据波动分析}{25}{subsubsection.5.4.4}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces (a) 数据波动箱线图+散点。80B 16\,GB 同配置 tg8 从 0.28 到 1.03，波动源于 page cache 命中率的系统状态依赖。(b) 多维度优化评估雷达图，展示 SLIM-ARC 在速度、内存、精度、稳定性四个维度的综合表现。\relax }}{25}{figure.caption.48}\protected@file@percent }
 \newlabel{fig:volatility}{{11}{25}{(a) 数据波动箱线图+散点。80B 16\,GB 同配置 tg8 从 0.28 到 1.03，波动源于 page cache 命中率的系统状态依赖。(b) 多维度优化评估雷达图，展示 SLIM-ARC 在速度、内存、精度、稳定性四个维度的综合表现。\relax }{figure.caption.48}{}}
+\citation{survey2026}
 \@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces 优化技术渐进提升 dumbbell 图。三档环境（8/16/32\,GB）从 baseline $\to $ SLIM-ARC $\to $ Full（含 FlashAttention）的完整优化链。8\,GB: 0.08$\to $0.42$\to $0.76（9.5$\times $）；16\,GB: 0.18$\to $0.90$\to $1.12（6.2$\times $）；32\,GB: 3.01$\to $3.30$\to $5.16（1.7$\times $）。对数 x 轴展示跨数量级提升。\relax }}{26}{figure.caption.49}\protected@file@percent }
 \newlabel{fig:opt_dumbbell}{{12}{26}{优化技术渐进提升 dumbbell 图。三档环境（8/16/32\,GB）从 baseline $\to $ SLIM-ARC $\to $ Full（含 FlashAttention）的完整优化链。8\,GB: 0.08$\to $0.42$\to $0.76（9.5$\times $）；16\,GB: 0.18$\to $0.90$\to $1.12（6.2$\times $）；32\,GB: 3.01$\to $3.30$\to $5.16（1.7$\times $）。对数 x 轴展示跨数量级提升。\relax }{figure.caption.49}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {6}总结与未来展望}{26}{section.6}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.1}工作总结}{26}{subsection.6.1}\protected@file@percent }
-\citation{survey2026}
+\citation{cgroupsv2}
 \citation{solidattention2026}
 \citation{survey2026}
-\bibstyle{IEEEtran}
-\bibdata{reference}
-\bibcite{brown2020gpt3}{1}
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.2}诚实评估与局限性}{27}{subsection.6.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{prefetch\_scheduler 的冗余}{27}{section*.50}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{prefetch\_scheduler 的冗余与 OS 底层绕开思路}{27}{section*.50}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{数据波动问题}{27}{section*.51}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{Speculative Decoding 的不适用}{27}{section*.52}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{KV Eviction 与 FlashAttention 的冲突}{27}{section*.53}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.3}未来展望}{27}{subsection.6.3}\protected@file@percent }
+\bibstyle{IEEEtran}
+\bibdata{reference}
+\bibcite{brown2020gpt3}{1}
 \bibcite{touvron2023llama}{2}
 \bibcite{qwen3_2025}{3}
 \bibcite{qwen3next2024}{4}

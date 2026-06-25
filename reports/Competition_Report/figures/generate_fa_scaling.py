@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Generate FlashAttention scaling + optimization chain figure for SLIM-ARC report."""
 import matplotlib
+matplotlib.rcParams.update({'font.size': 13, 'axes.titlesize': 16, 'axes.labelsize': 14, 'xtick.labelsize': 12, 'ytick.labelsize': 12, 'legend.fontsize': 11})
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.rcParams.update({'font.size': 13, 'axes.titlesize': 16, 'axes.labelsize': 14, 'xtick.labelsize': 12, 'ytick.labelsize': 12, 'legend.fontsize': 11}).pyplot as plt
 import numpy as np
 import os
 
@@ -18,7 +20,7 @@ pp_tts = [l / t for l, t in zip(pp_lens, pp_tps)]  # time to process prompt
 
 ax1_twin = ax1.twinx()
 bars = ax1.bar(range(len(pp_lens)), pp_tps, 0.5, color='#2196F3', alpha=0.8, label='Throughput (t/s)')
-line = ax1_twin.plot(range(len(pp_lens)), pp_tts, 'ro-', linewidth=2, markersize=8, label='TTFT (s)')
+line = ax1_twin.plot(range(len(pp_lens)), pp_tts, 'ro-', linewidth=2, markersize=10, label='TTFT (s)')
 ax1.set_xlabel('Prompt Length (tokens)')
 ax1.set_ylabel('Prefill Throughput (t/s)', color='#2196F3')
 ax1_twin.set_ylabel('Time-to-First-Token (s)', color='red')
@@ -27,8 +29,8 @@ ax1.set_xticklabels([f'{l}' for l in pp_lens])
 ax1.set_title('(a) FlashAttention: Prefill Scaling with Prompt Length')
 ax1.grid(axis='y', alpha=0.3)
 for i, (t, tt) in enumerate(zip(pp_tps, pp_tts)):
-    ax1.text(i, t + 0.5, f'{t:.1f}', ha='center', fontsize=9, color='#1565C0')
-    ax1_twin.text(i, tt + 0.3, f'{tt:.1f}s', ha='center', fontsize=8, color='red')
+    ax1.text(i, t + 0.5, f'{t:.1f}', ha='center', fontsize=13, color='#1565C0')
+    ax1_twin.text(i, tt + 0.3, f'{tt:.1f}s', ha='center', fontsize=12, color='red')
 
 # === Figure 2: Optimization chain (cumulative improvement) ===
 configs = ['Baseline\n(no opt)', '+MADV\nRANDOM', '+KV\nq4_0', '+IQ4_XS\nquant', '+FlashAttn\n(fa auto)']
@@ -42,18 +44,18 @@ ax2.set_xlabel('Optimization Stage')
 ax2.set_ylabel('Decode Throughput (t/s)')
 ax2.set_title('(b) Optimization Chain: 80B Cumulative Improvement')
 ax2.set_xticks(range(len(configs)))
-ax2.set_xticklabels(configs, fontsize=8)
+ax2.set_xticklabels(configs, fontsize=12)
 ax2.grid(axis='y', alpha=0.3)
 
 for i, v in enumerate(tg_values):
-    ax2.text(i, v + 0.15, f'{v:.2f}', ha='center', fontsize=9, fontweight='bold')
+    ax2.text(i, v + 0.15, f'{v:.2f}', ha='center', fontsize=13, fontweight='bold')
 
 # Add improvement annotations
 for i in range(1, len(tg_values)):
     improvement = (tg_values[i] / tg_values[i-1] - 1) * 100 if tg_values[i-1] > 0 else 0
     if improvement > 0:
         ax2.annotate(f'+{improvement:.0f}%', 
-                    xy=(i, tg_values[i] + 0.5), fontsize=7, color='green',
+                    xy=(i, tg_values[i] + 0.5), fontsize=11, color='green',
                     ha='center')
 
 ax2.set_ylim(0, max(tg_values) * 1.2)
