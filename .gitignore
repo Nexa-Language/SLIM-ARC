@@ -273,3 +273,5 @@ docs/papers/*.pdf
 
 # Plan files - internal planning, not committed to public repo
 plan/
+gitlab-clean/
+scripts/profile/src/
