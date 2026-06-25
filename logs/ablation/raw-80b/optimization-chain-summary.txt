@@ -5,3 +5,10 @@ Configuration progression (80B IQ4_XS, 32GB, 8 threads, KV q4_0):
 3. + KV eviction (sink=4,window=32):  pp64=4.85  tg48=3.30 t/s (conflicts with fa)
 4. Optimal = fa auto only:            pp64=12.99 tg48=5.16 t/s
 
+
+KV Quantization Comparison (80B IQ4_XS, 32GB, 8 threads, fa auto, pp64+tg48):
+- Q4_0:  pp64=12.99 t/s, tg48=5.16 t/s (BEST)
+- Q8_0:  pp64=5.37 t/s,  tg48=2.91 t/s (-44% tg)
+- IQ4_NL: pp64=6.73 t/s, tg48=timeout (slower)
+Conclusion: Q4_0 is optimal for both performance and memory.
+

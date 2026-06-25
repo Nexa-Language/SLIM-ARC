@@ -125,54 +125,55 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.7}KV Cache 量化效果}{19}{subsection.5.7}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {14}{\ignorespaces KV Cache 量化类型对比（80B 16\,GB, 8 线程）\relax }}{19}{table.caption.19}\protected@file@percent }
 \newlabel{tab:eval_kv_quant}{{14}{19}{KV Cache 量化类型对比（80B 16\,GB, 8 线程）\relax }{table.caption.19}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.7.1}扩展 KV 量化对比（80B IQ4\_XS, 32\,GB, fa auto, pp64+tg48）}{19}{subsubsection.5.7.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces KV 量化类型扩展对比（含 FlashAttention）\relax }}{19}{table.caption.20}\protected@file@percent }
+\newlabel{tab:eval_kv_quant_ext}{{15}{19}{KV 量化类型扩展对比（含 FlashAttention）\relax }{table.caption.20}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.8}StreamingLLM KV Eviction}{19}{subsection.5.8}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.8.1}机制}{19}{subsubsection.5.8.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.8.2}验证结果（Qwen3-4B, 32\,GB, 4 threads, n=300）}{19}{subsubsection.5.8.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {15}{\ignorespaces KV Eviction 消融（Qwen3-4B-Q4\_K\_M, sink=4, window=256）\relax }}{19}{table.caption.20}\protected@file@percent }
-\newlabel{tab:eval_kv_evict}{{15}{19}{KV Eviction 消融（Qwen3-4B-Q4\_K\_M, sink=4, window=256）\relax }{table.caption.20}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.8.2}验证结果（Qwen3-4B, 32\,GB, 4 threads, n=300）}{20}{subsubsection.5.8.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces KV Eviction 消融（Qwen3-4B-Q4\_K\_M, sink=4, window=256）\relax }}{20}{table.caption.21}\protected@file@percent }
+\newlabel{tab:eval_kv_evict}{{16}{20}{KV Eviction 消融（Qwen3-4B-Q4\_K\_M, sink=4, window=256）\relax }{table.caption.21}{}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.8.3}80B eviction 消融（IQ4\_XS, 32\,GB, 8 threads, KV q4\_0）}{20}{subsubsection.5.8.3}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {16}{\ignorespaces 80B KV Eviction 消融（sink=4, window=32, pp64+tg48）\relax }}{20}{table.caption.21}\protected@file@percent }
-\newlabel{tab:eval_kv_evict_80b}{{16}{20}{80B KV Eviction 消融（sink=4, window=32, pp64+tg48）\relax }{table.caption.21}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces 优化技术渐进提升：从 baseline 到 IQ4\_XS + KV q4\_0 + eviction 的完整优化链\relax }}{20}{figure.caption.22}\protected@file@percent }
-\newlabel{fig:opt_dumbbell}{{5}{20}{优化技术渐进提升：从 baseline 到 IQ4\_XS + KV q4\_0 + eviction 的完整优化链\relax }{figure.caption.22}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces (a) KV Cache 量化类型对比（带误差棒） (b) 线程数扩展性分析\relax }}{20}{figure.caption.23}\protected@file@percent }
-\newlabel{fig:kv_quant}{{6}{20}{(a) KV Cache 量化类型对比（带误差棒） (b) 线程数扩展性分析\relax }{figure.caption.23}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {17}{\ignorespaces 80B KV Eviction 消融（sink=4, window=32, pp64+tg48）\relax }}{20}{table.caption.22}\protected@file@percent }
+\newlabel{tab:eval_kv_evict_80b}{{17}{20}{80B KV Eviction 消融（sink=4, window=32, pp64+tg48）\relax }{table.caption.22}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces 优化技术渐进提升：从 baseline 到 IQ4\_XS + KV q4\_0 + eviction 的完整优化链\relax }}{21}{figure.caption.23}\protected@file@percent }
+\newlabel{fig:opt_dumbbell}{{5}{21}{优化技术渐进提升：从 baseline 到 IQ4\_XS + KV q4\_0 + eviction 的完整优化链\relax }{figure.caption.23}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces (a) KV Cache 量化类型对比（带误差棒） (b) 线程数扩展性分析\relax }}{21}{figure.caption.24}\protected@file@percent }
+\newlabel{fig:kv_quant}{{6}{21}{(a) KV Cache 量化类型对比（带误差棒） (b) 线程数扩展性分析\relax }{figure.caption.24}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {5.9}模型精度验证}{21}{subsection.5.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.9.1}Qwen3-4B-Q4\_K\_M 困惑度}{21}{subsubsection.5.9.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {17}{\ignorespaces Qwen3-4B-Q4\_K\_M 在 WikiTest-2 上的困惑度（n\_ctx=2048, 前 32 chunks）\relax }}{21}{table.caption.24}\protected@file@percent }
-\newlabel{tab:eval_ppl}{{17}{21}{Qwen3-4B-Q4\_K\_M 在 WikiTest-2 上的困惑度（n\_ctx=2048, 前 32 chunks）\relax }{table.caption.24}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.9.2}GSM8K 推理精度（综述 ALEM 协议）}{21}{subsubsection.5.9.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {18}{\ignorespaces GSM8K 推理精度对比（8-shot, temp=0.2, 综述 ALEM 协议）\relax }}{21}{table.caption.25}\protected@file@percent }
-\newlabel{tab:eval_gsm8k}{{18}{21}{GSM8K 推理精度对比（8-shot, temp=0.2, 综述 ALEM 协议）\relax }{table.caption.25}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.10}Speculative Decoding 负面结果}{22}{subsection.5.10}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.10.1}实验配置}{22}{subsubsection.5.10.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.10.2}结果}{22}{subsubsection.5.10.2}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {19}{\ignorespaces Speculative Decoding 负面结果（80B MoE, self-draft, ngram-simple）\relax }}{22}{table.caption.26}\protected@file@percent }
-\newlabel{tab:eval_spec_dec}{{19}{22}{Speculative Decoding 负面结果（80B MoE, self-draft, ngram-simple）\relax }{table.caption.26}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.9.1}Qwen3-4B-Q4\_K\_M 困惑度}{22}{subsubsection.5.9.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {18}{\ignorespaces Qwen3-4B-Q4\_K\_M 在 WikiTest-2 上的困惑度（n\_ctx=2048, 前 32 chunks）\relax }}{22}{table.caption.25}\protected@file@percent }
+\newlabel{tab:eval_ppl}{{18}{22}{Qwen3-4B-Q4\_K\_M 在 WikiTest-2 上的困惑度（n\_ctx=2048, 前 32 chunks）\relax }{table.caption.25}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.9.2}GSM8K 推理精度（综述 ALEM 协议）}{22}{subsubsection.5.9.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {19}{\ignorespaces GSM8K 推理精度对比（8-shot, temp=0.2, 综述 ALEM 协议）\relax }}{22}{table.caption.26}\protected@file@percent }
+\newlabel{tab:eval_gsm8k}{{19}{22}{GSM8K 推理精度对比（8-shot, temp=0.2, 综述 ALEM 协议）\relax }{table.caption.26}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.10}Speculative Decoding 负面结果}{23}{subsection.5.10}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.10.1}实验配置}{23}{subsubsection.5.10.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.10.2}结果}{23}{subsubsection.5.10.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {20}{\ignorespaces Speculative Decoding 负面结果（80B MoE, self-draft, ngram-simple）\relax }}{23}{table.caption.27}\protected@file@percent }
+\newlabel{tab:eval_spec_dec}{{20}{23}{Speculative Decoding 负面结果（80B MoE, self-draft, ngram-simple）\relax }{table.caption.27}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {6}总结与未来展望}{23}{section.6}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {6.1}工作总结}{23}{subsection.6.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.1.1}核心技术贡献}{23}{subsubsection.6.1.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.1.2}实验验证}{23}{subsubsection.6.1.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}诚实评估与局限性}{23}{subsection.6.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.1}prefetch\_scheduler 的冗余}{23}{subsubsection.6.2.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.2}数据波动问题}{24}{subsubsection.6.2.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.3}Phase 2b KV Cache 换页的未完成}{24}{subsubsection.6.2.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.4}动态 MADV 切换的失效}{24}{subsubsection.6.2.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}未来展望}{24}{subsection.6.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.1}短期优化方向}{24}{subsubsection.6.3.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.2}中长期研究方向}{24}{subsubsection.6.3.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}结论}{25}{subsection.6.4}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces 多维度优化效果评估雷达图\relax }}{25}{figure.caption.27}\protected@file@percent }
-\newlabel{fig:radar}{{7}{25}{多维度优化效果评估雷达图\relax }{figure.caption.27}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.1.1}核心技术贡献}{24}{subsubsection.6.1.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.1.2}实验验证}{24}{subsubsection.6.1.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}诚实评估与局限性}{24}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.1}prefetch\_scheduler 的冗余}{24}{subsubsection.6.2.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.2}数据波动问题}{25}{subsubsection.6.2.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.3}Phase 2b KV Cache 换页的未完成}{25}{subsubsection.6.2.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.2.4}动态 MADV 切换的失效}{25}{subsubsection.6.2.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}未来展望}{25}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.1}短期优化方向}{25}{subsubsection.6.3.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {6.3.2}中长期研究方向}{25}{subsubsection.6.3.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.4}结论}{26}{subsection.6.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces 多维度优化效果评估雷达图\relax }}{26}{figure.caption.28}\protected@file@percent }
+\newlabel{fig:radar}{{7}{26}{多维度优化效果评估雷达图\relax }{figure.caption.28}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces 优化技术堆叠瀑布图（80B 8\,GB cgroup）\relax }}{26}{figure.caption.29}\protected@file@percent }
+\newlabel{fig:waterfall}{{8}{26}{优化技术堆叠瀑布图（80B 8\,GB cgroup）\relax }{figure.caption.29}{}}
 \bibstyle{IEEEtran}
 \bibdata{reference}
 \bibcite{flexinfer2025}{1}
 \bibcite{dualblade2024}{2}
 \bibcite{hillinfer2024}{3}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces 优化技术堆叠瀑布图（80B 8\,GB cgroup）\relax }}{26}{figure.caption.28}\protected@file@percent }
-\newlabel{fig:waterfall}{{8}{26}{优化技术堆叠瀑布图（80B 8\,GB cgroup）\relax }{figure.caption.28}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Q4\_K\_M vs IQ4\_XS 量化格式性能对比\relax }}{26}{figure.caption.29}\protected@file@percent }
-\newlabel{fig:quant_compare}{{9}{26}{Q4\_K\_M vs IQ4\_XS 量化格式性能对比\relax }{figure.caption.29}{}}
 \bibcite{scoutattention2024}{4}
 \bibcite{mobilemoe2024}{5}
 \bibcite{moeprism2024}{6}
@@ -180,8 +181,10 @@
 \bibcite{survey2024}{8}
 \bibcite{llamacpp2024}{9}
 \bibcite{streamingllm2024}{10}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Q4\_K\_M vs IQ4\_XS 量化格式性能对比\relax }}{27}{figure.caption.30}\protected@file@percent }
+\newlabel{fig:quant_compare}{{9}{27}{Q4\_K\_M vs IQ4\_XS 量化格式性能对比\relax }{figure.caption.30}{}}
 \bibcite{solidattention2026}{11}
-\newlabel{LastPage}{{}{27}{}{page.27}{}}
-\xdef\lastpage@lastpage{27}
-\xdef\lastpage@lastpageHy{27}
-\gdef \@abspage@last{28}
+\newlabel{LastPage}{{}{28}{}{page.28}{}}
+\xdef\lastpage@lastpage{28}
+\xdef\lastpage@lastpageHy{28}
+\gdef \@abspage@last{29}

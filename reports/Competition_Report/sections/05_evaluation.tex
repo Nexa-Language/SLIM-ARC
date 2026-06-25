@@ -287,6 +287,27 @@ OLMoE（3.9\,GB）同样未触发 MADV\_RANDOM，主要因为模型小于 6\,GB 
 
 Q4\_0 量化使 KV Cache 内存减半，为权重缓存腾出更多物理内存，decode 性能提升 14\%。Q8\_0 虽然精度更高但性能不如 Q4\_0，因为其内存节省不足以显著改善 cache 命中率。
 
+\subsubsection{扩展 KV 量化对比（80B IQ4\_XS, 32\,GB, fa auto, pp64+tg48）}
+
+\begin{table}[H]
+    \centering
+    \caption{KV 量化类型扩展对比（含 FlashAttention）}
+    \label{tab:eval_kv_quant_ext}
+    \begin{tabular}{lcccc}
+        \toprule
+        \textbf{KV 类型} & \textbf{pp64 t/s} & \textbf{tg48 t/s} & \textbf{KV 内存} & \textbf{vs Q4\_0} \\
+        \midrule
+        Q8\_0 & 5.37 & 2.91 & 1$\times$ & --44\% \\
+        IQ4\_NL & 6.73 & --- & 0.5$\times$ & --48\%* \\
+        \textbf{Q4\_0} & \textbf{12.99} & \textbf{5.16} & \textbf{0.5$\times$} & \textbf{best} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\footnotetext[2]{$^*$IQ4\_NL 的 tg48 因超时未获取，但 pp64 已显示慢于 Q4\_0。}
+
+在 FlashAttention 开启的条件下，Q4\_0 仍然是性能最优的 KV 量化类型。Q8\_0 内存翻倍导致 cache 命中率下降，decode 慢 44\%。IQ4\_NL 虽然与 Q4\_0 同为 4-bit，但其非均匀量化方案的计算开销更高，吞吐量反而下降。这一结果验证了 Q4\_0 在"内存节省 $\times$ 计算效率"上的最佳平衡。
+
 \subsection{StreamingLLM KV Eviction}
 
 受综述 Sec 4.3 "combine KV compression with eviction policies (e.g., window + sink tokens)" 启发，我们实现了 StreamingLLM 式的 KV Cache 驱逐机制 \cite{streamingllm2024}。同时参考了 SolidAttention \cite{solidattention2026} 的 block-wise attention sparsity 思路。

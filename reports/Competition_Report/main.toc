@@ -56,26 +56,27 @@
 \contentsline {subsubsection}{\numberline {5.5.2}OLMoE-1B-7B（MoE, 3.9\,GB）}{18}{subsubsection.5.5.2}%
 \contentsline {subsection}{\numberline {5.6}数据波动分析}{18}{subsection.5.6}%
 \contentsline {subsection}{\numberline {5.7}KV Cache 量化效果}{19}{subsection.5.7}%
+\contentsline {subsubsection}{\numberline {5.7.1}扩展 KV 量化对比（80B IQ4\_XS, 32\,GB, fa auto, pp64+tg48）}{19}{subsubsection.5.7.1}%
 \contentsline {subsection}{\numberline {5.8}StreamingLLM KV Eviction}{19}{subsection.5.8}%
 \contentsline {subsubsection}{\numberline {5.8.1}机制}{19}{subsubsection.5.8.1}%
-\contentsline {subsubsection}{\numberline {5.8.2}验证结果（Qwen3-4B, 32\,GB, 4 threads, n=300）}{19}{subsubsection.5.8.2}%
+\contentsline {subsubsection}{\numberline {5.8.2}验证结果（Qwen3-4B, 32\,GB, 4 threads, n=300）}{20}{subsubsection.5.8.2}%
 \contentsline {subsubsection}{\numberline {5.8.3}80B eviction 消融（IQ4\_XS, 32\,GB, 8 threads, KV q4\_0）}{20}{subsubsection.5.8.3}%
 \contentsline {subsection}{\numberline {5.9}模型精度验证}{21}{subsection.5.9}%
-\contentsline {subsubsection}{\numberline {5.9.1}Qwen3-4B-Q4\_K\_M 困惑度}{21}{subsubsection.5.9.1}%
-\contentsline {subsubsection}{\numberline {5.9.2}GSM8K 推理精度（综述 ALEM 协议）}{21}{subsubsection.5.9.2}%
-\contentsline {subsection}{\numberline {5.10}Speculative Decoding 负面结果}{22}{subsection.5.10}%
-\contentsline {subsubsection}{\numberline {5.10.1}实验配置}{22}{subsubsection.5.10.1}%
-\contentsline {subsubsection}{\numberline {5.10.2}结果}{22}{subsubsection.5.10.2}%
+\contentsline {subsubsection}{\numberline {5.9.1}Qwen3-4B-Q4\_K\_M 困惑度}{22}{subsubsection.5.9.1}%
+\contentsline {subsubsection}{\numberline {5.9.2}GSM8K 推理精度（综述 ALEM 协议）}{22}{subsubsection.5.9.2}%
+\contentsline {subsection}{\numberline {5.10}Speculative Decoding 负面结果}{23}{subsection.5.10}%
+\contentsline {subsubsection}{\numberline {5.10.1}实验配置}{23}{subsubsection.5.10.1}%
+\contentsline {subsubsection}{\numberline {5.10.2}结果}{23}{subsubsection.5.10.2}%
 \contentsline {section}{\numberline {6}总结与未来展望}{23}{section.6}%
 \contentsline {subsection}{\numberline {6.1}工作总结}{23}{subsection.6.1}%
-\contentsline {subsubsection}{\numberline {6.1.1}核心技术贡献}{23}{subsubsection.6.1.1}%
-\contentsline {subsubsection}{\numberline {6.1.2}实验验证}{23}{subsubsection.6.1.2}%
-\contentsline {subsection}{\numberline {6.2}诚实评估与局限性}{23}{subsection.6.2}%
-\contentsline {subsubsection}{\numberline {6.2.1}prefetch\_scheduler 的冗余}{23}{subsubsection.6.2.1}%
-\contentsline {subsubsection}{\numberline {6.2.2}数据波动问题}{24}{subsubsection.6.2.2}%
-\contentsline {subsubsection}{\numberline {6.2.3}Phase 2b KV Cache 换页的未完成}{24}{subsubsection.6.2.3}%
-\contentsline {subsubsection}{\numberline {6.2.4}动态 MADV 切换的失效}{24}{subsubsection.6.2.4}%
-\contentsline {subsection}{\numberline {6.3}未来展望}{24}{subsection.6.3}%
-\contentsline {subsubsection}{\numberline {6.3.1}短期优化方向}{24}{subsubsection.6.3.1}%
-\contentsline {subsubsection}{\numberline {6.3.2}中长期研究方向}{24}{subsubsection.6.3.2}%
-\contentsline {subsection}{\numberline {6.4}结论}{25}{subsection.6.4}%
+\contentsline {subsubsection}{\numberline {6.1.1}核心技术贡献}{24}{subsubsection.6.1.1}%
+\contentsline {subsubsection}{\numberline {6.1.2}实验验证}{24}{subsubsection.6.1.2}%
+\contentsline {subsection}{\numberline {6.2}诚实评估与局限性}{24}{subsection.6.2}%
+\contentsline {subsubsection}{\numberline {6.2.1}prefetch\_scheduler 的冗余}{24}{subsubsection.6.2.1}%
+\contentsline {subsubsection}{\numberline {6.2.2}数据波动问题}{25}{subsubsection.6.2.2}%
+\contentsline {subsubsection}{\numberline {6.2.3}Phase 2b KV Cache 换页的未完成}{25}{subsubsection.6.2.3}%
+\contentsline {subsubsection}{\numberline {6.2.4}动态 MADV 切换的失效}{25}{subsubsection.6.2.4}%
+\contentsline {subsection}{\numberline {6.3}未来展望}{25}{subsection.6.3}%
+\contentsline {subsubsection}{\numberline {6.3.1}短期优化方向}{25}{subsubsection.6.3.1}%
+\contentsline {subsubsection}{\numberline {6.3.2}中长期研究方向}{25}{subsubsection.6.3.2}%
+\contentsline {subsection}{\numberline {6.4}结论}{26}{subsection.6.4}%
