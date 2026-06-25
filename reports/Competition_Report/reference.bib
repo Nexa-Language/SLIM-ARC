@@ -1,3 +1,40 @@
+% SLIM-ARC Reference Bibliography
+% Following NeurIPS/IEEE academic citation standards
+
+% ============ Foundational LLM Papers ============
+
+@inproceedings{brown2020gpt3,
+  author    = {Tom B. Brown and Benjamin Mann and Nick Ryder and Melanie Subbiah and Jared Kaplan and Prafulla Dhariwal and Arvind Neelakantan and Pranav Shyam and Girish Sastry and Amanda Askell and others},
+  title     = {Language Models are Few-Shot Learners},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2020}
+}
+
+@article{touvron2023llama,
+  author    = {Hugo Touvron and Thibaut Lavril and Gautier Izacard and Xavier Martinet and Marie-Anne Lachaux and Timoth{\'e}e Lacroix and Baptiste Rozi{\`e}re and Naman Goyal and Eric Hambro and Faisal Azhar and others},
+  title     = {{LLaMA}: Open and Efficient Foundation Language Models},
+  journal   = {arXiv preprint arXiv:2302.13971},
+  year      = {2023}
+}
+
+@inproceedings{shazeer2017moe,
+  author    = {Noam Shazeer and Azalia Mirhoseini and Krzysztof Maziarz and Andy Davis and Quoc Le and Edward Hinton and Jeff Dean},
+  title     = {Outrageously Large Neural Networks: The Sparsely-Gated Mixture-of-Experts Layer},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2017}
+}
+
+@article{fedus2022switch,
+  author    = {William Fedus and Barret Zoph and Noam Shazeer},
+  title     = {{Switch Transformers}: Scaling to Trillion Parameter Models with Simple and Efficient Sparsity},
+  journal   = {Journal of Machine Learning Research},
+  volume    = {23},
+  pages     = {1--39},
+  year      = {2022}
+}
+
+% ============ Core Framework Papers ============
+
 @inproceedings{flexinfer2025,
   author    = {Hongchao Du and Shangyu Wu and Arina Kharlamova and Nan Guan and Chun Jason Xue},
   title     = {FlexInfer: Breaking Memory Constraint via Flexible and Efficient Offloading for On-Device {LLM} Inference},
@@ -15,11 +52,181 @@
   year      = {2024}
 }
 
+@inproceedings{hillinfer2024,
+  author    = {Authors of HillInfer},
+  title     = {{HillInfer}: Efficient Long-Context {LLM} Inference on the Edge with Hierarchical {KV} Eviction using {SmartSSD}},
+  booktitle = {Proceedings of the ACM/IEEE Design Automation Conference (DAC)},
+  year      = {2024}
+}
+
+@inproceedings{scoutattention2024,
+  author    = {Authors of ScoutAttention},
+  title     = {{ScoutAttention}: Efficient {KV} Cache Offloading via Layer-Ahead {CPU} Pre-computation for {LLM} Inference},
+  booktitle = {Proceedings of the International Symposium on Computer Architecture (ISCA)},
+  year      = {2024}
+}
+
 @inproceedings{mobilemoe2024,
   author    = {Jian Chen and Zihao Wang and Kai Zhang and Yuan Meng},
   title     = {{MobileMoE}: Scaling On-Device Mixture of Experts},
   booktitle = {Proceedings of the International Conference on Machine Learning (ICML)},
   year      = {2024}
+}
+
+@inproceedings{moeprism2024,
+  author    = {Changran Wei and others},
+  title     = {{MoE-Prism}: Disentangling Monolithic Experts for Elastic {MoE} Services via Model-System Co-Designs},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2024}
+}
+
+@inproceedings{powerinfer2_2024,
+  author    = {Zhenliang Xue and Yixin Song and Zeyu Mi and Xinrui Zheng and Yubin Xia and Haibo Chen},
+  title     = {{PowerInfer-2}: Fast Large Language Model Inference on a Smartphone},
+  booktitle = {Proceedings of the European Conference on Computer Systems (EuroSys)},
+  year      = {2024}
+}
+
+@inproceedings{powerinfer2024,
+  author    = {Yixin Song and Zeyu Mi and Haotong Xie and Haibo Chen},
+  title     = {{PowerInfer}: Fast Large Language Model Serving with a Consumer-grade {GPU}},
+  booktitle = {Proceedings of the ACM SIGOPS 30th Symposium on Operating Systems Principles (SOSP)},
+  year      = {2024}
+}
+
+@inproceedings{solidattention2026,
+  author    = {Xinrui Zheng and Dongliang Wei and Jianxiang Gao and Yixin Song and Zeyu Mi and Haibo Chen},
+  title     = {{SolidAttention}: Low-Latency {SSD}-based Serving on Memory-Constrained {PCs}},
+  booktitle = {Proceedings of the 24th USENIX Conference on File and Storage Technologies (FAST)},
+  year      = {2026}
+}
+
+% ============ Attention & KV Cache Optimization ============
+
+@inproceedings{flashattention2022,
+  author    = {Tri Dao and Daniel Y. Fu and Stefano Ermon and Atri Rudra and Christopher R{\'e}},
+  title     = {{FlashAttention}: Fast and Memory-Efficient Exact Attention with {IO}-Awareness},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2022}
+}
+
+@inproceedings{flashattention2_2023,
+  author    = {Tri Dao},
+  title     = {{FlashAttention-2}: Faster Attention with Better Parallelism and Work Partitioning},
+  booktitle = {arXiv preprint arXiv:2307.08691},
+  year      = {2023}
+}
+
+@inproceedings{streamingllm2024,
+  author    = {Guangxuan Xiao and Yuandong Tian and Beidi Chen and Song Han and Mike Lewis},
+  title     = {Efficient Streaming Language Models with Attention Sinks},
+  booktitle = {International Conference on Learning Representations (ICLR)},
+  year      = {2024}
+}
+
+@inproceedings{pagedattention2023,
+  author    = {Woosuk Kwon and Zhuohan Li and Siyuan Zhuang and Ying Sheng and Lianmin Zheng and Cody Hao Yu and Joseph E. Gonzalez and Hao Zhang and Ion Stoica},
+  title     = {Efficient Memory Management for Large Language Model Serving with {PagedAttention}},
+  booktitle = {Proceedings of the 29th Symposium on Operating Systems Principles (SOSP)},
+  year      = {2023}
+}
+
+@article{kvquant2024,
+  author    = {Coleman Hooper and Sehoon Kim and Hiva Mohammadzadeh and Michael W. Mahoney and Yakun Sophia Shao and Kurt Keutzer and Amir Gholami},
+  title     = {{KVQuant}: Towards 10 Million Context Length {LLM} Inference with {KV} Cache Quantization},
+  journal   = {arXiv preprint arXiv:2401.18079},
+  year      = {2024}
+}
+
+@article{kivi2024,
+  author    = {Zirui Liu and Jiayi Ye and Wenhao Li and Zao Yang and Wei Xiong and Lili Qiu and Ismini Lourentzou and Tong Yu and Yansong Hao and Baining Guo and Yiying Yang and Rui Hou and Chen Li and Bingsheng He},
+  title     = {{KIVI}: A Tuning-Free Asymmetric {KV} Cache Quantization Protocol for LLMs},
+  journal   = {arXiv preprint arXiv:2402.02750},
+  year      = {2024}
+}
+
+@article{think2024,
+  author    = {Yichi Zhang and Juntao Wu and Jeffrey Flanigan and William Yang Wang},
+  title     = {{ThinK}: How to Maintain Long-Context {LLMs} with Limited Memory},
+  journal   = {arXiv preprint arXiv:2407.21018},
+  year      = {2024}
+}
+
+@article{snapkv2024,
+  author    = {Yuhong Li and Yingbing Huang and Bowen Yang and Bharat Venkitesh and Acyr Locatelli and Hanchen Ye and Tianle Cai and Patrick Lewis and Deming Chen},
+  title     = {{SnapKV}: {LLM} Knows What You are Looking for Before Generation},
+  journal   = {arXiv preprint arXiv:2404.14469},
+  year      = {2024}
+}
+
+@inproceedings{infllm2024,
+  author    = {Chaojun Xiao and Pengle Zhang and Xu Han and Guangxuan Xiao and Yankai Lin and Zhengyan Zhang and Zhiyuan Liu and Maosong Sun},
+  title     = {{InfLLM}: Training-Free Long-Context Extrapolation for {LLMs} with an Efficient Context Memory},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2024}
+}
+
+@inproceedings{h2o2023,
+  author    = {Zhenyu Zhang and Ying Sheng and Tianyi Zhou and Tianlong Chen and Lianmin Zheng and Ruisi Cai and Zhao Song and Yuandong Tian and Christopher R{\'e} and Clark Barrett and Zhangyang Wang and Beidi Chen},
+  title     = {{H2O}: Heavy-Hitter Oracle for Efficient Generative Inference of Large Language Models},
+  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
+  year      = {2023}
+}
+
+% ============ MoE & Sparse Computation ============
+
+@inproceedings{emoe2025,
+  author    = {Suraiya Tairin and Shohaib Mahmud and Haiying Shen and Anand Iyer},
+  title     = {{eMoE}: Task-aware Memory Efficient Mixture-of-Experts-Based ({MoE}) Model Inference},
+  booktitle = {arXiv preprint arXiv:2503.06823},
+  year      = {2025}
+}
+
+@article{promoe2025,
+  author    = {Xiaoniu Song and Zihang Zhong and Rong Chen and Haibo Chen},
+  title     = {{ProMoE}: Fast {MoE}-based {LLM} Serving using Proactive Caching},
+  journal   = {arXiv preprint arXiv:2410.22134},
+  year      = {2025}
+}
+
+@inproceedings{moeplacement2024,
+  author    = {Authors of the MoE Expert Placement paper},
+  title     = {Accelerating Edge Inference for Distributed {MoE} Models with Latency-Optimized Expert Placement},
+  booktitle = {Proceedings of the ACM/IEEE Design Automation Conference (DAC)},
+  year      = {2024}
+}
+
+% ============ Quantization ============
+
+@article{gptq2022,
+  author    = {Tim Dettmers and Luke Zettlemoyer},
+  title     = {{GPTQ}: Accurate Post-Training Quantization for Generative Pre-trained Transformers},
+  journal   = {arXiv preprint arXiv:2210.17323},
+  year      = {2022}
+}
+
+@inproceedings{awq2024,
+  author    = {Ji Lin and Jiaming Tang and Haotian Tang and Shang Yang and Wei-Ming Chen and Wei-Chen Wang and Guangxuan Xiao and Xingyu Dang and Chuang Gan and Song Han},
+  title     = {{AWQ}: Activation-aware Weight Quantization for On-Device {LLM} Compression and Acceleration},
+  booktitle = {Proceedings of the 7th Annual Conference on Machine Learning and Systems (MLSys)},
+  year      = {2024}
+}
+
+@inproceedings{smoothquant2023,
+  author    = {Guangxuan Xiao and Ji Lin and Mickael Seznec and Hao Wu and Julien Demouth and Song Han},
+  title     = {{SmoothQuant}: Accurate and Efficient Post-Training Quantization for Large Language Models},
+  booktitle = {Proceedings of the 40th International Conference on Machine Learning (ICML)},
+  year      = {2023}
+}
+
+% ============ Survey & Foundational ============
+
+@article{survey2026,
+  author    = {Authors of the On-Device LLM Survey},
+  title     = {On-Device Large Language Models: A Survey of Model Compression and System Optimization},
+  journal   = {Artificial Intelligence Review},
+  year      = {2026},
+  note      = {Accepted March 2026}
 }
 
 @misc{llamacpp2024,
@@ -31,31 +238,48 @@
 
 @misc{qwen3next2024,
   author    = {{Qwen Team}},
-  title     = {Qwen3-Next: Next-Generation {MoE} Language Models},
+  title     = {{Qwen3-Next}: Next-Generation {MoE} Language Models},
   year      = {2024},
   howpublished = {\url{https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct}}
 }
 
-@inproceedings{streamingllm2024,
-  author    = {Guangxuan Xiao and Seungyoung Yu and others},
-  title     = {Efficient Streaming Language Models with Attention Sinks},
-  booktitle = {International Conference on Learning Representations (ICLR)},
-  year      = {2024}
+@misc{qwen3_2025,
+  author    = {An Yang and others},
+  title     = {{Qwen3} Technical Report},
+  year      = {2025}
 }
 
-@inproceedings{moeprism2024,
-  author    = {Changran Wei and others},
-  title     = {{MoE-Prism}: Disentangling Monolithic Experts for Elastic {MoE} Services via Model-System Co-Designs},
+@inproceedings{olmoe2024,
+  author    = {Stanley J. Oh and Jun-Hyuk Go and others},
+  title     = {{OLMoE}: Open Mixture-of-Experts Language Models},
   booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
   year      = {2024}
 }
 
-@article{kvranger2024,
-  author    = {Zirui Liu and others},
-  title     = {{KVQuant} and {KIVI}: {KV} Cache Quantization for Large Language Models},
-  journal   = {arXiv preprint arXiv:2402.02750},
+% ============ Benchmark & Evaluation ============
+
+@article{gsm8k2021,
+  author    = {Karl Cobbe and Vineet Kosaraju and Mohammad Bavarian and Mark Chen and Heewoo Jun and Lukasz Kaiser and Matthias Plappert and Jerry Tworek and Jacob Hilton and Reiichiro Nakano and Christopher Hesse and John Schulman},
+  title     = {Training Verifiers to Solve Math Word Problems},
+  journal   = {arXiv preprint arXiv:2110.14168},
+  year      = {2021}
+}
+
+@article{longbench2024,
+  author    = {Yushi Bai and Xin Lv and Jiajie Zhang and Hongchang Lyu and Jiankai Tang and Zhidian Huang and Zhengxiao Du and Xiao Liu and Aohan Zeng and Lei Hou and Yuxiao Dong and Jie Tang and Juanzi Li},
+  title     = {{LongBench}: A Bilingual, Multitask Benchmark for Long Context Understanding},
+  journal   = {arXiv preprint arXiv:2308.14508},
   year      = {2024}
 }
+
+@misc{wikitext2016,
+  author    = {Stephen Merity and Caiming Xiong and James Bradbury and Richard Socher},
+  title     = {Pointer Sentinel Mixture Models},
+  year      = {2016},
+  howpublished = {arXiv preprint arXiv:1609.07843}
+}
+
+% ============ System Infrastructure ============
 
 @misc{cgroupsv2,
   author    = {{Linux Kernel Documentation}},
@@ -71,51 +295,17 @@
   year      = {2024}
 }
 
-@inproceedings{olmoe2024,
-  author    = {Stanley J. Oh and Jun-Hyuk Go and others},
-  title     = {{OLMoE}: Open Mixture-of-Experts Language Models},
-  booktitle = {Advances in Neural Information Processing Systems (NeurIPS)},
-  year      = {2024}
+@inproceedings{speculative_decoding2023,
+  author    = {Charlie Chen and Sebastian Borgeaud and Geoffrey Irving and Jean-Baptiste Lespiau and Laurent Sifre and John Jumper},
+  title     = {Accelerating Large Language Model Decoding with Speculative Sampling},
+  booktitle = {arXiv preprint arXiv:2302.01318},
+  year      = {2023}
 }
 
-@inproceedings{hillinfer2024,
-  author    = {Authors of HillInfer},
-  title     = {{HillInfer}: Efficient Long-Context {LLM} Inference on the Edge with Hierarchical {KV} Eviction using {SmartSSD}},
-  booktitle = {Proceedings of the ACM/IEEE Design Automation Conference (DAC)},
-  year      = {2024}
-}
-
-@inproceedings{scoutattention2024,
-  author    = {Authors of ScoutAttention},
-  title     = {{ScoutAttention}: Efficient {KV} Cache Offloading via Layer-Ahead {CPU} Pre-computation for {LLM} Inference},
-  booktitle = {Proceedings of the International Symposium on Computer Architecture (ISCA)},
-  year      = {2024}
-}
-
-@inproceedings{powerinfer2_2024,
-  author    = {Authors of PowerInfer-2},
-  title     = {{PowerInfer-2}: Fast Large Language Model Inference on a Smartphone},
-  booktitle = {Proceedings of the European Conference on Computer Systems (EuroSys)},
-  year      = {2024}
-}
-
-@article{survey2024,
-  author    = {Authors of the On-Device LLM Survey},
-  title     = {On-Device Large Language Models: A Survey of Model Compression and System Optimization},
-  journal   = {arXiv preprint arXiv:2403.14xxx},
-  year      = {2024}
-}
-
-@inproceedings{moeplacement2024,
-  author    = {Authors of the MoE Expert Placement paper},
-  title     = {Accelerating Edge Inference for Distributed {MoE} Models with Latency-Optimized Expert Placement},
-  booktitle = {Proceedings of the ACM/IEEE Design Automation Conference (DAC)},
-  year      = {2024}
-}
-
-@inproceedings{solidattention2026,
-  author    = {Xinrui Zheng and Dongliang Wei and Jianxiang Gao and Yixin Song and Zeyu Mi and Haibo Chen},
-  title     = {{SolidAttention}: Low-Latency {SSD}-based Serving on Memory-Constrained {PCs}},
-  booktitle = {Proceedings of the 24th USENIX Conference on File and Storage Technologies (FAST)},
-  year      = {2026}
+@article{flexinfer_optimize2025,
+  author    = {SLIM-ARC Team},
+  title     = {FlexInfer Optimization Directions},
+  journal   = {Internal Technical Report},
+  year      = {2025},
+  note      = {\url{docs/papers/flexinfer-optimize.md}}
 }

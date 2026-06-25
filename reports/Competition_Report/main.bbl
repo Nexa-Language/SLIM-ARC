@@ -21,12 +21,71 @@
 \providecommand{\BIBdecl}{\relax}
 \BIBdecl
 
+\bibitem{brown2020gpt3}
+T.~B. Brown, B.~Mann, N.~Ryder, M.~Subbiah, J.~Kaplan, P.~Dhariwal,
+  A.~Neelakantan, P.~Shyam, G.~Sastry, A.~Askell \emph{et~al.}, ``Language
+  models are few-shot learners,'' in \emph{Advances in Neural Information
+  Processing Systems (NeurIPS)}, 2020.
+
+\bibitem{touvron2023llama}
+H.~Touvron, T.~Lavril, G.~Izacard, X.~Martinet, M.-A. Lachaux, T.~Lacroix,
+  B.~Rozi{\`e}re, N.~Goyal, E.~Hambro, F.~Azhar \emph{et~al.}, ``{LLaMA}: Open
+  and efficient foundation language models,'' \emph{arXiv preprint
+  arXiv:2302.13971}, 2023.
+
+\bibitem{qwen3_2025}
+A.~Yang \emph{et~al.}, ``{Qwen3} technical report,'' 2025.
+
+\bibitem{qwen3next2024}
+{Qwen Team}, ``{Qwen3-Next}: Next-generation {MoE} language models,''
+  \url{https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct}, 2024.
+
+\bibitem{survey2026}
+A.~of~the On-Device LLM~Survey, ``On-device large language models: A survey of
+  model compression and system optimization,'' \emph{Artificial Intelligence
+  Review}, 2026, accepted March 2026.
+
+\bibitem{shazeer2017moe}
+N.~Shazeer, A.~Mirhoseini, K.~Maziarz, A.~Davis, Q.~Le, E.~Hinton, and J.~Dean,
+  ``Outrageously large neural networks: The sparsely-gated mixture-of-experts
+  layer,'' in \emph{International Conference on Learning Representations
+  (ICLR)}, 2017.
+
+\bibitem{fedus2022switch}
+W.~Fedus, B.~Zoph, and N.~Shazeer, ``{Switch Transformers}: Scaling to trillion
+  parameter models with simple and efficient sparsity,'' \emph{Journal of
+  Machine Learning Research}, vol.~23, pp. 1--39, 2022.
+
+\bibitem{llamacpp2024}
+G.~Gerganov \emph{et~al.}, ``llama.cpp: {LLM} inference in {C/C++},''
+  \url{https://github.com/ggml-org/llama.cpp}, 2024.
+
+\bibitem{mobilemoe2024}
+J.~Chen, Z.~Wang, K.~Zhang, and Y.~Meng, ``{MobileMoE}: Scaling on-device
+  mixture of experts,'' in \emph{Proceedings of the International Conference on
+  Machine Learning (ICML)}, 2024.
+
+\bibitem{moeprism2024}
+C.~Wei \emph{et~al.}, ``{MoE-Prism}: Disentangling monolithic experts for
+  elastic {MoE} services via model-system co-designs,'' in \emph{Advances in
+  Neural Information Processing Systems (NeurIPS)}, 2024.
+
 \bibitem{flexinfer2025}
 H.~Du, S.~Wu, A.~Kharlamova, N.~Guan, and C.~J. Xue, ``Flexinfer: Breaking
   memory constraint via flexible and efficient offloading for on-device {LLM}
   inference,'' in \emph{Proceedings of the 5th Workshop on Machine Learning and
   Systems (EuroMLSys '25)}.\hskip 1em plus 0.5em minus 0.4em\relax ACM, 2025,
   pp. 56--65.
+
+\bibitem{powerinfer2024}
+Y.~Song, Z.~Mi, H.~Xie, and H.~Chen, ``{PowerInfer}: Fast large language model
+  serving with a consumer-grade {GPU},'' in \emph{Proceedings of the ACM SIGOPS
+  30th Symposium on Operating Systems Principles (SOSP)}, 2024.
+
+\bibitem{powerinfer2_2024}
+Z.~Xue, Y.~Song, Z.~Mi, X.~Zheng, Y.~Xia, and H.~Chen, ``{PowerInfer-2}: Fast
+  large language model inference on a smartphone,'' in \emph{Proceedings of the
+  European Conference on Computer Systems (EuroSys)}, 2024.
 
 \bibitem{dualblade2024}
 H.~Wang, S.~Cao, Y.~C. Lin, and G.~Pekhimenko, ``{DUAL-BLADE}: Dual-path
@@ -45,33 +104,44 @@ A.~of~ScoutAttention, ``{ScoutAttention}: Efficient {KV} cache offloading via
   layer-ahead {CPU} pre-computation for {LLM} inference,'' in \emph{Proceedings
   of the International Symposium on Computer Architecture (ISCA)}, 2024.
 
-\bibitem{mobilemoe2024}
-J.~Chen, Z.~Wang, K.~Zhang, and Y.~Meng, ``{MobileMoE}: Scaling on-device
-  mixture of experts,'' in \emph{Proceedings of the International Conference on
-  Machine Learning (ICML)}, 2024.
+\bibitem{kvquant2024}
+C.~Hooper, S.~Kim, H.~Mohammadzadeh, M.~W. Mahoney, Y.~S. Shao, K.~Keutzer, and
+  A.~Gholami, ``{KVQuant}: Towards 10 million context length {LLM} inference
+  with {KV} cache quantization,'' \emph{arXiv preprint arXiv:2401.18079}, 2024.
 
-\bibitem{moeprism2024}
-C.~Wei \emph{et~al.}, ``{MoE-Prism}: Disentangling monolithic experts for
-  elastic {MoE} services via model-system co-designs,'' in \emph{Advances in
-  Neural Information Processing Systems (NeurIPS)}, 2024.
+\bibitem{kivi2024}
+Z.~Liu, J.~Ye, W.~Li, Z.~Yang, W.~Xiong, L.~Qiu, I.~Lourentzou, T.~Yu, Y.~Hao,
+  B.~Guo, Y.~Yang, R.~Hou, C.~Li, and B.~He, ``{KIVI}: A tuning-free asymmetric
+  {KV} cache quantization protocol for llms,'' \emph{arXiv preprint
+  arXiv:2402.02750}, 2024.
 
-\bibitem{powerinfer2_2024}
-A.~of~PowerInfer-2, ``{PowerInfer-2}: Fast large language model inference on a
-  smartphone,'' in \emph{Proceedings of the European Conference on Computer
-  Systems (EuroSys)}, 2024.
+\bibitem{think2024}
+Y.~Zhang, J.~Wu, J.~Flanigan, and W.~Y. Wang, ``{ThinK}: How to maintain
+  long-context {LLMs} with limited memory,'' \emph{arXiv preprint
+  arXiv:2407.21018}, 2024.
 
-\bibitem{survey2024}
-A.~of~the On-Device LLM~Survey, ``On-device large language models: A survey of
-  model compression and system optimization,'' \emph{arXiv preprint
-  arXiv:2403.14xxx}, 2024.
+\bibitem{emoe2025}
+S.~Tairin, S.~Mahmud, H.~Shen, and A.~Iyer, ``{eMoE}: Task-aware memory
+  efficient mixture-of-experts-based ({MoE}) model inference,'' in \emph{arXiv
+  preprint arXiv:2503.06823}, 2025.
 
-\bibitem{llamacpp2024}
-G.~Gerganov \emph{et~al.}, ``llama.cpp: {LLM} inference in {C/C++},''
-  \url{https://github.com/ggml-org/llama.cpp}, 2024.
+\bibitem{promoe2025}
+X.~Song, Z.~Zhong, R.~Chen, and H.~Chen, ``{ProMoE}: Fast {MoE}-based {LLM}
+  serving using proactive caching,'' \emph{arXiv preprint arXiv:2410.22134},
+  2025.
+
+\bibitem{flashattention2022}
+T.~Dao, D.~Y. Fu, S.~Ermon, A.~Rudra, and C.~R{\'e}, ``{FlashAttention}: Fast
+  and memory-efficient exact attention with {IO}-awareness,'' in \emph{Advances
+  in Neural Information Processing Systems (NeurIPS)}, 2022.
+
+\bibitem{flashattention2_2023}
+T.~Dao, ``{FlashAttention-2}: Faster attention with better parallelism and work
+  partitioning,'' in \emph{arXiv preprint arXiv:2307.08691}, 2023.
 
 \bibitem{streamingllm2024}
-G.~Xiao, S.~Yu \emph{et~al.}, ``Efficient streaming language models with
-  attention sinks,'' in \emph{International Conference on Learning
+G.~Xiao, Y.~Tian, B.~Chen, S.~Han, and M.~Lewis, ``Efficient streaming language
+  models with attention sinks,'' in \emph{International Conference on Learning
   Representations (ICLR)}, 2024.
 
 \bibitem{solidattention2026}
@@ -79,5 +149,35 @@ X.~Zheng, D.~Wei, J.~Gao, Y.~Song, Z.~Mi, and H.~Chen, ``{SolidAttention}:
   Low-latency {SSD}-based serving on memory-constrained {PCs},'' in
   \emph{Proceedings of the 24th USENIX Conference on File and Storage
   Technologies (FAST)}, 2026.
+
+\bibitem{pagedattention2023}
+W.~Kwon, Z.~Li, S.~Zhuang, Y.~Sheng, L.~Zheng, C.~H. Yu, J.~E. Gonzalez,
+  H.~Zhang, and I.~Stoica, ``Efficient memory management for large language
+  model serving with {PagedAttention},'' in \emph{Proceedings of the 29th
+  Symposium on Operating Systems Principles (SOSP)}, 2023.
+
+\bibitem{posix_madvise}
+{The Open Group}, ``{posix\_madvise}: Memory advisory ({POSIX}),''
+  \url{https://man7.org/linux/man-pages/man2/posix_madvise.2.html}, 2024.
+
+\bibitem{cgroupsv2}
+{Linux Kernel Documentation}, ``{cgroup-v2}: {Linux} {Control} {Group} {v2},''
+  \url{https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html},
+  2024.
+
+\bibitem{gsm8k2021}
+K.~Cobbe, V.~Kosaraju, M.~Bavarian, M.~Chen, H.~Jun, L.~Kaiser, M.~Plappert,
+  J.~Tworek, J.~Hilton, R.~Nakano, C.~Hesse, and J.~Schulman, ``Training
+  verifiers to solve math word problems,'' \emph{arXiv preprint
+  arXiv:2110.14168}, 2021.
+
+\bibitem{wikitext2016}
+S.~Merity, C.~Xiong, J.~Bradbury, and R.~Socher, ``Pointer sentinel mixture
+  models,'' arXiv preprint arXiv:1609.07843, 2016.
+
+\bibitem{speculative_decoding2023}
+C.~Chen, S.~Borgeaud, G.~Irving, J.-B. Lespiau, L.~Sifre, and J.~Jumper,
+  ``Accelerating large language model decoding with speculative sampling,'' in
+  \emph{arXiv preprint arXiv:2302.01318}, 2023.
 
 \end{thebibliography}

@@ -404,55 +404,65 @@ def fig_small_models():
 # Figure 6: Optimization waterfall (dumbbell plot)
 # ============================================================
 def fig_optimization_dumbbell():
-    """Dumbbell plot showing progressive improvement from baseline to full optimization"""
-    environments = ['8GB\n(4 cores)\npp4+tg1', '16GB\n(8 cores)\npp32+tg8', '32GB\n(8 cores)\npp32+tg8']
+    """Dumbbell plot showing progressive improvement from baseline to full optimization.
+    Uses log x-axis to show wide range (0.08 to 5.16 t/s) clearly."""
+    environments = ['8GB\n(4 cores)\npp4+tg1', '16GB\n(8 cores)\npp32+tg8', '32GB\n(8 cores)\npp64+tg48']
     
-    baseline_tg = [0.08, 0.18, 0.0]
-    slimarc_tg = [0.42, 0.90, 1.24]
-    full_tg = [0.76, 1.12, 2.45]
+    # Updated data: 32GB baseline now measured (3.01), full includes FlashAttention (5.16)
+    baseline_tg = [0.08, 0.18, 3.01]   # 32GB baseline (fa off) now measured
+    slimarc_tg = [0.42, 0.90, 3.30]    # +KV eviction
+    full_tg = [0.76, 1.12, 5.16]       # +FlashAttention (fa auto)
     
-    fig, ax = plt.subplots(figsize=(12, 7))
+    fig, ax = plt.subplots(figsize=(13, 7))
     
     y = np.arange(len(environments))
     
     for i in range(len(environments)):
-        # Baseline to SLIM-ARC
+        # Baseline to SLIM-ARC (blue line)
         if baseline_tg[i] > 0 and slimarc_tg[i] > 0:
-            ax.plot([baseline_tg[i], slimarc_tg[i]], [i, i], color=COLORS['slimarc'], linewidth=3, alpha=0.6)
-            ax.scatter(baseline_tg[i], i, s=150, c=COLORS['baseline'], zorder=5, edgecolors='black', linewidth=1)
-            ax.scatter(slimarc_tg[i], i, s=150, c=COLORS['slimarc'], zorder=5, edgecolors='black', linewidth=1)
+            ax.plot([baseline_tg[i], slimarc_tg[i]], [i, i], color=COLORS['slimarc'], linewidth=4, alpha=0.7, solid_capstyle='round')
+            ax.scatter(baseline_tg[i], i, s=180, c=COLORS['baseline'], zorder=5, edgecolors='black', linewidth=1.5)
+            ax.scatter(slimarc_tg[i], i, s=180, c=COLORS['slimarc'], zorder=5, edgecolors='black', linewidth=1.5)
         
-        # SLIM-ARC to full
+        # SLIM-ARC to full (purple line, with arrow)
         if slimarc_tg[i] > 0 and full_tg[i] > 0:
-            ax.plot([slimarc_tg[i], full_tg[i]], [i, i], color=COLORS['iq4xs'], linewidth=3, alpha=0.6)
-            ax.scatter(full_tg[i], i, s=200, c=COLORS['iq4xs'], zorder=5, edgecolors='black', linewidth=1, marker='*')
+            ax.annotate('', xy=(full_tg[i], i), xytext=(slimarc_tg[i], i),
+                        arrowprops=dict(arrowstyle='->', color=COLORS['iq4xs'], lw=4))
+            ax.scatter(full_tg[i], i, s=250, c=COLORS['iq4xs'], zorder=5, edgecolors='black', linewidth=1.5, marker='*')
         
-        # Annotations
+        # Value annotations (offset to avoid overlap)
+        offset = (baseline_tg[i] * 0.08) if baseline_tg[i] > 0 else 0.05
         if baseline_tg[i] > 0:
-            ax.text(baseline_tg[i], i - 0.15, f'{baseline_tg[i]:.2f}', ha='center', va='top', fontsize=9, fontweight='bold', color=COLORS['baseline'])
-        ax.text(slimarc_tg[i], i - 0.15, f'{slimarc_tg[i]:.2f}', ha='center', va='top', fontsize=9, fontweight='bold', color=COLORS['slimarc'])
-        ax.text(full_tg[i], i + 0.15, f'{full_tg[i]:.2f}', ha='center', va='bottom', fontsize=10, fontweight='bold', color=COLORS['iq4xs'])
+            ax.text(baseline_tg[i] * 0.92, i - 0.18, f'{baseline_tg[i]:.2f}', ha='right', va='center', fontsize=9, fontweight='bold', color=COLORS['baseline'])
+        ax.text(slimarc_tg[i] * 1.08, i + 0.18, f'{slimarc_tg[i]:.2f}', ha='left', va='center', fontsize=9, fontweight='bold', color=COLORS['slimarc'])
+        ax.text(full_tg[i] * 1.05, i + 0.18, f'{full_tg[i]:.2f}', ha='left', va='center', fontsize=10, fontweight='bold', color=COLORS['iq4xs'])
         
         # Speedup annotation
         if baseline_tg[i] > 0:
             speedup = full_tg[i] / baseline_tg[i]
-            ax.text(full_tg[i] + 0.1, i, f'{speedup:.1f}x', va='center', fontsize=11, fontweight='bold', color=COLORS['iq4xs'])
+            ax.text(full_tg[i] * 1.15, i - 0.18, f'{speedup:.1f}x', ha='left', va='center', fontsize=11, fontweight='bold', color=COLORS['iq4xs'],
+                    bbox=dict(boxstyle='round,pad=0.3', facecolor='yellow', alpha=0.3))
     
     ax.set_yticks(y)
     ax.set_yticklabels(environments, fontsize=11)
-    ax.set_xlabel('Decode Throughput (tokens/s)', fontsize=12)
-    ax.set_title('Progressive Optimization: Baseline → SLIM-ARC → Full Optimization', fontsize=14, fontweight='bold')
+    ax.set_xscale('log')
+    ax.set_xlabel('Decode Throughput (tokens/s, log scale)', fontsize=12)
+    ax.set_title('Progressive Optimization: Baseline → SLIM-ARC → Full (IQ4_XS + KV q4_0 + FlashAttention)', fontsize=13, fontweight='bold')
+    ax.grid(axis='x', alpha=0.3, linestyle='--')
     
     # Legend
     legend_elements = [
-        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=COLORS['baseline'], markersize=10, label='Baseline (Q4_K_M, KV f16)'),
-        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=COLORS['slimarc'], markersize=10, label='SLIM-ARC (Q4_K_M, KV f16)'),
-        plt.Line2D([0], [0], marker='*', color='w', markerfacecolor=COLORS['iq4xs'], markersize=12, label='Full (IQ4_XS, KV q4_0)'),
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=COLORS['baseline'], markersize=11, label='Baseline (Q4_K_M, KV f16, no fa)'),
+        plt.Line2D([0], [0], marker='o', color='w', markerfacecolor=COLORS['slimarc'], markersize=11, label='SLIM-ARC (+MADV +KV q4_0 +eviction)'),
+        plt.Line2D([0], [0], marker='*', color='w', markerfacecolor=COLORS['iq4xs'], markersize=13, label='Full (+IQ4_XS +FlashAttention)'),
     ]
-    ax.legend(handles=legend_elements, fontsize=10, loc='lower right')
+    ax.legend(handles=legend_elements, fontsize=9, loc='upper left', framealpha=0.9)
+    
+    # Set x limits with padding
+    ax.set_xlim(0.05, 10)
     
     fig.tight_layout()
-    fig.savefig(os.path.join(OUTPUT_DIR, 'fig_optimization_dumbbell.png'), bbox_inches='tight')
+    fig.savefig(os.path.join(OUTPUT_DIR, 'fig_optimization_dumbbell.png'), bbox_inches='tight', dpi=150)
     plt.close(fig)
     print("Generated: fig_optimization_dumbbell.png")
 

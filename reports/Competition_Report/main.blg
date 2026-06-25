@@ -8,51 +8,49 @@ Reallocated singl_function (elt_size=4) to 100 items from 50.
 Reallocated wiz_functions (elt_size=4) to 6000 items from 3000.
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Database file #1: reference.bib
-Warning--I didn't find a database entry for "flexinfer-optimize"
 -- IEEEtran.bst version 1.14 (2015/08/26) by Michael Shell.
 -- http://www.michaelshell.org/tex/ieeetran/bibtex/
 -- See the "IEEEtran_bst_HOWTO.pdf" manual for usage information.
 
 Done.
-You've used 11 entries,
+You've used 31 entries,
             4087 wiz_defined-function locations,
-            871 strings with 9627 characters,
-and the built_in function-call counts, 5597 in all, are:
-= -- 381
-> -- 130
-< -- 7
-+ -- 64
-- -- 30
-* -- 249
-:= -- 895
-add.period$ -- 23
-call.type$ -- 11
-change.case$ -- 11
-chr.to.int$ -- 18
-cite$ -- 11
-duplicate$ -- 465
-empty$ -- 619
-format.name$ -- 37
-if$ -- 1297
+            955 strings with 13813 characters,
+and the built_in function-call counts, 16983 in all, are:
+= -- 1125
+> -- 622
+< -- 14
++ -- 303
+- -- 148
+* -- 767
+:= -- 2603
+add.period$ -- 63
+call.type$ -- 31
+change.case$ -- 32
+chr.to.int$ -- 33
+cite$ -- 31
+duplicate$ -- 1380
+empty$ -- 1693
+format.name$ -- 172
+if$ -- 3933
 int.to.chr$ -- 0
-int.to.str$ -- 11
-missing$ -- 96
-newline$ -- 56
-num.names$ -- 11
-pop$ -- 267
+int.to.str$ -- 31
+missing$ -- 323
+newline$ -- 116
+num.names$ -- 31
+pop$ -- 915
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 2
-skip$ -- 440
+skip$ -- 1294
 stack$ -- 0
-substring$ -- 53
-swap$ -- 256
-text.length$ -- 1
+substring$ -- 109
+swap$ -- 827
+text.length$ -- 3
 text.prefix$ -- 0
 top$ -- 5
-type$ -- 11
+type$ -- 31
 warning$ -- 0
-while$ -- 15
-width$ -- 13
-write$ -- 111
-(There was 1 warning)
+while$ -- 39
+width$ -- 33
+write$ -- 273
