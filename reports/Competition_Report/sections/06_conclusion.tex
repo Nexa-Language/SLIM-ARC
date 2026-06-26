@@ -35,4 +35,15 @@
 
 \subsection{未来展望}
 
-由于初赛时间紧迫，SLIM-ARC 的部分工作尚未完善。在决赛阶段，我们将参考 \texttt{docs/others/赛题与学习路径.pdf} 和 \texttt{docs/others/INIT\_PROMPT.md} 中的初始规划，重点推进以下方向：\textbf{超参数机器学习联调}——当前各优化的超参数（MADV 阈值 6\,GB、KV window/sink、prefetch window、IQ4\_XS vs Q4\_K\_M 选择）为手动设置，决赛将用贝叶斯优化/网格搜索在多档环境下自动搜索最优组合，预期可进一步挖掘 10--20\% 的协同增益；完成 KV eviction manager 与推理流程的深度集成，实现基于注意力分数的 KV Block 级别驱逐和跨层投机预取（参考 SolidAttention~\cite{solidattention2026}的 block-wise sparsity 和 81\% 跨层选择相似性）；探索更激进的模型量化（Q2\_K/IQ2\_XXS，$\sim$22--28\,GB）以彻底消除 8\,GB 环境的数据波动；实现 Tile 级微流水线和融合反量化，将权重张量切分为对齐 L2/L3 cache 行的 Tile，I/O 线程与计算线程重叠执行；完成统一调度器在权重预取 + KV 换页 + 专家预取三路竞争下的协同验证；以及探索端侧 Agent 场景的语义缓存和 edge-cloud 协同（参考综述~\cite{survey2026}Sec 4.5 的 ECCC 框架），实现 84\% hit rate 的上下文摘要替代原始 KV。我们相信，通过操作系统虚拟内存机制与 MoE 稀疏性的深度协同，端侧大模型推理的“内存墙”问题将得到系统性解决。
+由于初赛时间紧迫，SLIM-ARC 的部分工作尚未完善。在决赛阶段，我们将参考 \texttt{docs/others/赛题与学习路径.pdf} 和 \texttt{docs/others/INIT\_PROMPT.md} 中的初始规划，重点推进以下方向：
+
+\begin{itemize}
+    \item \textbf{超参数机器学习联调}：当前各优化的超参数（MADV 阈值 6\,GB、KV window/sink、prefetch window、IQ4\_XS vs Q4\_K\_M 选择）为手动设置，决赛将用贝叶斯优化/网格搜索在多档环境下自动搜索最优组合，预期可进一步挖掘 10--20\% 的协同增益。
+    \item \textbf{KV eviction 深度集成}：完成 KV eviction manager 与推理流程的深度集成，实现基于注意力分数的 KV Block 级别驱逐和跨层投机预取（参考 SolidAttention~\cite{solidattention2026}的 block-wise sparsity 和 81\% 跨层选择相似性）。
+    \item \textbf{更激进的模型量化}：探索 Q2\_K/IQ2\_XXS（$\sim$22--28\,GB）以彻底消除 8\,GB 环境的数据波动。
+    \item \textbf{Tile 级微流水线}：将权重张量切分为对齐 L2/L3 cache 行的 Tile，I/O 线程与计算线程重叠执行，实现融合反量化。
+    \item \textbf{统一调度器协同验证}：完成统一调度器在权重预取 + KV 换页 + 专家预取三路竞争下的协同验证。
+    \item \textbf{端侧 Agent 语义缓存}：探索 edge-cloud 协同（参考综述~\cite{survey2026}Sec 4.5 的 ECCC 框架），实现 84\% hit rate 的上下文摘要替代原始 KV。
+\end{itemize}
+
+我们相信，通过操作系统虚拟内存机制与 MoE 稀疏性的深度协同，端侧大模型推理的"内存墙"问题将得到系统性解决。

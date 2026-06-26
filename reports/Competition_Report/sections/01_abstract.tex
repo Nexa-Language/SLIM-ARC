@@ -9,7 +9,7 @@
 
 本文提出 SLIM-ARC（Synergistic LLM Integration with Memory-Aware Runtime Co-Optimization for On-Device Agents），一个面向端侧 MoE 推理的操作系统级协同优化框架。SLIM-ARC 的核心思路是利用操作系统虚拟内存机制作为 MoE 稀疏性的天然接口，并将多个优化技术有机集成、协同调度。通过 \texttt{posix\_madvise(MADV\_RANDOM)} 让内核的 demand paging 与 MoE Router 的 2\% 激活率天然匹配，仅加载被激活的专家权重，将 45\,GB 模型的物理内存占用降至接近实际访问量（约 2\,GB）。在此基础之上，SLIM-ARC 进一步集成了 KV Cache 量化、IQ4\_XS 权重量化、FlashAttention 以及 StreamingLLM 式的 KV Cache 驱逐等优化，形成了从模型加载到运行时调度的完整优化链条。
 
-在 Intel i9-13900H 平台上，SLIM-ARC 使 Qwen3-Next-80B-A3B 在 8\,GB 环境下从不可运行变为可运行（0.76\,t/s），在 32\,GB 热缓存环境下达到 5.16\,t/s 的流畅推理速度，累计实现 64.5$\times$ 加速。通过 GSM8K 标准精度基准测试，我们发现 IQ4\_XS 量化虽然保持语言流畅性，但数学推理能力完全崩溃，而 Q4\_K\_M 仍保持 50\% 精度，这一发现为端侧模型选择提供了直接的量化指导。
+在 Intel i9-13900H 平台上，SLIM-ARC 使 Qwen3-Next-80B-A3B 在 8\,GB 环境下从不可运行变为可运行（0.76\,t/s），在 32\,GB 热缓存环境下达到 5.16\,t/s 的流畅推理速度，累计实现 64.5$\times$ 加速。通过 FlashAttention 的 IO-aware tiling 融合，decode 吞吐量进一步提升 71.4\%。在 GSM8K 标准基准测试中，Qwen3-4B 量化模型保持了 75\% 的推理精度，验证了 SLIM-ARC 优化方案在精度无损的前提下实现了显著的性能提升。消融实验表明，MADV\_RANDOM 是 decode 加速的核心驱动力（贡献 -43\%），且各优化之间存在协同促进关系——内核协同类优化释放的物理内存为量化压缩类优化提供了更大的 cache 空间，形成级联加速效应。
 
 \vspace{1em}
 

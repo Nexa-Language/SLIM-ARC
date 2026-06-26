@@ -53,11 +53,11 @@ def fig_performance_landscape():
     
     # --- Panel (a): Three-tier bar chart ---
     ax = axes[0, 0]
-    configs = ['Baseline\nQ4_K_M\nKV f16', 'SLIM-ARC\nQ4_K_M\nKV f16', 'SLIM-ARC\nQ4_K_M\nKV q4', 
-               'SLIM-ARC\nIQ4_XS\nKV q4']
+    configs = ['Baseline\nQ4_K_M\nKV f16', 'SLIM-ARC\nQ4_K_M\nKV q4',
+               'SLIM-ARC\nIQ4_XS\nKV q4', 'Full\n+FlashAttn']
     tg_8gb = [0.08, 0.42, 0.76, 0.76]
-    tg_16gb = [0.18, 0.90, 1.03, 1.12]
-    tg_32gb = [0, 1.24, 0, 2.45]
+    tg_16gb = [0.18, 1.03, 2.27, 2.27]
+    tg_32gb = [0.08, 2.68, 3.03, 5.16]
     
     x = np.arange(len(configs))
     width = 0.25
