@@ -204,12 +204,12 @@
         \midrule
         F16 & --- & 3.92 & 2$\times$ & +4\% \\
         Q8\_0 & 5.37 & 2.91 & 1$\times$ & --23\% \\
-        \textbf{Q4\_0} & \textbf{4.44} & \textbf{3.77} & \textbf{0.5$\times$} & \textbf{best} \\
+        \textbf{Q4\_0} & \textbf{4.44} & \textbf{3.03} & \textbf{0.5$\times$} & \textbf{best} \\
         \bottomrule
     \end{tabular}
 \end{table}
 
-表\ref{tab:eval_kv_quant}在冷启动串行条件下对比 KV 量化。Q4\_0 在 32\,GB 冷启动下略慢于 F16（3.77 vs 3.92），因为 32\,GB 够用、量化计算开销略大于内存节省。但在 8\,GB 受限环境（之前测过），Q4\_0 的内存节省带来 +14\% decode 提升。这揭示了\textbf{优化的环境相关性}：KV q4\_0 在内存充裕时略有负面影响，在内存受限时正向贡献。
+表\ref{tab:eval_kv_quant}在冷启动串行条件下对比 KV 量化。Q4\_0 在 32\,GB 冷启动下略慢于 F16（3.03 vs 3.92），因为 32\,GB 够用、量化计算开销略大于内存节省。但在 8\,GB 受限环境（之前测过），Q4\_0 的内存节省带来 +14\% decode 提升。这揭示了\textbf{优化的环境相关性}：KV q4\_0 在内存充裕时略有负面影响，在内存受限时正向贡献。
 
 \begin{figure}[H]
     \centering
@@ -250,9 +250,9 @@
         \toprule
         \textbf{配置} & \textbf{pp64 t/s} & \textbf{tg48 t/s} & \textbf{vs Full} & \textbf{贡献} \\
         \midrule
-        \textbf{Full SLIM-ARC} & \textbf{4.44} & \textbf{3.77} & --- & --- \\
+        \textbf{Full SLIM-ARC} & \textbf{4.44} & \textbf{3.03} & --- & --- \\
         -KV q4\_0 (KV f16) & --- & 3.92 & +4\% & 冷启动下略负* \\
-        -MADV (SLIM\_ARC\_DISABLE) & 3.72 & \textbf{2.15} & \textbf{-43\%} & \textbf{最大贡献} \\
+        -MADV (SLIM\_ARC\_DISABLE) & 3.72 & \textbf{2.15} & \textbf{-41\%} & \textbf{最大贡献} \\
         +Eviction & --- & 3.30 & -12\% & 与 FA 冲突 \\
         \bottomrule
     \end{tabular}
@@ -263,7 +263,7 @@
 表\ref{tab:ablation_single}的单点消融精确定位了各组件贡献。关键发现：
 
 \begin{enumerate}
-    \item \textbf{MADV\_RANDOM 是最大贡献者}（-43\%）：关闭后 tg48 从 3.77 降到 2.15，证明 MoE 稀疏按需加载是核心机制。
+    \item \textbf{MADV\_RANDOM 是最大贡献者}（-41\%）：关闭后 tg48 从 3.03 降到 2.15，证明 MoE 稀疏按需加载是核心机制。
     \item \textbf{KV q4\_0 有环境相关性}：32\,GB 冷启动下略负（+4\%），因内存充裕时量化计算开销 > 内存节省；但 8\,GB 受限环境下 +14\%（之前测过）。这揭示了\textbf{优化 A（MADV 释放内存）促进 B（KV q4\_0 发挥优势）的协同关系}——只有当 MADV 先释放了内存，KV 量化的内存节省才有意义。
     \item \textbf{Eviction 与 FlashAttention 冲突}（-12\%）：eviction 的 \texttt{seq\_rm} 干扰 FA 的 KV 布局，当前选择 FA 优先。
 \end{enumerate}
@@ -320,7 +320,7 @@
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{figures/fig_volatility_radar.png}
-    \caption{(a) 数据波动箱线图（80B 16\,GB tg8 从 0.28 到 1.03）。(b) 多维度优化评估雷达图。}
+    \caption{(a) 数据波动箱线图（示意性数据，基于实测观察的 80B 16\,GB tg8 波动范围 0.28--1.03）。(b) 多维度优化评估雷达图。}
     \label{fig:volatility}
 \end{figure}
 

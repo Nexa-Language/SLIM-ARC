@@ -16,8 +16,8 @@ COLORS = {'baseline': '#E74C3C', 'slimarc': '#3498DB', 'iq4xs': '#9B59B6',
 # === Figure 1: Updated ablation diverging bar (serial cold-start data) ===
 def fig_ablation_updated():
     configs = ['Full\nSLIM-ARC', '-KV q4_0\n(f16)', '-MADV\n(DISABLE)', '+Eviction']
-    tg_vals = [3.77, 3.92, 2.15, 3.30]
-    tg_baseline = 3.77  # Full as baseline
+    tg_vals = [3.03, 3.92, 2.15, 3.30]
+    tg_baseline = 3.03  # Full as baseline
     tg_speedup = [(v - tg_baseline) / tg_baseline * 100 for v in tg_vals]
 
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 5))
@@ -152,7 +152,7 @@ def fig_landscape_updated():
     ax = axes[1][1]
     configs = ['Baseline', 'SLIM-ARC', 'Full']
     pp = [5.89, 4.44, 12.99]
-    tg = [0.08, 3.77, 5.16]
+    tg = [0.08, 3.03, 5.16]
     ax.scatter(pp, tg, s=200, c=[COLORS['baseline'], COLORS['slimarc'], COLORS['iq4xs']],
               edgecolors='black', linewidth=1.5, zorder=5)
     for i, cfg in enumerate(configs):

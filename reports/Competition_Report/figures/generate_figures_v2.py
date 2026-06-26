@@ -57,7 +57,7 @@ def fig_performance_landscape():
                'SLIM-ARC\nIQ4_XS\nKV q4', 'Full\n+FlashAttn']
     tg_8gb = [0.08, 0.42, 0.76, 0.76]
     tg_16gb = [0.18, 1.03, 2.27, 2.27]
-    tg_32gb = [0.08, 2.68, 3.03, 5.16]
+    tg_32gb = [3.01, 2.68, 3.03, 5.16]
     
     x = np.arange(len(configs))
     width = 0.25
@@ -135,7 +135,7 @@ def fig_performance_landscape():
     data = [
         # (pp, tg, label, color, size)
         (0.22, 0.08, '8GB baseline', COLORS['baseline'], 80),
-        (0.27, 0.42, '8GB SLIM-ARC', COLORS['slimarc'], 100),
+        (0.25, 0.43, '8GB SLIM-ARC', COLORS['slimarc'], 100),
         (0.35, 0.76, '8GB SLIM+KVq4+IQ4', COLORS['iq4xs'], 120),
         (1.04, 0.18, '16GB baseline', COLORS['baseline'], 80),
         (1.26, 0.90, '16GB SLIM-ARC', COLORS['slimarc'], 100),
