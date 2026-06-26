@@ -86,3 +86,17 @@
    - 编写集成脚本（如 `scripts/apply-slim-arc.py`）确保可恢复
 4. `src/llama-upstream/` 是独立 git clone，本身不被主仓库跟踪，但所有 SLIM-ARC 修改通过 `scripts/apply-slim-arc.py` 可从 `patches/llama-upstream/` 完整恢复
 5. 每次修改后必须 `git add` 并确认 `git status` 显示修改被跟踪
+
+## ⚠️ 重大教训：apply_diff 的 path 参数与文件回退问题（2026-06-26 事故）
+
+**事故**: 多次使用 apply_diff 时遗漏 `path` 参数导致操作失败；write_to_file 写入的内容在后续 commit 中被回退（如 README 在 commit 1cf102b 后又被旧版本覆盖）。
+
+**强制规则**:
+1. **apply_diff 必须显式提供 path 参数**，不可省略，不可放在 diff 内容中
+2. **write_to_file 后立即 git add + commit**，不能放在命令链末尾（可能被后续操作覆盖）
+3. **每次 write_to_file 后用 git diff 验证内容确实改变**
+4. **一个文件的所有修改一次性完成**，不要分多次 apply_diff 改同一个文件
+5. **长命令链拆分为短链**：先写文件→验证→commit，再写下一个文件
+6. **避免在一条 execute_command 中混合编译+提交**，因为编译耗时长可能导致 git 操作超时
+
+**预防措施**: 如果不确定文件是否被正确保存，用 `git diff --stat` 检查工作区状态。

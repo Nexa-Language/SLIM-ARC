@@ -2,6 +2,24 @@
 
 ---
 
+## 2026-06-26 审计修复 + 文档全面更新
+
+### 变更描述
+1. **论文数据审计修复**（commit db79afe, 7916934）：数据拼接、32GB baseline、MADV 百分比计算方向、prefill/decode 数值
+2. **MADV 贡献百分比修正**：-41% → -29%（正确计算 (3.03-2.15)/3.03 = 29% 下降）
+3. **文档全面更新**（commit 38517ec）：README/AGENT.md/architecture.md/config 从 FlexInfer 叙事改为 llama.cpp 叙事
+4. **旧报告标注过时**（commit 4f6807d）：defense-data-summary 等加"已过时"标注
+5. **tests/README.md** 清理不存在的测试引用
+
+### 涉及文件
+- README.md, AGENT.md, docs/design/architecture.md, config/slim-arc.toml
+- 01_abstract.tex, 03_core_design.tex, 05_evaluation.tex
+- generate_figures_v2.py, generate_updated_figures.py
+- reports/raw_analysis/defense-data-summary.md, defense-outline.md, optimization-attribution-analysis.md
+- tests/README.md
+
+---
+
 ## 2026-06-25 FlashAttention + GSM8K 标准benchmark测试
 
 ### 变更描述
