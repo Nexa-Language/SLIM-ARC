@@ -106,8 +106,8 @@ OLMoE/Qwen3-4B 在 8GB 下进行了 4 次测量，数据波动较大（baseline 
 | Phase 2a MoE router hook | ✅ 真集成 | 从 ffn_moe_topk 提取 expert IDs |
 | Phase 2a 跨层专家预取 | ✅ 真集成 | cache_router_experts + prefetch_experts |
 | Phase 3 unified tick() | ✅ 真集成 | graph_compute 中调用 |
-| **evict_layer** | ⚠️ 接口完成，**未集成调用** | 定义存在但无调用点 |
-| **Phase 2b KV 换页** | ⚠️ 接口完成，**未集成推理** | kv_manager 传 nullptr |
+| **evict_layer** | ✅ 已集成 | graph_compute 中 SLIM_ARC_KV_EVICT 开关控制 |
+| **Phase 2b KV 换页** | ✅ 已集成 | StreamingLLM eviction 通过环境变量控制 |
 | Phase 2b KV clear 页释放 | ✅ 轻量集成 | llama_kv_cache::clear 调用 DONTNEED |
 | **Phase 2d Tile 流水线** | ⚠️ 隐式实现 | 依赖内核 page cache，无独立代码 |
 

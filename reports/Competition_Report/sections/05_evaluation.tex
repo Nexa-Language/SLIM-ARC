@@ -128,12 +128,14 @@
         \toprule
         \textbf{配置} & \textbf{pp64 t/s} & \textbf{tg48 t/s} & \textbf{vs 无 FA} \\
         \midrule
-        SLIM-ARC 无 FlashAttention & 5.89 & 3.01 & --- \\
+        SLIM-ARC 无 FA$^*$ & 5.89 & 3.01 & --- \\
         \texttt{-fa on} & 6.64 & 3.90 & +29.6\% \\
         \texttt{-fa auto}（默认） & \textbf{12.99} & \textbf{5.16} & \textbf{+71.4\%} \\
         \bottomrule
     \end{tabular}
 \end{table}
+
+\footnotetext[1]{$^*$SLIM-ARC 无 FA 即关闭 FlashAttention（\texttt{-fa off}），由于 Qwen3-Next 架构要求 FA，此配置实际为 SLIM-ARC 全开但未启用 FA auto 模式的热缓存数据，非 upstream baseline。}
 
 表\ref{tab:eval_flashattn}展示 FlashAttention 效果（热缓存基线）。\texttt{-fa auto} 让模型自选最优 attention 实现，decode +71.4\%。注意此表为热缓存数据（与冷启动表\ref{tab:core_iq4xs}的 3.03 不同），因为 FlashAttention 的收益在热缓存下更显著。
 
