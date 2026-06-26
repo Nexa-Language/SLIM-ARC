@@ -71,7 +71,7 @@ def fig_performance_landscape():
     ax.set_xticks(x)
     ax.set_xticklabels(configs, fontsize=12)
     ax.legend(fontsize=12, loc='upper left')
-    ax.set_ylim(0, 3.0)
+    ax.set_ylim(0, 6.0)
     
     for bars in [bars1, bars2, bars3]:
         for bar in bars:
