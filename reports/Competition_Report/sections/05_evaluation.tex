@@ -252,7 +252,7 @@
         \midrule
         \textbf{Full SLIM-ARC} & \textbf{4.44} & \textbf{3.03} & --- & --- \\
         -KV q4\_0 (KV f16) & --- & 3.92 & +4\% & 冷启动下略负* \\
-        -MADV (SLIM\_ARC\_DISABLE) & 3.72 & \textbf{2.15} & \textbf{-41\%} & \textbf{最大贡献} \\
+        -MADV (SLIM\_ARC\_DISABLE) & 3.72 & \textbf{2.15} & \textbf{-29\%} & \textbf{最大贡献} \\
         +Eviction & --- & 3.30 & -12\% & 与 FA 冲突 \\
         \bottomrule
     \end{tabular}
@@ -263,7 +263,7 @@
 表\ref{tab:ablation_single}的单点消融精确定位了各组件贡献。关键发现：
 
 \begin{enumerate}
-    \item \textbf{MADV\_RANDOM 是最大贡献者}（-41\%）：关闭后 tg48 从 3.03 降到 2.15，证明 MoE 稀疏按需加载是核心机制。
+    \item \textbf{MADV\_RANDOM 是最大贡献者}（-29\%）：关闭后 tg48 从 3.03 降到 2.15，证明 MoE 稀疏按需加载是核心机制。
     \item \textbf{KV q4\_0 有环境相关性}：32\,GB 冷启动下略负（+4\%），因内存充裕时量化计算开销 > 内存节省；但 8\,GB 受限环境下 +14\%（之前测过）。这揭示了\textbf{优化 A（MADV 释放内存）促进 B（KV q4\_0 发挥优势）的协同关系}——只有当 MADV 先释放了内存，KV 量化的内存节省才有意义。
     \item \textbf{Eviction 与 FlashAttention 冲突}（-12\%）：eviction 的 \texttt{seq\_rm} 干扰 FA 的 KV 布局，当前选择 FA 优先。
 \end{enumerate}
