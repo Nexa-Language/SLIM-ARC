@@ -46,10 +46,10 @@ COLORS = {
 # Figure 1: Comprehensive performance landscape (multi-panel)
 # ============================================================
 def fig_performance_landscape():
-    """4-panel figure: (a) 3-tier bar, (b) optimization stacking, 
+    """4-panel figure: (a) 3-tier bar, (b) optimization stacking,
     (c) quantization comparison, (d) pp vs tg scatter"""
-    fig, axes = plt.subplots(2, 2, figsize=(16, 12))
-    fig.suptitle('SLIM-ARC Performance Landscape: Qwen3-Next-80B', fontsize=20, fontweight='bold', y=0.98)
+    fig, axes = plt.subplots(2, 2, figsize=(16, 10))
+    fig.suptitle('SLIM-ARC Performance Landscape: Qwen3-Next-80B', fontsize=20, fontweight='bold', y=1.0)
     
     # --- Panel (a): Three-tier bar chart ---
     ax = axes[0, 0]

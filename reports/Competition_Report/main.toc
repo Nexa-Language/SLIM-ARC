@@ -25,64 +25,64 @@
 \contentsline {paragraph}{SolidAttention}{8}{section*.16}%
 \contentsline {paragraph}{PagedAttention}{8}{section*.17}%
 \contentsline {subsection}{\numberline {2.4}问题定义与期望解决方法}{8}{subsection.2.4}%
-\contentsline {section}{\numberline {3}核心设计}{9}{section.3}%
-\contentsline {subsection}{\numberline {3.1}设计思路与整体架构}{9}{subsection.3.1}%
-\contentsline {subsubsection}{\numberline {3.1.1}思路与创新}{9}{subsubsection.3.1.1}%
-\contentsline {subsubsection}{\numberline {3.1.2}整体架构}{9}{subsubsection.3.1.2}%
-\contentsline {subsection}{\numberline {3.2}内核协同类优化}{10}{subsection.3.2}%
-\contentsline {subsubsection}{\numberline {3.2.1}mmap + MADV\_RANDOM 按需加载机制}{10}{subsubsection.3.2.1}%
-\contentsline {paragraph}{设计动机}{10}{section*.19}%
-\contentsline {paragraph}{机制设计}{10}{section*.20}%
-\contentsline {paragraph}{prefill/decode 的 tradeoff}{11}{section*.22}%
-\contentsline {paragraph}{prefill/decode 的 I/O 占比量化}{11}{section*.23}%
-\contentsline {subsubsection}{\numberline {3.2.2}禁用 GGML\_CPU\_REPACK}{12}{subsubsection.3.2.2}%
-\contentsline {paragraph}{问题发现}{12}{section*.25}%
-\contentsline {paragraph}{解决方案}{12}{section*.26}%
-\contentsline {subsubsection}{\numberline {3.2.3}层感知预取调度器}{12}{subsubsection.3.2.3}%
-\contentsline {paragraph}{架构设计}{12}{section*.27}%
-\contentsline {paragraph}{MoE Router Hook 与跨层专家预测}{13}{section*.28}%
-\contentsline {subsection}{\numberline {3.3}量化压缩类优化}{14}{subsection.3.3}%
-\contentsline {subsubsection}{\numberline {3.3.1}KV Cache 量化}{14}{subsubsection.3.3.1}%
-\contentsline {subsubsection}{\numberline {3.3.2}统一 I/O 带宽预算调度器}{14}{subsubsection.3.3.2}%
-\contentsline {subsection}{\numberline {3.4}计算融合类优化}{15}{subsection.3.4}%
-\contentsline {subsubsection}{\numberline {3.4.1}FlashAttention 集成}{15}{subsubsection.3.4.1}%
-\contentsline {subsubsection}{\numberline {3.4.2}StreamingLLM KV Eviction}{15}{subsubsection.3.4.2}%
-\contentsline {section}{\numberline {4}实现}{16}{section.4}%
-\contentsline {subsection}{\numberline {4.1}开发环境与基础框架}{16}{subsection.4.1}%
-\contentsline {subsubsection}{\numberline {4.1.1}与 upstream llama.cpp 的集成方式}{16}{subsubsection.4.1.1}%
-\contentsline {subsubsection}{\numberline {4.1.2}cgroups v2 三档环境}{16}{subsubsection.4.1.2}%
-\contentsline {subsection}{\numberline {4.2}代码模块结构}{17}{subsection.4.2}%
-\contentsline {subsubsection}{\numberline {4.2.1}SLIM-ARC 独立模块（6 个文件）}{17}{subsubsection.4.2.1}%
-\contentsline {subsubsection}{\numberline {4.2.2}llama.cpp 源文件修改（4 个文件）}{17}{subsubsection.4.2.2}%
-\contentsline {subsection}{\numberline {4.3}环境变量接口}{17}{subsection.4.3}%
-\contentsline {subsection}{\numberline {4.4}构建与复现流程}{18}{subsection.4.4}%
-\contentsline {subsection}{\numberline {4.5}模型量化策略}{18}{subsection.4.5}%
-\contentsline {section}{\numberline {5}实验评估}{18}{section.5}%
-\contentsline {subsection}{\numberline {5.1}实验设置}{19}{subsection.5.1}%
-\contentsline {subsubsection}{\numberline {5.1.1}硬件与三档受限环境}{19}{subsubsection.5.1.1}%
-\contentsline {subsubsection}{\numberline {5.1.2}测试模型}{19}{subsubsection.5.1.2}%
-\contentsline {subsubsection}{\numberline {5.1.3}测试方法与数据集}{19}{subsubsection.5.1.3}%
-\contentsline {subsubsection}{\numberline {5.1.4}对比维度与基线}{20}{subsubsection.5.1.4}%
-\contentsline {subsection}{\numberline {5.2}核心实验：80B 全优化三档性能}{20}{subsection.5.2}%
-\contentsline {subsubsection}{\numberline {5.2.1}IQ4\_XS 量化三档}{20}{subsubsection.5.2.1}%
-\contentsline {subsubsection}{\numberline {5.2.2}Q4\_K\_M 量化三档}{20}{subsubsection.5.2.2}%
-\contentsline {subsubsection}{\numberline {5.2.3}端到端文本生成验证}{20}{subsubsection.5.2.3}%
-\contentsline {subsubsection}{\numberline {5.2.4}FlashAttention 加速}{21}{subsubsection.5.2.4}%
-\contentsline {subsection}{\numberline {5.3}附属实验}{22}{subsection.5.3}%
-\contentsline {subsubsection}{\numberline {5.3.1}小模型 2\,GB+1 核极端环境}{22}{subsubsection.5.3.1}%
-\contentsline {subsubsection}{\numberline {5.3.2}GSM8K 推理精度（ALEM 协议）}{23}{subsubsection.5.3.2}%
-\contentsline {subsubsection}{\numberline {5.3.3}KV Cache 量化对比}{23}{subsubsection.5.3.3}%
-\contentsline {subsubsection}{\numberline {5.3.4}WikiText PPL 精度}{24}{subsubsection.5.3.4}%
-\contentsline {subsection}{\numberline {5.4}消融实验}{24}{subsection.5.4}%
-\contentsline {subsubsection}{\numberline {5.4.1}单点消融（逐个关闭）}{24}{subsubsection.5.4.1}%
-\contentsline {subsubsection}{\numberline {5.4.2}优化协同关系分析}{25}{subsubsection.5.4.2}%
-\contentsline {subsubsection}{\numberline {5.4.3}Speculative Decoding 负面结果}{25}{subsubsection.5.4.3}%
-\contentsline {subsubsection}{\numberline {5.4.4}数据波动分析}{26}{subsubsection.5.4.4}%
-\contentsline {section}{\numberline {6}总结与未来展望}{26}{section.6}%
-\contentsline {subsection}{\numberline {6.1}工作总结}{26}{subsection.6.1}%
-\contentsline {subsection}{\numberline {6.2}局限性}{27}{subsection.6.2}%
-\contentsline {paragraph}{prefetch\_scheduler 的冗余与 OS 底层绕开思路}{27}{section*.53}%
-\contentsline {paragraph}{数据波动问题}{27}{section*.54}%
-\contentsline {paragraph}{Speculative Decoding 的不适用}{27}{section*.55}%
-\contentsline {paragraph}{KV Eviction 与 FlashAttention 的冲突}{28}{section*.56}%
-\contentsline {subsection}{\numberline {6.3}未来展望}{28}{subsection.6.3}%
+\contentsline {section}{\numberline {3}核心设计}{10}{section.3}%
+\contentsline {subsection}{\numberline {3.1}设计思路与整体架构}{10}{subsection.3.1}%
+\contentsline {subsubsection}{\numberline {3.1.1}思路与创新}{10}{subsubsection.3.1.1}%
+\contentsline {subsubsection}{\numberline {3.1.2}整体架构}{10}{subsubsection.3.1.2}%
+\contentsline {subsection}{\numberline {3.2}内核协同类优化}{11}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}mmap + MADV\_RANDOM 按需加载机制}{11}{subsubsection.3.2.1}%
+\contentsline {paragraph}{设计动机}{11}{section*.19}%
+\contentsline {paragraph}{机制设计}{11}{section*.20}%
+\contentsline {paragraph}{prefill/decode 的 tradeoff}{12}{section*.22}%
+\contentsline {paragraph}{prefill/decode 的 I/O 占比量化}{12}{section*.23}%
+\contentsline {subsubsection}{\numberline {3.2.2}禁用 GGML\_CPU\_REPACK}{13}{subsubsection.3.2.2}%
+\contentsline {paragraph}{问题发现}{13}{section*.25}%
+\contentsline {paragraph}{解决方案}{13}{section*.26}%
+\contentsline {subsubsection}{\numberline {3.2.3}层感知预取调度器}{13}{subsubsection.3.2.3}%
+\contentsline {paragraph}{架构设计}{13}{section*.27}%
+\contentsline {paragraph}{MoE Router Hook 与跨层专家预测}{14}{section*.28}%
+\contentsline {subsection}{\numberline {3.3}量化压缩类优化}{15}{subsection.3.3}%
+\contentsline {subsubsection}{\numberline {3.3.1}KV Cache 量化}{15}{subsubsection.3.3.1}%
+\contentsline {subsubsection}{\numberline {3.3.2}统一 I/O 带宽预算调度器}{15}{subsubsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.4}计算融合类优化}{16}{subsection.3.4}%
+\contentsline {subsubsection}{\numberline {3.4.1}FlashAttention 集成}{16}{subsubsection.3.4.1}%
+\contentsline {subsubsection}{\numberline {3.4.2}StreamingLLM KV Eviction}{16}{subsubsection.3.4.2}%
+\contentsline {section}{\numberline {4}实现}{18}{section.4}%
+\contentsline {subsection}{\numberline {4.1}开发环境与基础框架}{18}{subsection.4.1}%
+\contentsline {subsubsection}{\numberline {4.1.1}与 upstream llama.cpp 的集成方式}{18}{subsubsection.4.1.1}%
+\contentsline {subsubsection}{\numberline {4.1.2}cgroups v2 三档环境}{18}{subsubsection.4.1.2}%
+\contentsline {subsection}{\numberline {4.2}代码模块结构}{18}{subsection.4.2}%
+\contentsline {subsubsection}{\numberline {4.2.1}SLIM-ARC 独立模块（6 个文件）}{18}{subsubsection.4.2.1}%
+\contentsline {subsubsection}{\numberline {4.2.2}llama.cpp 源文件修改（4 个文件）}{19}{subsubsection.4.2.2}%
+\contentsline {subsection}{\numberline {4.3}环境变量接口}{19}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}构建与复现流程}{19}{subsection.4.4}%
+\contentsline {subsection}{\numberline {4.5}模型量化策略}{20}{subsection.4.5}%
+\contentsline {section}{\numberline {5}实验评估}{21}{section.5}%
+\contentsline {subsection}{\numberline {5.1}实验设置}{21}{subsection.5.1}%
+\contentsline {subsubsection}{\numberline {5.1.1}硬件与三档受限环境}{21}{subsubsection.5.1.1}%
+\contentsline {subsubsection}{\numberline {5.1.2}测试模型}{21}{subsubsection.5.1.2}%
+\contentsline {subsubsection}{\numberline {5.1.3}测试方法与数据集}{22}{subsubsection.5.1.3}%
+\contentsline {subsubsection}{\numberline {5.1.4}对比维度与基线}{22}{subsubsection.5.1.4}%
+\contentsline {subsection}{\numberline {5.2}核心实验：80B 全优化三档性能}{22}{subsection.5.2}%
+\contentsline {subsubsection}{\numberline {5.2.1}IQ4\_XS 量化三档}{22}{subsubsection.5.2.1}%
+\contentsline {subsubsection}{\numberline {5.2.2}Q4\_K\_M 量化三档}{22}{subsubsection.5.2.2}%
+\contentsline {subsubsection}{\numberline {5.2.3}端到端文本生成验证}{23}{subsubsection.5.2.3}%
+\contentsline {subsubsection}{\numberline {5.2.4}FlashAttention 加速}{23}{subsubsection.5.2.4}%
+\contentsline {subsection}{\numberline {5.3}附属实验}{24}{subsection.5.3}%
+\contentsline {subsubsection}{\numberline {5.3.1}小模型 2\,GB+1 核极端环境}{24}{subsubsection.5.3.1}%
+\contentsline {subsubsection}{\numberline {5.3.2}GSM8K 推理精度（ALEM 协议）}{25}{subsubsection.5.3.2}%
+\contentsline {subsubsection}{\numberline {5.3.3}KV Cache 量化对比}{25}{subsubsection.5.3.3}%
+\contentsline {subsubsection}{\numberline {5.3.4}WikiText PPL 精度}{26}{subsubsection.5.3.4}%
+\contentsline {subsection}{\numberline {5.4}消融实验}{26}{subsection.5.4}%
+\contentsline {subsubsection}{\numberline {5.4.1}单点消融（逐个关闭）}{26}{subsubsection.5.4.1}%
+\contentsline {subsubsection}{\numberline {5.4.2}优化协同关系分析}{27}{subsubsection.5.4.2}%
+\contentsline {subsubsection}{\numberline {5.4.3}Speculative Decoding 负面结果}{27}{subsubsection.5.4.3}%
+\contentsline {subsubsection}{\numberline {5.4.4}数据波动分析}{28}{subsubsection.5.4.4}%
+\contentsline {section}{\numberline {6}总结与未来展望}{29}{section.6}%
+\contentsline {subsection}{\numberline {6.1}工作总结}{29}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}局限性}{29}{subsection.6.2}%
+\contentsline {paragraph}{prefetch\_scheduler 的冗余与 OS 底层绕开思路}{29}{section*.53}%
+\contentsline {paragraph}{数据波动问题}{30}{section*.54}%
+\contentsline {paragraph}{Speculative Decoding 的不适用}{30}{section*.55}%
+\contentsline {paragraph}{KV Eviction 与 FlashAttention 的冲突}{30}{section*.56}%
+\contentsline {subsection}{\numberline {6.3}未来展望}{30}{subsection.6.3}%
