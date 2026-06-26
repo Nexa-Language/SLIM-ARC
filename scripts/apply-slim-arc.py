@@ -95,6 +95,8 @@ def patch_model_loader(filepath):
                 if (!slim_arc_disabled && !no_madv && msz > (6ULL << 30) &&
                     mapping->addr() && msz > 0) {
                     (void) posix_madvise(mapping->addr(), msz, POSIX_MADV_RANDOM);
+                    // SLIM-ARC: register mmap region for dynamic MADV switching
+                    slim_arc::register_mmap_region(mapping->addr(), msz);
                 }
             }"""
     if 'POSIX_MADV_RANDOM' not in content:
