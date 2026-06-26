@@ -16,17 +16,17 @@
 
 ## 技术栈约定
 
-- **主语言**: C/C++（FlexInfer / llama.cpp 生态）、Python（脚本与 benchmark）
-- **构建**: CMake 3.14+，`build-host.sh` 方式
+- **主语言**: C/C++（upstream llama.cpp 生态）、Python（脚本与 benchmark）
+- **构建**: CMake 3.14+，`cmake -DGGML_CPU_REPACK=OFF` 方式
 - **环境隔离**: cgroups v2（三档：8G+4核 / 12G+6核 / 16G+8核）
-- **模型格式**: GGUF，4096 字节对齐（FlexInfer Direct I/O 要求）
-- **量化**: Q4_K_M 为主，Q8_0 用于精度对比
+- **模型格式**: GGUF（标准 llama.cpp 格式，无需特殊对齐）
+- **量化**: IQ4_XS 为主（80B），Q4_K_M 用于精度对比，KV Q4_0 量化
 - **CPU**: 纯 CPU 推理，不使用 GPU
 - **代理**: `http://127.0.0.1:7897`（外部网络请求）
 
 ## 代码组织规则
 
-1. **所有运行代码必须在 `src/` 下**，`docs/papers/FlexInfer/` 仅作参考，运行前需移入 `src/flexinfer/`
+1. **所有运行代码必须在 `src/llama-upstream/` 下**，`docs/papers/FlexInfer/` 仅作参考源码，不参与编译
 2. 脚本放 `scripts/`，配置放 `config/`，数据放 `data/`，日志放 `logs/`，报告放 `reports/`，测试放 `tests/`
 3. 计划文件放 `plan/`，命名格式 `NN-vX-<标题>.md`（如 `00-v1-slim-arc-overview.md`）
 4. 计划文件需实时更新，变更时创建 v2 版本并在 ROADMAP 记录原因
@@ -41,7 +41,7 @@
 
 ## 里程碑
 
-1. Phase 0: 环境搭建与基线复现（llama.cpp + FlexInfer）
+1. Phase 0: 环境搭建与基线复现（upstream llama.cpp）
 2. Phase 1: 访存行为分析
 3. Phase 2: 单点优化（MoE 预测预取 / KV 换页 / 动态锁定 / Tile 流水线）
 4. Phase 3: 统一 I/O 带宽预算调度器（核心创新）
@@ -52,11 +52,11 @@
 
 ## 关键约束
 
-1. **纯 CPU**: 不使用 GPU，FlexInfer 是纯 CPU 框架
+1. **纯 CPU**: 不使用 GPU，llama.cpp 是纯 CPU 框架
 2. **三档环境固定**: 8G+4核 / 12G+6核 / 16G+8核，用 cgroups v2 隔离
 3. **存储固定**: NVMe SSD（WSL 原生），不模拟慢盘
-4. **模型固定**: Qwen3-4B（Dense）+ Qwen3-Next-A3B（MoE）
-5. **Baseline**: llama.cpp 标准路径 + 自复现 FlexInfer
+4. **模型固定**: Qwen3-4B（Dense）+ Qwen3-Next-80B-A3B（MoE）+ OLMoE-1B-7B（MoE）
+5. **Baseline**: upstream llama.cpp 标准路径（mmap + WILLNEED + KV f16）
 
 ## 学习资料
 
