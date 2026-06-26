@@ -1,3 +1,5 @@
+> ⚠️ **此文档已过时，内容可能包含旧数据（如 343% 提升、baseline OOM 等），以论文 reports/Competition_Report/ 为准。**
+
 # SLIM-ARC 答辩数据汇总
 
 ## 最终突破：IQ4_XS 量化 + SLIM-ARC 实现 80B 流畅运行
