@@ -1,17 +1,18 @@
-% SLIM-ARC: 学术报告 - 摘要
-\section{摘要}
+% SLIM-ARC: 学术报告 - 摘要（不编号，单独页）
+\begin{center}
+{\Large \kaishu \bfseries 摘\quad 要}
+\end{center}
 
-随着大语言模型（LLM）参数规模的快速增长，端侧设备（8--16\,GB RAM）上部署大规模模型面临严峻的内存墙问题。以 Qwen3-Next-80B-A3B（45\,GB，512 专家的稀疏 MoE 模型）为例，在传统加载方式下，仅模型权重就远超端侧设备的物理内存上限，导致内存溢出（OOM）或极端低效的交换行为。现有工作 FlexInfer 通过张量级异步预取和 Direct I/O 实现了权重卸载，但其对上游 llama.cpp 的架构适配存在兼容性问题，且未充分利用 MoE 模型的专家稀疏性。
+\vspace{1em}
 
-本文提出 \textbf{SLIM-ARC}（Synergistic LLM Integration with Memory-Aware Runtime Co-Optimization for On-Device Agents），一个面向端侧 MoE 推理的操作系统级协同优化框架。SLIM-ARC 的核心创新包括：
+大语言模型（LLM）在端侧设备上的部署面临严峻的内存墙问题：80B 参数的 MoE 模型量化后仍达 40--45\,GB，而典型端侧设备仅有 8--16\,GB RAM。现有工作或依赖复杂的用户态内存管理，或需要修改模型结构，且各优化技术彼此独立、缺乏协同。
 
-\begin{enumerate}
-    \item \textbf{mmap + MADV\_RANDOM 内核协同机制}：利用虚拟内存的按需分页特性，通过 \texttt{posix\_madvise(MADV\_RANDOM)} 关闭内核的顺序预读，使只有实际被访问的权重页面进入物理内存。结合 MoE 模型 98\% 的专家稀疏率，大幅降低了运行时物理内存占用。
-    \item \textbf{禁用 GGML\_CPU\_REPACK}：识别并消除了 CPU 后端的权重重打包机制导致的匿名内存翻倍问题，使 45\,GB 模型在 8\,GB 环境下从 OOM 转变为可运行。
-    \item \textbf{层感知预取调度器}：基于运行时阶段（Prefill/Decode）动态调整 \texttt{madvise(WILLNEED)} 预取窗口，配合 MoE Router 跨层专家预测，实现选择性专家预取。
-    \item \textbf{KV Cache 量化与统一 I/O 调度}：引入 KV Cache 的 Q4\_0 量化以进一步降低内存占用，并设计统一 I/O 带宽预算调度器协调权重预取、KV 换页与专家预取三路 I/O 需求。
-\end{enumerate}
+本文提出 SLIM-ARC（Synergistic LLM Integration with Memory-Aware Runtime Co-Optimization for On-Device Agents），一个面向端侧 MoE 推理的操作系统级协同优化框架。SLIM-ARC 的核心思路是利用操作系统虚拟内存机制作为 MoE 稀疏性的天然接口，并将多个优化技术有机集成、协同调度。通过 \texttt{posix\_madvise(MADV\_RANDOM)} 让内核的 demand paging 与 MoE Router 的 2\% 激活率天然匹配，仅加载被激活的专家权重，将 45\,GB 模型的物理内存占用降至接近实际访问量（约 2\,GB）。在此基础之上，SLIM-ARC 进一步集成了 KV Cache 量化、IQ4\_XS 权重量化、FlashAttention 以及 StreamingLLM 式的 KV Cache 驱逐等优化，形成了从模型加载到运行时调度的完整优化链条。
 
-在 Intel i9-13900H（4--8 核，8--32\,GB RAM）平台上，SLIM-ARC 使 Qwen3-Next-80B-A3B 在 8\,GB cgroup 环境下实现了 \textbf{0.76\,tokens/s} 的 decode 吞吐（相比 baseline 提升 \textbf{850\%}），在 32\,GB 热缓存环境下达到 \textbf{2.45\,tokens/s} 的流畅推理速度。通过四组单点消融实验，我们精确定位了 MADV\_RANDOM 作为 decode 加速核心驱动因素的作用机制，并诚实评估了预取调度器在当前场景下的贡献边界。
+在 Intel i9-13900H 平台上，SLIM-ARC 使 Qwen3-Next-80B-A3B 在 8\,GB 环境下从不可运行变为可运行（0.76\,t/s），在 32\,GB 热缓存环境下达到 5.16\,t/s 的流畅推理速度，累计实现 64.5$\times$ 加速。通过 GSM8K 标准精度基准测试，我们发现 IQ4\_XS 量化虽然保持语言流畅性，但数学推理能力完全崩溃，而 Q4\_K\_M 仍保持 50\% 精度，这一发现为端侧模型选择提供了直接的量化指导。
 
-\textbf{关键词}：端侧 LLM 推理；MoE 稀疏性；虚拟内存优化；按需加载；KV Cache 量化
+\vspace{1em}
+
+\noindent\textbf{关键词}：端侧 LLM 推理；MoE 稀疏性；虚拟内存优化；按需加载；KV Cache 量化；FlashAttention
+
+\newpage

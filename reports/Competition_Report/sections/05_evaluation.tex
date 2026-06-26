@@ -1,7 +1,7 @@
 % SLIM-ARC: 学术报告 - 实验评估
 \section{实验评估}
 
-本节按"实验设置 $\to$ 核心实验 $\to$ 附属实验 $\to$ 消融实验"结构组织。\textbf{核心实验}展示完整 SLIM-ARC（全优化开）在核心模型 80B 和三档环境下的性能；\textbf{附属实验}展示核心优化以外的其他数据（小模型、精度、FA scaling）；\textbf{消融实验}通过逐个排列组合关闭优化，定位各组件贡献与协同关系。所有实验\textbf{串行执行}（确保无内存竞争），冷启动（drop\_caches），数据可溯源至 \texttt{logs/ablation/full-rerun/}。
+\textbf{核心实验}展示完整 SLIM-ARC 在核心模型 80B 和三档环境下的性能；\textbf{附属实验}展示核心优化以外的其他数据；\textbf{消融实验}通过逐个关闭优化定位各组件贡献。所有实验串行执行（确保无内存竞争），冷启动（drop\_caches），数据可溯源至 \texttt{logs/ablation/full-rerun/}。
 
 \subsection{实验设置}
 
@@ -34,7 +34,7 @@
     \end{tabular}
 \end{table}
 
-表\ref{tab:eval_env}展示了实验环境。三档 cgroup 覆盖端侧 LLM 部署的典型硬件范围，80B 模型（40--45\,GB）在所有档位都远超物理内存，构成"内存墙"场景。
+表\ref{tab:eval_env}展示了实验环境。三档 cgroup 覆盖端侧 LLM 部署的典型硬件范围，80B 模型（40--45\,GB）在所有档位都远超物理内存，构成“内存墙”场景。
 
 \subsubsection{测试模型}
 
@@ -189,7 +189,7 @@
     \end{tabular}
 \end{table}
 
-表\ref{tab:eval_gsm8k}揭示量化的非线性精度损害：IQ4\_XS（4.25 bpw）相比 Q4\_K\_M（$\sim$4.5 bpw）仅少 0.25 bit，但 GSM8K 精度从 50\% 骤降至 0\%。典型失败模式是"计算正确但答案写错"（如 "2+1=3, The answer is 2"）。这说明 PPL 不是充分精度指标，GSM8K 更敏感。
+表\ref{tab:eval_gsm8k}揭示量化的非线性精度损害：IQ4\_XS（4.25 bpw）相比 Q4\_K\_M（$\sim$4.5 bpw）仅少 0.25 bit，但 GSM8K 精度从 50\% 骤降至 0\%。典型失败模式是“计算正确但答案写错”（如 “2+1=3, The answer is 2”）。这说明 PPL 不是充分精度指标，GSM8K 更敏感。
 
 \subsubsection{KV Cache 量化对比}
 
@@ -235,7 +235,7 @@
 
 \footnotetext[1]{$^*$F16 参考值来自 Qwen3 技术报告，未在本环境实测。}
 
-\subsection{消融实验：逐个排列组合}
+\subsection{消融实验}
 
 消融实验在完整 SLIM-ARC 基础上逐个关闭优化，定位各组件贡献与协同关系。所有消融在 32\,GB 冷启动串行条件下执行（确保无内存竞争）。
 
@@ -294,7 +294,7 @@
     \end{tabular}
 \end{table}
 
-表\ref{tab:synergy_matrix}的协同矩阵揭示了 SLIM-ARC 的核心设计价值：A 类优化（MADV）不是独立加速，而是\textbf{为 B 类优化创造条件}。这种"A 释放 $\to$ B 利用 $\to$ C 加速"的级联效应是 SLIM-ARC 超越单点优化的关键。
+表\ref{tab:synergy_matrix}的协同矩阵揭示了 SLIM-ARC 的核心设计价值：A 类优化（MADV）不是独立加速，而是\textbf{为 B 类优化创造条件}。这种“A 释放 $\to$ B 利用 $\to$ C 加速”的级联效应是 SLIM-ARC 超越单点优化的关键。
 
 \subsubsection{Speculative Decoding 负面结果}
 
