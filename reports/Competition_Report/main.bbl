@@ -160,11 +160,6 @@ W.~Kwon, Z.~Li, S.~Zhuang, Y.~Sheng, L.~Zheng, C.~H. Yu, J.~E. Gonzalez,
 {The Open Group}, ``{posix\_madvise}: Memory advisory ({POSIX}),''
   \url{https://man7.org/linux/man-pages/man2/posix_madvise.2.html}, 2024.
 
-\bibitem{cgroupsv2}
-{Linux Kernel Documentation}, ``{cgroup-v2}: {Linux} {Control} {Group} {v2},''
-  \url{https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html},
-  2024.
-
 \bibitem{gsm8k2021}
 K.~Cobbe, V.~Kosaraju, M.~Bavarian, M.~Chen, H.~Jun, L.~Kaiser, M.~Plappert,
   J.~Tworek, J.~Hilton, R.~Nakano, C.~Hesse, and J.~Schulman, ``Training
@@ -175,9 +170,9 @@ K.~Cobbe, V.~Kosaraju, M.~Bavarian, M.~Chen, H.~Jun, L.~Kaiser, M.~Plappert,
 S.~Merity, C.~Xiong, J.~Bradbury, and R.~Socher, ``Pointer sentinel mixture
   models,'' arXiv preprint arXiv:1609.07843, 2016.
 
-\bibitem{speculative_decoding2023}
-C.~Chen, S.~Borgeaud, G.~Irving, J.-B. Lespiau, L.~Sifre, and J.~Jumper,
-  ``Accelerating large language model decoding with speculative sampling,'' in
-  \emph{arXiv preprint arXiv:2302.01318}, 2023.
+\bibitem{cgroupsv2}
+{Linux Kernel Documentation}, ``{cgroup-v2}: {Linux} {Control} {Group} {v2},''
+  \url{https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html},
+  2024.
 
 \end{thebibliography}

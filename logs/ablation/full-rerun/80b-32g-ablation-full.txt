@@ -1,6 +1,6 @@
 | model                          |       size |     params | backend    | threads | type_k | type_v |            test |                  t/s |
 | ------------------------------ | ---------: | ---------: | ---------- | ------: | -----: | -----: | --------------: | -------------------: |
-| qwen3next 80B.A3B IQ4_XS - 4.25 bpw |  39.71 GiB |    79.67 B | CPU        |       8 |   q4_0 |   q4_0 |            pp64 |          4.48 ± 1.58 |
-| qwen3next 80B.A3B IQ4_XS - 4.25 bpw |  39.71 GiB |    79.67 B | CPU        |       8 |   q4_0 |   q4_0 |            tg48 |          3.74 ± 0.53 |
+| qwen3next 80B.A3B IQ4_XS - 4.25 bpw |  39.71 GiB |    79.67 B | CPU        |       8 |   q4_0 |   q4_0 |            pp64 |          4.72 ± 2.33 |
+| qwen3next 80B.A3B IQ4_XS - 4.25 bpw |  39.71 GiB |    79.67 B | CPU        |       8 |   q4_0 |   q4_0 |            tg48 |          3.77 ± 0.16 |
 
 build: 7c90850 (1)

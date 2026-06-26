@@ -1,0 +1,19 @@
+| model                          |       size |     params | backend    | threads | type_k | type_v |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | -----: | -----: | --------------: | -------------------: |
+| qwen3next 80B.A3B IQ4_XS - 4.25 bpw |  39.71 GiB |    79.67 B | CPU        |       8 |   q4_0 |   q4_0 |            pp64 |          4.42 ± 1.67 |
+SLIM-ARC KV eviction: ENABLED (sink=4, window=32)
+SLIM-ARC KV eviction: evicted [4,5) (seq_len 37→36)
+SLIM-ARC KV eviction: evicted [5,6) (seq_len 38→37)
+SLIM-ARC KV eviction: evicted [6,7) (seq_len 39→38)
+SLIM-ARC KV eviction: evicted [7,8) (seq_len 40→39)
+SLIM-ARC KV eviction: evicted [8,9) (seq_len 41→40)
+SLIM-ARC KV eviction: evicted [9,10) (seq_len 42→41)
+SLIM-ARC KV eviction: evicted [10,11) (seq_len 43→42)
+SLIM-ARC KV eviction: evicted [11,12) (seq_len 44→43)
+SLIM-ARC KV eviction: evicted [12,13) (seq_len 45→44)
+SLIM-ARC KV eviction: evicted [13,14) (seq_len 46→45)
+SLIM-ARC KV eviction: evicted [14,15) (seq_len 47→46)
+SLIM-ARC KV eviction: evicted [15,16) (seq_len 48→47)
+| qwen3next 80B.A3B IQ4_XS - 4.25 bpw |  39.71 GiB |    79.67 B | CPU        |       8 |   q4_0 |   q4_0 |            tg48 |          3.30 ± 0.13 |
+
+build: 7c90850 (1)

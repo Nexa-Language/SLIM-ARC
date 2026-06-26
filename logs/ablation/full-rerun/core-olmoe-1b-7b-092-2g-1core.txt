@@ -1,0 +1,7 @@
+bash: warning: setlocale: LC_ALL: cannot change locale (en_US.UTF-8)
+| model                          |       size |     params | backend    | threads |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --------------: | -------------------: |
+| olmoe A1.7B Q4_K - Medium      |   3.92 GiB |     6.92 B | CPU        |       1 |            pp64 |         19.70 ± 1.40 |
+| olmoe A1.7B Q4_K - Medium      |   3.92 GiB |     6.92 B | CPU        |       1 |            tg16 |          8.92 ± 0.94 |
+
+build: 7c90850 (1)

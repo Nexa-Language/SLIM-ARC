@@ -1,0 +1,6 @@
+| model                          |       size |     params | backend    | threads | type_k | type_v |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | -----: | -----: | --------------: | -------------------: |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       8 |   q4_0 |   q4_0 |            pp64 |          3.44 ± 1.31 |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       8 |   q4_0 |   q4_0 |            tg48 |          2.68 ± 0.23 |
+
+build: 7c90850 (1)

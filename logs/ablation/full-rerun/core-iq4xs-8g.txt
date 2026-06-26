@@ -1,0 +1,3 @@
+bash: warning: setlocale: LC_ALL: cannot change locale (en_US.UTF-8)
+| model                          |       size |     params | backend    | threads | type_k | type_v |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | -----: | -----: | --------------: | -------------------: |
