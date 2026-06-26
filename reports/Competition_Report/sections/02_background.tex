@@ -14,7 +14,16 @@
     \item \textbf{计算缓冲区}：包含 attention 中间结果、FFN 激活值等，通常 1--2\,GB，与 batch size 和序列长度相关。
 \end{itemize}
 
-当三类内存需求的总和超过物理内存时，操作系统会触发频繁的页面交换（swapping），导致推理速度急剧下降甚至完全不可用。综述 Sec 4.3 进一步指出，随着上下文长度从 4K 增长到 128K（已成为 2025 年模型的默认配置~\cite{survey2026}），KV Cache 的内存开销将主导总内存使用，使得即使 8B 参数的小模型也需要超过 16\,GB 内存仅用于 KV Cache。
+如图\ref{fig:memory_wall}所示，三类内存消耗的构成与增长特性各不相同：模型权重固定庞大且只读，KV Cache 随上下文长度线性增长，计算缓冲随 batch 波动。三者叠加超出物理内存后，操作系统触发频繁的页面交换，导致推理速度急剧下降。
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/memory_wall.png}
+    \caption{端侧 LLM 推理的三类内存消耗与内存墙问题。模型权重（45\,GB，固定只读）、KV Cache（随上下文线性增长，32K 下达 6\,GB）、计算缓冲（1--2\,GB，随 batch 波动）三者叠加超出 8\,GB 物理内存，触发 page swapping 导致性能崩溃。右侧因果链展示上下文增长如何引发连锁反应。}
+    \label{fig:memory_wall}
+\end{figure}
+
+综述 Sec 4.3 进一步指出，随着上下文长度从 4K 增长到 128K（已成为 2025 年模型的默认配置~\cite{survey2026}），KV Cache 的内存开销将主导总内存使用，使得即使 8B 参数的小模型也需要超过 16\,GB 内存仅用于 KV Cache。
 
 \subsection{MoE 模型的稀疏性机遇}
 
