@@ -1,0 +1,115 @@
+\newpage
+% SLIM-ARC: 附录 — 赛事声明（对应官方文档大纲第 4/5/7/8/9/10 部分）
+\section{附录：赛事声明}
+
+本附录集中记录官方建议大纲中未在正文技术章节展开的过程性信息，包括开发计划、进展历程、工程问题与解决、分工协作、仓库目录描述和比赛收获，以补充正文聚焦的技术内容。
+
+\subsection{开发计划}
+
+SLIM-ARC 的开发分为六个阶段，初赛阶段（6/21--6/26）完成 Phase 0--4，Phase 5 留待决赛。表~\ref{tab:dev_plan} 列出各阶段目标与实际完成情况。
+
+\begin{table}[H]
+    \centering
+    \caption{开发计划与实际完成情况}
+    \label{tab:dev_plan}
+    \begin{tabular}{llll}
+        \toprule
+        \textbf{阶段} & \textbf{目标} & \textbf{计划周期} & \textbf{实际完成} \\
+        \midrule
+        Phase 0 & 环境搭建与基线复现 & 6/21 & 6/21 完成 \\
+        Phase 1 & 访存行为分析 & 6/22 & 6/22 完成 \\
+        Phase 2 & 单点优化（MADV/KV/锁定/流水线） & 6/22--6/23 & 6/23 完成 \\
+        Phase 3 & 统一 I/O 带宽预算调度器 & 6/23 & 6/23 原型 \\
+        Phase 4 & 消融与组合实验 & 6/24--6/25 & 6/26 完成 \\
+        Phase 5 & 文档与展示 & 6/25--6/26 & 6/26 完成 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+实际执行中，Phase 2 的四个子方向（MoE 预测预取 / KV 换页 / 动态锁定 / Tile 流水线）仅前两者完整实现并验证，后两者因时间限制降级为设计文档（见 \texttt{docs/design/}）。Phase 3 的统一调度器实现为原型但未在消融中获得独立贡献（见 Sec~6.2 局限性），决赛将重新设计。
+
+\subsection{比赛过程中的重要进展}
+
+初赛六天的关键进展按时间线记录如下：
+
+\begin{itemize}
+    \item \textbf{6/21（环境与基线）}：完成 WSL2 开发环境搭建、cgroups v2 三档隔离配置、upstream llama.cpp 编译、Qwen3-4B 基线跑通。发现 FlexInfer 不支持 Qwen3 架构，技术路线从 FlexInfer 转向 upstream llama.cpp。
+    \item \textbf{6/22（mmap + MADV\_RANDOM）}：实现 \texttt{posix\_madvise(MADV\_RANDOM)} 按需加载，80B 模型首次在 8\,GB 环境从 OOM 转为可运行（0.08\,t/s）。实现 tensor-level prefetch scheduler 和 MoE router hook。
+    \item \textbf{6/23（80B 端到端成功）}：80B 8\,GB decode 达到 0.76\,t/s（+850\% vs baseline），核心卖点数据确立。发现 GGML\_CPU\_REPACK 内存翻倍问题并禁用。
+    \item \textbf{6/24（IQ4\_XS 突破）}：IQ4\_XS 量化（45$\to$40\,GB）使 32\,GB 热缓存下达到 2.45\,t/s 流畅推理。完成 StreamingLLM KV eviction 实现（+9.6\% decode）。
+    \item \textbf{6/25（FlashAttention + GSM8K）}：FlashAttention (-fa auto) decode +71.4\%。GSM8K 精度测试发现 IQ4\_XS 推理崩溃（0\%）vs Q4\_K\_M（50\%），建立量化精度边界。完成学术报告 LaTeX 重构和展示网站。
+    \item \textbf{6/26（审计与修复）}：执行两轮数据审计，修复数据拼接、32\,GB baseline、MADV 百分比计算方向等问题。所有核心实验串行重跑（冷启动，无内存竞争），确保可复现性。
+\end{itemize}
+
+关键转折点：6/22 的 OOM$\to$可运行是项目成立的基础；6/24 的 IQ4\_XS 突破使 32\,GB 流畅推理成为可能；6/26 的审计修复使数据可信度达到学术标准。
+
+\subsection{遇到的主要问题与解决方法}
+
+\begin{enumerate}
+    \item \textbf{FlexInfer 不支持 Qwen3 架构}：FlexInfer 的 4096 对齐和架构定义不支持 Qwen3-Next 的 512 专家 MoE。解决：技术路线转向 upstream llama.cpp，从最新 llama.cpp backport Qwen3 架构定义，自行实现 SLIM-ARC 修改。
+    \item \textbf{GGML\_CPU\_REPACK 内存翻倍}：llama.cpp CPU 后端的 Q4\_K $\to$ q4\_K\_8x8 重打包导致匿名内存 45$\to$90\,GB，是 80B 在受限环境 OOM 的根因。解决：\texttt{-DGGML\_CPU\_REPACK=OFF} 禁用，内存减半。
+    \item \textbf{并行实验导致内存竞争}：三组消融并行跑导致 cgroup 内存竞争，数据不可复现（同一配置 tg8 从 0.28 到 1.03）。解决：全部核心实验改为串行冷启动（drop\_caches + 单任务），数据可信度恢复。
+    \item \textbf{src/llama-upstream 代码因 .gitignore 误加而丢失}：WSL 重启后丢失全部 upstream 修改。解决：开发 \texttt{scripts/apply-slim-arc.py} 幂等集成脚本，所有 SLIM-ARC 修改通过 \texttt{patches/} 可完整恢复，并修正 .gitignore。
+    \item \textbf{数据拼接与计算错误}：审计发现 tab:ablation\_single 的 Full 行拼接了两个不同日志的数值，MADV 贡献百分比计算方向错误（-41\% 应为 -29\%），32\,GB baseline 误用 8\,GB 数据。解决：统一数据源到 \texttt{logs/ablation/full-rerun/}，重算所有百分比，重跑 32\,GB baseline。
+    \item \textbf{Speculative Decoding 负收益}：llama.cpp 内置 ngram-simple speculative decoding 在 80B MoE 上 -53.2\%。分析原因（无 small draft model、MoE router 高熵、验证开销大），诚实记录为负面结果，未强行使用。
+\end{enumerate}
+
+\subsection{分工与协作}
+
+\begin{table}[H]
+    \centering
+    \caption{团队分工}
+    \label{tab:team}
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{成员} & \textbf{角色} & \textbf{主要工作} \\
+        \midrule
+        欧阳易芃 & 项目负责人 / 系统优化 & 架构设计、SLIM-ARC 代码实现、实验调优、报告撰写 \\
+        马福泉 & 实验评估 & cgroups 环境搭建、benchmark 脚本、消融实验、数据收集 \\
+        刘昊 & 文档与展示 & 文档维护、展示网站、图表制作、资料调研 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\textbf{指导教师}：赵帅、张献伟。
+
+\textbf{协作方式}：通过 Git 进行版本管理（GitHub 公开仓库 + GitLab 比赛托管），每日同步进展。使用 AI Agent（Claude Code）辅助代码实现和文档生成，所有 AI 参与均在 commit message 和文档中声明。指导教师定期 review 技术方向和实验设计。
+
+\subsection{提交仓库目录与文件描述}
+
+提交仓库（GitLab: \texttt{T2026105589911358/project3136859-389100}）的目录结构如下：
+
+\begin{verbatim}
+SLIM-ARC/
+├── src/llama-upstream/          # upstream llama.cpp + SLIM-ARC 修改
+│   └── src/slim-arc-*.h/.cpp    # SLIM-ARC 独立模块（6 个文件）
+├── scripts/
+│   ├── apply-slim-arc.py        # 幂等集成脚本
+│   ├── env/setup-cgroups.sh     # 三档 cgroups 配置
+│   └── bench/                   # benchmark 脚本
+├── patches/llama-upstream/      # SLIM-ARC 补丁（可恢复）
+├── docs/
+│   ├── design/                  # 工程级代码文档（6 个）
+│   ├── official/                # 赛题与官方材料
+│   └── papers/                  # 参考论文与调研
+├── reports/Competition_Report/  # 学术报告（LaTeX + PDF）
+├── config/slim-arc.toml         # 配置文件
+├── data/benchmarks/gsm8k/       # GSM8K 测试集
+├── logs/                        # 实验日志（可溯源）
+├── tests/                       # 环境测试
+├── README.md                    # 项目说明
+└── LICENSE                      # MIT
+\end{verbatim}
+
+关键文件说明：\texttt{scripts/apply-slim-arc.py} 是幂等集成脚本，在干净 upstream 上运行即可恢复全部 SLIM-ARC 修改；\texttt{patches/} 保存独立模块源码，作为 apply 脚本的备份；\texttt{logs/ablation/full-rerun/} 存放串行冷启动实验日志，报告所有数据可溯源至此；\texttt{reports/Competition\_Report/main.pdf} 为本报告 PDF。
+
+\subsection{比赛收获}
+
+\begin{itemize}
+    \item \textbf{技术收获}：深入理解了操作系统虚拟内存机制（mmap、madvise、page fault、cgroups）与大模型推理访存行为的协同。核心 insight 是\textbf{MADV\_RANDOM 作为 MoE 稀疏性的天然 OS 接口}——关闭顺序预读后，page fault 天然实现了"仅加载激活专家"。这一发现将 OS 课程知识（虚拟内存）与前沿系统问题（端侧 LLM）深度结合。
+    \item \textbf{方法论收获}：建立了优化技术的 ABC 分类法（内核协同 / 量化压缩 / 计算融合），揭示了"A 释放 $\to$ B 利用 $\to$ C 加速"的级联协同关系。学会了对负面结果（prefetch 冗余、speculative 负收益）的诚实记录而非掩盖，这是学术可信度的基石。
+    \item \textbf{工程收获}：掌握了幂等集成脚本（apply-slim-arc.py）保证第三方代码修改可恢复的工程实践；建立了串行冷启动实验协议确保数据可复现；通过两轮数据审计建立了数据溯源到原始日志的质量控制流程。
+    \item \textbf{团队收获}：探索了 AI Agent（Claude Code）作为"Agent Programmer"辅助科研的协作模式，在代码实现、文档生成、数据审计中显著提升效率，同时通过 commit message 声明和人工 review 保证了学术诚信。
+\end{itemize}
+
+我们相信，操作系统虚拟内存机制与 MoE 稀疏性的深度协同，是解决端侧大模型推理"内存墙"问题的关键路径，这一思路对未来的端侧 Agent 系统设计具有参考价值。
