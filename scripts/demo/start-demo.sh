@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 # SLIM-ARC Demo 启动脚本
 #
-# 一键启动：llama-server (8080) + monitor.py (8001) + 打开浏览器
+# 一键启动：llama-server (8080) + monitor.py (8001) + 前端 http (8090)
 #
 # 用法：
 #   bash scripts/demo/start-demo.sh [4b|80b]
-#   默认 4b（快速，适合演示 UI）
-#   80b  需要预热（40GB 模型加载 + 热缓存）
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -41,51 +39,56 @@ echo "  SLIM-ARC Live Demo"
 echo "  模型: $MODEL_NAME ($MODEL_SIZE)"
 echo "  llama-server: http://127.0.0.1:8080"
 echo "  monitor:      http://127.0.0.1:8001"
-echo "  前端:         scripts/demo/index.html"
+echo "  前端:         http://127.0.0.1:8090"
 echo "=============================================="
 echo ""
 
-# 启动 llama-server
+# 确保日志目录存在
+mkdir -p "$PROJECT_ROOT/logs"
+
+# 导出环境变量给 monitor
+export SLIM_ARC_MODEL="$MODEL_NAME"
+export SLIM_ARC_MODEL_SIZE="$MODEL_SIZE"
+export SLIM_ARC_EXPERTS_TOTAL="$EXPERTS_TOTAL"
+export SLIM_ARC_EXPERTS_ACTIVE="$EXPERTS_ACTIVE"
+export SLIM_ARC_MADV=ON
+export SLIM_ARC_KV_TYPE=q4_0
+export SLIM_ARC_FA=ON
+export SLIM_ARC_REPACK=OFF
+export SLIM_ARC_TIER="32GB warm"
+
+# 1. 启动 llama-server（后台，日志到文件）
 echo "[1/3] 启动 llama-server..."
-LLAMA_PID=$(SLIM_ARC_MODEL="$MODEL_NAME" \
-    SLIM_ARC_MODEL_SIZE="$MODEL_SIZE" \
-    SLIM_ARC_EXPERTS_TOTAL="$EXPERTS_TOTAL" \
-    SLIM_ARC_EXPERTS_ACTIVE="$EXPERTS_ACTIVE" \
-    SLIM_ARC_MADV=ON \
-    SLIM_ARC_KV_TYPE=q4_0 \
-    SLIM_ARC_FA=ON \
-    SLIM_ARC_REPACK=OFF \
-    SLIM_ARC_TIER="32GB warm" \
-    setsid bash -c "exec $LLAMA_DIR/build/bin/llama-server \
-        -m '$MODEL' -t 8 -c 8192 --host 0.0.0.0 --port 8080 \
-        -fa auto -ctk q4_0 -ctv q4_0 --no-repack \
-        --no-context-shift 2>&1 > $PROJECT_ROOT/logs/demo-llama-server.log" &)
-echo "  PID: $LLAMA_PID (日志: logs/demo-llama-server.log)"
+nohup "$LLAMA_DIR/build/bin/llama-server" \
+    -m "$MODEL" -t 8 -c 8192 --host 0.0.0.0 --port 8080 \
+    -fa auto -ctk q4_0 -ctv q4_0 --no-repack --no-context-shift \
+    > "$PROJECT_ROOT/logs/demo-llama-server.log" 2>&1 &
+LLAMA_PID=$!
+echo "  PID: $LLAMA_PID"
 
-# 启动 monitor
+# 2. 启动 monitor（后台）
 echo "[2/3] 启动 monitor.py..."
-MONITOR_PID=$(SLIM_ARC_MODEL="$MODEL_NAME" \
-    SLIM_ARC_MODEL_SIZE="$MODEL_SIZE" \
-    SLIM_ARC_EXPERTS_TOTAL="$EXPERTS_TOTAL" \
-    SLIM_ARC_EXPERTS_ACTIVE="$EXPERTS_ACTIVE" \
-    SLIM_ARC_MADV=ON \
-    SLIM_ARC_KV_TYPE=q4_0 \
-    SLIM_ARC_FA=ON \
-    SLIM_ARC_REPACK=OFF \
-    SLIM_ARC_TIER="32GB warm" \
-    setsid python3 "$DEMO_DIR/monitor.py" 2>&1 > $PROJECT_ROOT/logs/demo-monitor.log &)
-echo "  PID: $MONITOR_PID (日志: logs/demo-monitor.log)"
+nohup python3 "$DEMO_DIR/monitor.py" \
+    > "$PROJECT_ROOT/logs/demo-monitor.log" 2>&1 &
+MONITOR_PID=$!
+echo "  PID: $MONITOR_PID"
 
-echo "[3/3] 等待服务就绪..."
-sleep 3
+# 3. 启动前端 http（后台）
+echo "[3/3] 启动前端 http (8090)..."
+nohup python3 -m http.server 8090 --directory "$DEMO_DIR" \
+    > "$PROJECT_ROOT/logs/demo-http.log" 2>&1 &
+HTTP_PID=$!
+echo "  PID: $HTTP_PID"
 
+echo ""
+echo "等待服务就绪..."
 # 检查 llama-server
-for i in 1 2 3 4 5; do
+for i in 1 2 3 4 5 6 7 8; do
     if curl -s http://127.0.0.1:8080/health > /dev/null 2>&1; then
         echo "  llama-server 就绪 ✓"
         break
     fi
-    echo "  等待 llama-server ($i/5)..."
+    echo "  等待 llama-server ($i/8)..."
     sleep 5
 done
 
@@ -96,25 +99,32 @@ else
     echo "  ⚠️  monitor 未就绪，检查 logs/demo-monitor.log"
 fi
 
+# 检查前端
+if curl -s http://127.0.0.1:8090/index.html > /dev/null 2>&1; then
+    echo "  前端就绪 ✓"
+fi
+
 echo ""
 echo "=============================================="
 echo "  ✅ Demo 已启动！"
 echo ""
-echo "  打开浏览器访问: scripts/demo/index.html"
-echo "  或用 python -m http.server 在 demo 目录开服务"
+echo "  打开浏览器: http://127.0.0.1:8090/index.html"
 echo ""
-echo "  停止: kill $LLAMA_PID $MONITOR_PID"
+echo "  停止: kill $LLAMA_PID $MONITOR_PID $HTTP_PID"
+echo "  或: ps aux | grep -E 'llama-server|monitor.py|http.server' | grep -v grep | awk '{print \$2}' | xargs -r kill"
 echo "=============================================="
+echo ""
 
 # 尝试打开浏览器
 if command -v xdg-open > /dev/null; then
-    xdg-open "$DEMO_DIR/index.html" 2>/dev/null || true
+    xdg-open http://127.0.0.1:8090/index.html 2>/dev/null || true
 elif command -v wslview > /dev/null; then
-    wslview "$DEMO_DIR/index.html" 2>/dev/null || true
+    wslview http://127.0.0.1:8090/index.html 2>/dev/null || true
 fi
 
-# 保持前台，Ctrl+C 退出时清理
+# 前台保持，显示 llama-server 日志
+echo "服务运行中。Ctrl+C 停止所有服务。"
+echo "（实时日志: tail -f logs/demo-llama-server.log）"
 echo ""
-echo "按 Ctrl+C 停止所有服务..."
-trap "kill $LLAMA_PID $MONITOR_PID 2>/dev/null; exit" INT TERM
+trap "kill $LLAMA_PID $MONITOR_PID $HTTP_PID 2>/dev/null; exit 0" INT TERM
 wait
