@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLIM-ARC Live Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --bg: #0a0e1a;
+            --panel: #131826;
+            --border: #2a3450;
+            --text: #e8ecf4;
+            --muted: #8892b0;
+            --accent: #64ffda;
+            --accent2: #7c3aed;
+            --danger: #ff6b6b;
+            --success: #4ade80;
+            --warn: #fbbf24;
+        }
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', 'Noto Sans CJK SC', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+        }
+        /* 顶部栏 */
+        .topbar {
+            height: 56px;
+            background: var(--panel);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+        }
+        .topbar-left { display: flex; align-items: center; gap: 12px; }
+        .logo {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            border-radius: 8px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: var(--bg); font-size: 14px;
+        }
+        .title { font-size: 18px; font-weight: 600; }
+        .subtitle { font-size: 12px; color: var(--muted); }
+        .topbar-right { display: flex; gap: 8px; align-items: center; }
+        .badge {
+            padding: 4px 12px; border-radius: 12px; font-size: 12px;
+            background: rgba(100,255,218,0.1); color: var(--accent);
+            border: 1px solid rgba(100,255,218,0.3);
+        }
+        .badge.danger { background: rgba(255,107,107,0.1); color: var(--danger); border-color: rgba(255,107,107,0.3); }
+        /* 主布局 */
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            height: calc(100vh - 56px);
+            gap: 1px;
+            background: var(--border);
+        }
+        /* 聊天区 */
+        .chat {
+            background: var(--bg);
+            display: flex; flex-direction: column;
+        }
+        .chat-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px; color: var(--muted);
+        }
+        .chat-messages {
+            flex: 1; overflow-y: auto; padding: 24px;
+        }
+        .msg { margin-bottom: 24px; }
+        .msg.user .msg-bubble {
+            background: rgba(124,58,237,0.15);
+            border: 1px solid rgba(124,58,237,0.3);
+            margin-left: 80px;
+        }
+        .msg.assistant .msg-bubble {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            margin-right: 80px;
+        }
+        .msg-bubble {
+            padding: 14px 18px;
+            border-radius: 12px;
+            font-size: 15px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .msg-role {
+            font-size: 12px; color: var(--muted);
+            margin-bottom: 6px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .msg.user .msg-role { justify-content: flex-end; }
+        .cursor {
+            display: inline-block; width: 8px; height: 16px;
+            background: var(--accent); margin-left: 2px;
+            animation: blink 1s step-end infinite;
+            vertical-align: text-bottom;
+        }
+        @keyframes blink { 50% { opacity: 0; } }
+        .chat-input {
+            padding: 16px 24px;
+            border-top: 1px solid var(--border);
+            display: flex; gap: 12px;
+        }
+        .chat-input input {
+            flex: 1;
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: var(--text);
+            font-size: 15px;
+            outline: none;
+        }
+        .chat-input input:focus { border-color: var(--accent); }
+        .chat-input button {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: var(--bg);
+            border: none; border-radius: 10px;
+            padding: 12px 24px; font-size: 15px; font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .chat-input button:hover { transform: translateY(-1px); }
+        .chat-input button:disabled { opacity: 0.5; cursor: not-allowed; }
+        /* 监控面板 */
+        .monitor {
+            background: var(--panel);
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .monitor-section { margin-bottom: 24px; }
+        .monitor-title {
+            font-size: 12px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 1px;
+            margin-bottom: 12px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .monitor-title::before {
+            content: ''; width: 4px; height: 14px;
+            background: var(--accent); border-radius: 2px;
+        }
+        /* 进度条 */
+        .metric-row {
+            display: flex; justify-content: space-between;
+            font-size: 13px; margin-bottom: 6px;
+        }
+        .metric-label { color: var(--muted); }
+        .metric-value { font-weight: 600; font-variant-numeric: tabular-nums; }
+        .progress {
+            height: 8px; background: var(--bg); border-radius: 4px;
+            overflow: hidden; margin-bottom: 12px;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), var(--accent2));
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        .progress-bar.danger { background: linear-gradient(90deg, var(--warn), var(--danger)); }
+        /* t/s 图 */
+        .tps-chart {
+            height: 60px; background: var(--bg);
+            border-radius: 8px; padding: 8px;
+            position: relative;
+        }
+        .tps-chart canvas { width: 100%; height: 100%; }
+        .tps-current {
+            position: absolute; top: 8px; right: 12px;
+            font-size: 20px; font-weight: 700;
+            color: var(--accent);
+            font-variant-numeric: tabular-nums;
+        }
+        /* 优化链 */
+        .opt-chain { display: flex; flex-direction: column; gap: 8px; }
+        .opt-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px;
+            background: var(--bg);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 13px;
+        }
+        .opt-check {
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 11px;
+        }
+        .opt-check.on { background: var(--success); color: var(--bg); }
+        .opt-check.off { background: var(--danger); color: var(--bg); }
+        .opt-cat { color: var(--muted); font-size: 11px; }
+        .opt-name { flex: 1; }
+        /* 专家激活 */
+        .experts {
+            display: grid;
+            grid-template-columns: repeat(32, 1fr);
+            gap: 2px;
+            padding: 8px;
+            background: var(--bg);
+            border-radius: 8px;
+        }
+        .expert {
+            aspect-ratio: 1;
+            background: var(--border);
+            border-radius: 2px;
+            transition: background 0.3s;
+        }
+        .expert.active {
+            background: var(--accent);
+            box-shadow: 0 0 4px var(--accent);
+        }
+        .experts-label {
+            display: flex; justify-content: space-between;
+            font-size: 12px; color: var(--muted);
+            margin-top: 6px;
+        }
+        /* 滚动条 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+        <div class="topbar-left">
+            <div class="logo">SA</div>
+            <div>
+                <div class="title">SLIM-ARC Live Demo</div>
+                <div class="subtitle" id="subtitle">加载中...</div>
+            </div>
+        </div>
+        <div class="topbar-right">
+            <span class="badge" id="model-badge">--</span>
+            <span class="badge" id="tier-badge">--</span>
+        </div>
+    </div>
+
+    <div class="main">
+        <!-- 聊天区 -->
+        <div class="chat">
+            <div class="chat-header">
+                💬 与 SLIM-ARC 优化后的模型对话，体验端侧 MoE 大模型推理
+            </div>
+            <div class="chat-messages" id="messages">
+                <div class="msg assistant">
+                    <div class="msg-role">🤖 Assistant</div>
+                    <div class="msg-bubble">你好！我是 SLIM-ARC 优化后的端侧大模型。在下方输入问题，我会流式回答。右侧面板展示实时系统状态。</div>
+                </div>
+            </div>
+            <div class="chat-input">
+                <input type="text" id="input" placeholder="输入问题，回车发送..." autocomplete="off">
+                <button id="send" onclick="send()">发送</button>
+            </div>
+        </div>
+
+        <!-- 监控面板 -->
+        <div class="monitor" id="monitor">
+            <div class="monitor-section">
+                <div class="monitor-title">系统内存</div>
+                <div class="metric-row">
+                    <span class="metric-label">已用 / 总计</span>
+                    <span class="metric-value" id="mem-used">-- GB / -- GB</span>
+                </div>
+                <div class="progress"><div class="progress-bar" id="mem-bar" style="width:0%"></div></div>
+                <div class="metric-row">
+                    <span class="metric-label">Cache (文件缓存)</span>
+                    <span class="metric-value" id="mem-cache">-- GB</span>
+                </div>
+                <div class="progress"><div class="progress-bar" id="cache-bar" style="width:0%"></div></div>
+            </div>
+
+            <div class="monitor-section">
+                <div class="monitor-title">推理速度</div>
+                <div class="tps-chart">
+                    <canvas id="tps-canvas"></canvas>
+                    <div class="tps-current" id="tps-current">0.00 t/s</div>
+                </div>
+                <div class="metric-row" style="margin-top:8px">
+                    <span class="metric-label">已生成 token</span>
+                    <span class="metric-value" id="tokens-gen">0</span>
+                </div>
+            </div>
+
+            <div class="monitor-section">
+                <div class="monitor-title">MoE 专家激活</div>
+                <div class="experts" id="experts"></div>
+                <div class="experts-label">
+                    <span id="experts-active">0 / 0 激活</span>
+                    <span>稀疏率 0%</span>
+                </div>
+            </div>
+
+            <div class="monitor-section">
+                <div class="monitor-title">SLIM-ARC 优化链</div>
+                <div class="opt-chain" id="opt-chain"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const LLAMA_SERVER = 'http://127.0.0.1:8080';
+        const MONITOR_API = 'http://127.0.0.1:8001/api/monitor';
+
+        let sending = false;
+
+        // 初始化专家格
+        function initExperts(total, active) {
+            const el = document.getElementById('experts');
+            el.innerHTML = '';
+            const count = Math.min(total, 128); // 最多显示 128 格
+            for (let i = 0; i < count; i++) {
+                const d = document.createElement('div');
+                d.className = 'expert';
+                el.appendChild(d);
+            }
+        }
+
+        function updateExperts(active, total) {
+            const el = document.getElementById('experts');
+            const cells = el.children;
+            const count = cells.length;
+            // 随机激活 active 个
+            const activeSet = new Set();
+            while (activeSet.size < Math.min(active, count)) {
+                activeSet.add(Math.floor(Math.random() * count));
+            }
+            for (let i = 0; i < count; i++) {
+                cells[i].className = 'expert' + (activeSet.has(i) ? ' active' : '');
+            }
+            const sparse = total > 0 ? ((1 - active / total) * 100).toFixed(1) : 0;
+            document.getElementById('experts-active').textContent = `${active} / ${total} 激活`;
+            document.querySelector('.experts-label span:last-child').textContent = `稀疏率 ${sparse}%`;
+        }
+
+        // 初始化优化链
+        function renderOptChain(config) {
+            const items = [
+                { cat: 'A 内核协同', name: 'MADV_RANDOM 按需加载', on: config.madv === 'ON' },
+                { cat: 'A 内核协同', name: 'REPACK=OFF (禁用翻倍)', on: config.repack === 'OFF' },
+                { cat: 'B 量化压缩', name: `KV ${config.kv_type} 量化`, on: config.kv_type !== 'f16' },
+                { cat: 'B 量化压缩', name: `${config.model} (${config.model_size || ''})`, on: true },
+                { cat: 'C 计算融合', name: 'FlashAttention', on: config.fa === 'ON' },
+            ];
+            const el = document.getElementById('opt-chain');
+            el.innerHTML = '';
+            items.forEach(it => {
+                const d = document.createElement('div');
+                d.className = 'opt-item';
+                d.innerHTML = `
+                    <div class="opt-check ${it.on ? 'on' : 'off'}">${it.on ? '✓' : '✗'}</div>
+                    <div class="opt-cat">${it.cat}</div>
+                    <div class="opt-name">${it.name}</div>
+                `;
+                el.appendChild(d);
+            });
+        }
+
+        // t/s 折线图
+        const canvas = document.getElementById('tps-canvas');
+        const ctx = canvas.getContext('2d');
+        let tpsHistory = [];
+
+        function drawTpsChart() {
+            const w = canvas.width = canvas.offsetWidth * 2;
+            const h = canvas.height = canvas.offsetHeight * 2;
+            ctx.clearRect(0, 0, w, h);
+            if (tpsHistory.length < 2) return;
+            const max = Math.max(...tpsHistory.map(p => p.tps), 1) * 1.2;
+            ctx.strokeStyle = '#64ffda';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            tpsHistory.forEach((p, i) => {
+                const x = (i / (tpsHistory.length - 1)) * w;
+                const y = h - (p.tps / max) * h * 0.9 - h * 0.05;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            // 填充
+            ctx.lineTo(w, h);
+            ctx.lineTo(0, h);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(100,255,218,0.1)';
+            ctx.fill();
+        }
+
+        // 轮询监控
+        async function pollMonitor() {
+            try {
+                const r = await fetch(MONITOR_API);
+                const data = await r.json();
+                // 顶栏
+                document.getElementById('subtitle').textContent = `${data.config.model} · ${data.config.model_size} · ${data.config.tier}`;
+                document.getElementById('model-badge').textContent = `${data.config.model} (${data.config.model_size})`;
+                document.getElementById('tier-badge').textContent = data.config.tier;
+                // 内存
+                const mem = data.memory;
+                document.getElementById('mem-used').textContent = `${mem.used_gb} GB / ${mem.total_gb} GB`;
+                document.getElementById('mem-bar').style.width = (mem.used / mem.total * 100) + '%';
+                document.getElementById('mem-cache').textContent = `${mem.cached_gb} GB`;
+                document.getElementById('cache-bar').style.width = (mem.cached / mem.total * 100) + '%';
+                // t/s
+                if (data.tps_history && data.tps_history.length > 0) {
+                    tpsHistory = data.tps_history;
+                    const last = tpsHistory[tpsHistory.length - 1];
+                    document.getElementById('tps-current').textContent = last.tps.toFixed(2) + ' t/s';
+                    drawTpsChart();
+                }
+                document.getElementById('tokens-gen').textContent = Math.floor(data.metrics.n_decoded || 0);
+                // 专家
+                if (data.config.experts_total > 0) {
+                    updateExperts(data.config.experts_active, data.config.experts_total);
+                }
+                // 优化链（每次更新，确保模型名同步）
+                renderOptChain(data.config);
+            } catch (e) {
+                console.log('monitor error', e);
+            }
+        }
+
+        // 初始化专家（静态，如果 monitor 未启动）
+        initExperts(512, 10);
+        renderOptChain({madv:'ON', repack:'OFF', kv_type:'q4_0', fa:'ON', model:'Qwen3-4B'});
+        setInterval(pollMonitor, 500);
+        pollMonitor();
+
+        // 发送消息
+        async function send() {
+            const input = document.getElementById('input');
+            const msg = input.value.trim();
+            if (!msg || sending) return;
+            sending = true;
+            document.getElementById('send').disabled = true;
+            input.value = '';
+
+            // 添加用户消息
+            const messages = document.getElementById('messages');
+            const userDiv = document.createElement('div');
+            userDiv.className = 'msg user';
+            userDiv.innerHTML = `<div class="msg-role">🧑 User</div><div class="msg-bubble"></div>`;
+            userDiv.querySelector('.msg-bubble').textContent = msg;
+            messages.appendChild(userDiv);
+
+            // 添加 assistant 消息（流式）
+            const asstDiv = document.createElement('div');
+            asstDiv.className = 'msg assistant';
+            asstDiv.innerHTML = `<div class="msg-role">🤖 Assistant</div><div class="msg-bubble"><span class="cursor"></span></div>`;
+            messages.appendChild(asstDiv);
+            const bubble = asstDiv.querySelector('.msg-bubble');
+            messages.scrollTop = messages.scrollHeight;
+
+            try {
+                const r = await fetch(LLAMA_SERVER + '/v1/chat/completions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'slim-arc',
+                        messages: [
+                            { role: 'system', content: '你是 SLIM-ARC 优化后的端侧 AI 助手。SLIM-ARC 利用操作系统虚拟内存机制（mmap+MADV_RANDOM）让 80B MoE 大模型在 8GB 内存设备上流畅运行。请简洁友好地回答用户问题，控制在 80 字以内。' },
+                            { role: 'user', content: msg }
+                        ],
+                        temperature: 0.7,
+                        top_p: 0.9,
+                        max_tokens: 200,
+                        stream: true,
+                        chat_template_kwargs: { enable_thinking: false },
+                    })
+                });
+                const reader = r.body.getReader();
+                const decoder = new TextDecoder();
+                let text = '';
+                let buf = '';
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buf += decoder.decode(value, { stream: true });
+                    const lines = buf.split('\n');
+                    buf = lines.pop();
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const json = line.slice(6).trim();
+                            if (json === '[DONE]') continue;
+                            try {
+                                const obj = JSON.parse(json);
+                                const delta = obj.choices && obj.choices[0] && obj.choices[0].delta;
+                                if (delta && delta.content) {
+                                    text += delta.content;
+                                    bubble.innerHTML = escapeHtml(text) + '<span class="cursor"></span>';
+                                    messages.scrollTop = messages.scrollHeight;
+                                }
+                            } catch (e) {}
+                        }
+                    }
+                }
+                bubble.innerHTML = escapeHtml(text) || '<span style="color:#8892b0">(无输出)</span>';
+            } catch (e) {
+                bubble.innerHTML = '⚠️ 连接 llama-server 失败: ' + e.message + '<br><br>请先启动: <code>bash scripts/demo/start-demo.sh 4b</code>';
+            }
+            sending = false;
+            document.getElementById('send').disabled = false;
+            input.focus();
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/\n/g,'<br>');
+        }
+
+        document.getElementById('input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') send();
+        });
+        document.getElementById('input').focus();
+    </script>
+</body>
+</html>
