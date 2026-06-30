@@ -4,7 +4,9 @@
 
 # SLIM-ARC
 
-### 面向端侧 Agent 的内存感知 MoE 大模型推理协同优化
+### Synergistic LLM Integration with Memory-Aware Runtime Co-Optimization for On-Device Agents
+
+#### 面向端侧 Agent 的内存感知 MoE 大模型推理协同优化
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![OS Competition](https://img.shields.io/badge/OS%20Challenge-2026%20Proj%2059-cyan.svg)](https://github.com/Nexa-Language/SLIM-ARC)
