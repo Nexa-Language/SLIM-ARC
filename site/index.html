@@ -3,89 +3,132 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SLIM-ARC | Synergistic LLM Integration with Memory-Aware Runtime Co-Optimization</title>
+    <title>SLIM-ARC | 端侧 MoE 大模型推理优化</title>
+    <meta name="description" content="SLIM-ARC：利用操作系统虚拟内存机制让 80B MoE 大模型在 8GB 内存端侧设备流畅运行。">
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" href="assets/logo_nobg.png">
 </head>
 <body>
-    <!-- 粒子背景 -->
-    <canvas id="particle-canvas"></canvas>
-    
-    <!-- 导航 -->
-    <nav class="nav">
-        <div class="nav-logo">
+
+<!-- Navigation -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="index.html" class="nav-logo">
             <img src="assets/logo_nobg.png" alt="SLIM-ARC" class="nav-logo-img">
             <span class="nav-title">SLIM-ARC</span>
-        </div>
+        </a>
         <div class="nav-links">
             <a href="index.html" class="active">首页</a>
             <a href="architecture.html">架构</a>
             <a href="benchmark.html">基准测试</a>
             <a href="team.html">团队</a>
-            <a href="https://github.com/Nexa-Language/SLIM-ARC" target="_blank" class="nav-github">GitHub</a>
+            <a href="https://github.com/Nexa-Language/SLIM-ARC" target="_blank" class="nav-cta">GitHub ↗</a>
         </div>
-    </nav>
+    </div>
+</nav>
 
-    <!-- Hero -->
-    <section class="hero">
-        <div class="hero-content">
-            <div class="hero-badge">OS挑战赛 Proj 59 · 中山大学</div>
-            <h1 class="hero-title">
-                <span class="gradient-text">SLIM-ARC</span>
-            </h1>
-            <p class="hero-subtitle">Synergistic LLM Integration with Memory-Aware Runtime Co-Optimization for On-Device Agents</p>
-            <p class="hero-desc">让 80B MoE 大模型在 8GB 内存端侧设备上流畅运行</p>
-            <div class="hero-cta">
-                <a href="architecture.html" class="btn btn-primary">探索架构 →</a>
-                <a href="benchmark.html" class="btn btn-secondary">查看数据</a>
-            </div>
+<!-- Hero -->
+<section class="hero">
+    <div class="container">
+        <div class="hero-badge">
+            <span class="dot"></span>
+            OS挑战赛 Proj 59 · 中山大学
         </div>
-        <div class="hero-visual">
-            <div class="floating-card card-1">
-                <div class="card-value">64.5×</div>
-                <div class="card-label">累计加速</div>
-            </div>
-            <div class="floating-card card-2">
-                <div class="card-value">5.16</div>
-                <div class="card-label">tokens/s (32GB)</div>
-            </div>
-            <div class="floating-card card-3">
-                <div class="card-value">+71.4%</div>
-                <div class="card-label">FlashAttention</div>
-            </div>
-            <div class="floating-card card-4">
-                <div class="card-value">2GB</div>
-                <div class="card-label">RSS (vs 45GB)</div>
-            </div>
+        <h1 class="hero-title">
+            让 <span class="gradient-text">80B MoE</span> 大模型<br>
+            在 8GB 内存设备上流畅运行
+        </h1>
+        <p class="hero-subtitle">// SLIM-ARC</p>
+        <p class="hero-desc">Synergistic LLM Integration with Memory-Aware Runtime Co-Optimization — 利用操作系统虚拟内存机制作为 MoE 稀疏性的天然接口</p>
+        <div class="hero-cta">
+            <a href="architecture.html" class="btn btn-primary">探索架构 →</a>
+            <a href="benchmark.html" class="btn btn-secondary">查看数据</a>
         </div>
-    </section>
 
-    <!-- 核心数据 -->
-    <section class="stats">
-        <h2 class="section-title">核心成果</h2>
+        <!-- 终端代码块：展示核心命令 -->
+        <div class="terminal">
+            <div class="terminal-header">
+                <span class="terminal-dot red"></span>
+                <span class="terminal-dot yellow"></span>
+                <span class="terminal-dot green"></span>
+                <span class="terminal-title">slim-arc@edge-device: ~</span>
+            </div>
+            <div class="terminal-body">
+<span class="comment"># 80B MoE 模型（38GB）跑在 32GB RAM 上，mmap 按需加载</span><br>
+<span class="cmd">llama-server</span> <span class="flag">-m</span> <span class="val">Qwen3-Next-80B-IQ4_XS.gguf</span> \<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">-fa</span> <span class="val">auto</span> <span class="flag">-ctk</span> <span class="val">q4_0</span> <span class="flag">-ctv</span> <span class="val">q4_0</span> <span class="flag">--no-repack</span> \<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">-t</span> <span class="val">8</span> <span class="flag">--host</span> <span class="val">0.0.0.0</span> <span class="flag">--port</span> <span class="val">8080</span><br>
+<br>
+<span class="output">[OK] model loaded (38 GB, mmap on-demand)</span><br>
+<span class="output">[OK] server listening on http://0.0.0.0:8080</span><br>
+<span class="output">[OK] active experts: 10/512 (sparse 98%)</span><br>
+<span class="output">[OK] decode: 5.16 tokens/s</span>
+            </div>
+        </div>
+
+        <!-- 核心数据 -->
+        <div class="hero-stats">
+            <div class="hero-stat">
+                <div class="hero-stat-value">64.5×</div>
+                <div class="hero-stat-label">累计加速</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value">5.16</div>
+                <div class="hero-stat-label">tokens/s</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value">+71%</div>
+                <div class="hero-stat-label">FlashAttn</div>
+            </div>
+            <div class="hero-stat">
+                <div class="hero-stat-value">2GB</div>
+                <div class="hero-stat-label">RSS</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 核心成果 -->
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">// 核心成果</span>
+            <h2 class="section-title">数据说话</h2>
+            <p class="section-desc">在三档受限环境下验证 SLIM-ARC 的优化效果，所有数据可溯源至原始日志</p>
+        </div>
         <div class="stats-grid">
             <div class="stat-card reveal">
-                <div class="stat-number" data-target="850" data-suffix="%">0</div>
-                <div class="stat-desc">8GB 环境解码加速<br><span class="stat-sub">vs baseline (0.08→0.76 t/s)</span></div>
+                <div class="stat-number">850%</div>
+                <div class="stat-desc">8GB 环境解码加速</div>
+                <span class="stat-sub">0.08 → 0.76 t/s</span>
             </div>
             <div class="stat-card reveal">
-                <div class="stat-number" data-target="98" data-suffix="%">0</div>
-                <div class="stat-desc">物理内存节省<br><span class="stat-sub">MADV_RANDOM 按需加载</span></div>
+                <div class="stat-number">98%</div>
+                <div class="stat-desc">物理内存节省</div>
+                <span class="stat-sub">MADV_RANDOM</span>
             </div>
             <div class="stat-card reveal">
-                <div class="stat-number" data-target="75" data-suffix="%">0</div>
-                <div class="stat-desc">GSM8K 精度保持<br><span class="stat-sub">Qwen3-4B Q4_K_M</span></div>
+                <div class="stat-number">75%</div>
+                <div class="stat-desc">GSM8K 精度保持</div>
+                <span class="stat-sub">Qwen3-4B Q4_K_M</span>
             </div>
             <div class="stat-card reveal">
-                <div class="stat-number" data-target="30" data-suffix="+">0</div>
-                <div class="stat-desc">引用论文<br><span class="stat-sub">NeurIPS/ICLR/USENIX</span></div>
+                <div class="stat-number">30+</div>
+                <div class="stat-desc">引用论文</div>
+                <span class="stat-sub">NeurIPS / ICLR</span>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <!-- 技术亮点 -->
-    <section class="features">
-        <h2 class="section-title">技术亮点</h2>
+<!-- 技术亮点 -->
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">// 技术亮点</span>
+            <h2 class="section-title">OS × MoE 协同优化</h2>
+            <p class="section-desc">三类优化协同工作：内核协同释放内存 → 量化压缩降低需求 → 计算融合加速推理</p>
+        </div>
         <div class="features-grid">
             <div class="feature-card reveal">
                 <div class="feature-icon">🧠</div>
@@ -108,11 +151,17 @@
                 <p>首次用 GSM8K ALEM 协议发现 IQ4_XS 保持语言流畅但推理崩溃，为端侧模型选择提供指导。</p>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <!-- 优化链 -->
-    <section class="optimization-chain">
-        <h2 class="section-title">优化链：0.08 → 5.16 t/s</h2>
+<!-- 优化链 -->
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">// 优化链</span>
+            <h2 class="section-title">0.08 → 5.16 t/s</h2>
+            <p class="section-desc">逐步叠加优化技术，累计实现 64.5× 加速</p>
+        </div>
         <div class="chain-container">
             <div class="chain-step reveal">
                 <div class="chain-bar" style="height: 8%"></div>
@@ -122,13 +171,13 @@
             <div class="chain-arrow">→</div>
             <div class="chain-step reveal">
                 <div class="chain-bar" style="height: 15%"></div>
-                <div class="chain-label">+MADV_RANDOM</div>
+                <div class="chain-label">+MADV</div>
                 <div class="chain-value">0.42 t/s</div>
             </div>
             <div class="chain-arrow">→</div>
             <div class="chain-step reveal">
                 <div class="chain-bar" style="height: 25%"></div>
-                <div class="chain-label">+KV q4_0</div>
+                <div class="chain-label">+KV q4</div>
                 <div class="chain-value">0.76 t/s</div>
             </div>
             <div class="chain-arrow">→</div>
@@ -140,15 +189,20 @@
             <div class="chain-arrow">→</div>
             <div class="chain-step reveal highlight">
                 <div class="chain-bar" style="height: 100%"></div>
-                <div class="chain-label">+FlashAttention</div>
+                <div class="chain-label">+FA</div>
                 <div class="chain-value">5.16 t/s</div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <!-- CTA -->
-    <section class="cta">
-        <h2 class="section-title">深入了解</h2>
+<!-- CTA -->
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">// 深入了解</span>
+            <h2 class="section-title">探索更多</h2>
+        </div>
         <div class="cta-grid">
             <a href="architecture.html" class="cta-card">
                 <h3>系统架构 →</h3>
@@ -163,14 +217,16 @@
                 <p>完整可复现的 SLIM-ARC 实现</p>
             </a>
         </div>
-    </section>
+    </div>
+</section>
 
-    <footer class="footer">
+<footer class="footer">
+    <div class="container">
         <p>SLIM-ARC · 2026 全国大学生系统能力大赛操作系统设计赛 Proj 59</p>
         <p>中山大学 · 依托Agent答辩OS团队</p>
-    </footer>
+    </div>
+</footer>
 
-    <script src="js/particles.js"></script>
-    <script src="js/main.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>
