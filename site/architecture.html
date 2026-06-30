@@ -8,79 +8,94 @@
     <link rel="icon" href="assets/logo_nobg.png">
 </head>
 <body>
-    <canvas id="particle-canvas"></canvas>
-    
-    <nav class="nav">
-        <div class="nav-logo">
+
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="index.html" class="nav-logo">
             <img src="assets/logo_nobg.png" alt="SLIM-ARC" class="nav-logo-img">
             <span class="nav-title">SLIM-ARC</span>
-        </div>
+        </a>
         <div class="nav-links">
             <a href="index.html">首页</a>
             <a href="architecture.html" class="active">架构</a>
             <a href="benchmark.html">基准测试</a>
             <a href="team.html">团队</a>
-            <a href="https://github.com/Nexa-Language/SLIM-ARC" target="_blank" class="nav-github">GitHub</a>
+            <a href="https://gitlab.eduxiji.net/T2026105589911358/project3136859-389100" target="_blank" class="nav-cta">GitLab ↗</a>
         </div>
-    </nav>
+    </div>
+</nav>
 
-    <header class="page-header">
-        <h1 class="gradient-text">三层协同架构</h1>
-        <p>利用操作系统虚拟内存机制作为 MoE 稀疏性的天然接口，零模型修改实现端侧大模型推理</p>
-    </header>
+<section class="hero" style="padding: 4rem 0 2rem;">
+    <div class="container">
+        <div class="hero-badge"><span class="dot"></span>// 系统架构</div>
+        <h1 class="hero-title">三层<span class="gradient-text">协同架构</span></h1>
+        <p class="hero-desc">利用操作系统虚拟内存机制作为 MoE 稀疏性的天然接口，零模型修改实现端侧大模型推理</p>
+    </div>
+</section>
 
-    <section style="padding-top: 2rem;">
-        <div class="arch-layer reveal">
-            <h3>🔧 内核协同层（底层）</h3>
-            <p>利用 mmap 将 45GB GGUF 模型映射到虚拟地址空间，通过 posix_madvise 控制页面预取策略。</p>
-            <ul>
-                <li><strong>mmap</strong>：45GB VSZ 虚拟映射，不占用物理内存</li>
-                <li><strong>MADV_RANDOM</strong>：禁用内核顺序预读，仅 page fault 时加载 → RSS 从 45GB 降至 2GB</li>
-                <li><strong>page cache</strong>：利用内核 demand paging，MoE 10/512 激活专家按需加载</li>
-                <li><strong>NVMe SSD</strong>：3.5GB/s 顺序读写，GGUF 文件直接 mmap</li>
-            </ul>
+<section class="section" style="border-top: none;">
+    <div class="container">
+        <div class="features-grid">
+            <div class="feature-card reveal">
+                <div class="feature-icon">🔧</div>
+                <h3>A. 内核协同层（底层）</h3>
+                <p>利用 mmap 将 45GB GGUF 模型映射到虚拟地址空间，通过 posix_madvise 控制页面预取策略。</p>
+                <ul style="margin-top: 0.75rem; padding-left: 1.25rem; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.8;">
+                    <li><strong>mmap</strong>：45GB VSZ 虚拟映射，不占物理内存</li>
+                    <li><strong>MADV_RANDOM</strong>：禁用顺序预读，page fault 加载 → RSS 45GB→2GB</li>
+                    <li><strong>page cache</strong>：MoE 10/512 激活专家按需加载</li>
+                    <li><strong>NVMe SSD</strong>：3.5GB/s，GGUF 直接 mmap</li>
+                </ul>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon">⚙️</div>
+                <h3>B. 运行时调度层（中层）</h3>
+                <p>基于运行时阶段（Prefill/Decode）和 MoE Router 输出，动态调度权重预取与专家选择性加载。</p>
+                <ul style="margin-top: 0.75rem; padding-left: 1.25rem; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.8;">
+                    <li><strong>prefetch_scheduler</strong>：层感知异步预取</li>
+                    <li><strong>MoE Router Hook</strong>：跨层预测激活专家</li>
+                    <li><strong>unified_io_scheduler</strong>：三路 I/O 带宽预算</li>
+                    <li><strong>StreamingLLM eviction</strong>：sink+window KV 驱逐</li>
+                </ul>
+            </div>
+            <div class="feature-card reveal">
+                <div class="feature-icon">📐</div>
+                <h3>C. 量化优化层（顶层）</h3>
+                <p>从算法层面降低内存占用和 I/O 带宽需求，配合 FlashAttention 加速 attention 计算。</p>
+                <ul style="margin-top: 0.75rem; padding-left: 1.25rem; color: var(--text-secondary); font-size: 0.88rem; line-height: 1.8;">
+                    <li><strong>IQ4_XS</strong>：45GB→40GB，cache 命中率提升</li>
+                    <li><strong>KV q4_0</strong>：KV 内存减半，decode +14%</li>
+                    <li><strong>FlashAttention</strong>：IO-aware tiling，+71.4%</li>
+                    <li><strong>REPACK=OFF</strong>：禁用 45→90GB 翻倍</li>
+                </ul>
+            </div>
         </div>
+    </div>
+</section>
 
-        <div class="arch-layer reveal">
-            <h3>⚙️ 运行时调度层（中层）</h3>
-            <p>基于运行时阶段（Prefill/Decode）和 MoE Router 输出，动态调度权重预取与专家选择性加载。</p>
-            <ul>
-                <li><strong>prefetch_scheduler</strong>：层感知异步预取，窗口大小随阶段调整（prefill=4层, decode=1层）</li>
-                <li><strong>MoE Router Hook</strong>：提取 ffn_moe_topk 张量，跨层预测激活专家</li>
-                <li><strong>unified_io_scheduler</strong>：权重/KV/专家三路 I/O 带宽预算分配</li>
-                <li><strong>StreamingLLM eviction</strong>：sink(4) + sliding window(1024) KV 驱逐</li>
-            </ul>
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">// 核心 Insight</span>
+            <h2 class="section-title">OS 虚拟内存 × MoE 稀疏性</h2>
         </div>
-
-        <div class="arch-layer reveal">
-            <h3>📐 量化优化层（顶层）</h3>
-            <p>从算法层面降低内存占用和 I/O 带宽需求，配合 FlashAttention 加速 attention 计算。</p>
-            <ul>
-                <li><strong>IQ4_XS</strong>：4.25 bpw 量化，45GB → 40GB，cache 命中率提升</li>
-                <li><strong>KV q4_0</strong>：KV Cache 内存减半，decode +14%</li>
-                <li><strong>FlashAttention</strong>：IO-aware tiling 融合，decode +71.4%</li>
-                <li><strong>GGML_CPU_REPACK=OFF</strong>：禁用重打包，避免 45→90GB 内存翻倍</li>
-            </ul>
-        </div>
-    </section>
-
-    <section>
-        <h2 class="section-title">核心 Insight</h2>
-        <div style="max-width: 800px; margin: 0 auto; text-align: center; padding: 3rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px;">
-            <p style="font-size: 1.3rem; line-height: 1.8; color: var(--text-primary);">
-                <span class="gradient-text" style="font-size: 1.5rem; font-weight: 700;">"MoE 模型的专家稀疏性与操作系统虚拟内存机制的结合，是实现端侧大模型推理的有效路径。"</span>
+        <div style="max-width: 800px; margin: 0 auto; padding: 2.5rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg);">
+            <p style="font-size: 1.1rem; line-height: 1.8; color: var(--text-secondary); text-align: center;">
+                <span class="gradient-text" style="font-size: 1.3rem; font-weight: 700;">"MoE 模型的专家稀疏性与操作系统虚拟内存机制的结合，是实现端侧大模型推理的有效路径。"</span>
                 <br><br>
-                通过 <code style="color: var(--accent-cyan);">posix_madvise(MADV_RANDOM)</code> 这一简单的内核接口调用，系统能够精确地只加载被激活的专家权重，将 45GB 模型的物理内存占用降至接近实际访问量（~2GB）。
+                通过 <code>posix_madvise(MADV_RANDOM)</code> 这一简单的内核接口调用，系统能够精确地只加载被激活的专家权重，将 45GB 模型的物理内存占用降至接近实际访问量（~2GB）。
             </p>
         </div>
-    </section>
+    </div>
+</section>
 
-    <footer class="footer">
+<footer class="footer">
+    <div class="container">
         <p>SLIM-ARC · 2026 全国大学生系统能力大赛操作系统设计赛 Proj 59</p>
         <p>中山大学 · 依托Agent答辩OS团队</p>
-    </footer>
+    </div>
+</footer>
 
-    <script src="js/particles.js"></script>
-    <script src="js/main.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>

@@ -6,31 +6,73 @@
     <title>团队 | SLIM-ARC</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" href="assets/logo_nobg.png">
+    <style>
+        .team-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1.25rem;
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        .team-card {
+            padding: 1.75rem;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            text-align: center;
+            transition: all 0.15s;
+        }
+        .team-card:hover { background: var(--bg-elevated); }
+        .team-avatar {
+            width: 56px; height: 56px;
+            border-radius: 50%;
+            background: var(--gradient);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0 auto 1rem;
+            font-family: var(--font-mono);
+        }
+        .team-name { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.25rem; }
+        .team-role { font-size: 0.85rem; color: var(--accent-bright); margin-bottom: 0.75rem; font-family: var(--font-mono); }
+        .team-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.7; }
+    </style>
 </head>
 <body>
-    <canvas id="particle-canvas"></canvas>
-    
-    <nav class="nav">
-        <div class="nav-logo">
+
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="index.html" class="nav-logo">
             <img src="assets/logo_nobg.png" alt="SLIM-ARC" class="nav-logo-img">
             <span class="nav-title">SLIM-ARC</span>
-        </div>
+        </a>
         <div class="nav-links">
             <a href="index.html">首页</a>
             <a href="architecture.html">架构</a>
             <a href="benchmark.html">基准测试</a>
             <a href="team.html" class="active">团队</a>
-            <a href="https://github.com/Nexa-Language/SLIM-ARC" target="_blank" class="nav-github">GitHub</a>
+            <a href="https://gitlab.eduxiji.net/T2026105589911358/project3136859-389100" target="_blank" class="nav-cta">GitLab ↗</a>
         </div>
-    </nav>
+    </div>
+</nav>
 
-    <header class="page-header">
-        <h1 class="gradient-text">依托Agent答辩OS</h1>
-        <p>中山大学 · 2026 全国大学生系统能力大赛操作系统设计赛 Proj 59</p>
-    </header>
+<section class="hero" style="padding: 4rem 0 2rem;">
+    <div class="container">
+        <div class="hero-badge"><span class="dot"></span>// 团队</div>
+        <h1 class="hero-title"><span class="gradient-text">依托Agent答辩OS</span></h1>
+        <p class="hero-desc">中山大学 · 2026 全国大学生系统能力大赛操作系统设计赛 Proj 59</p>
+    </div>
+</section>
 
-    <section style="padding-top: 2rem;">
-        <h2 class="section-title">团队成员</h2>
+<section class="section" style="border-top: none;">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">// 团队成员</span>
+            <h2 class="section-title">三人核心</h2>
+        </div>
         <div class="team-grid">
             <div class="team-card reveal">
                 <div class="team-avatar">欧</div>
@@ -51,10 +93,15 @@
                 <div class="team-desc">学术报告撰写<br>统计图表设计<br>展示网站开发</div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <section>
-        <h2 class="section-title">指导教师</h2>
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">// 指导教师</span>
+            <h2 class="section-title">指导教师</h2>
+        </div>
         <div class="team-grid" style="max-width: 600px;">
             <div class="team-card reveal">
                 <div class="team-avatar">赵</div>
@@ -69,23 +116,30 @@
                 <div class="team-desc">中山大学<br>大模型推理与系统设计</div>
             </div>
         </div>
-    </section>
+    </div>
+</section>
 
-    <section>
-        <h2 class="section-title">赛题信息</h2>
-        <div style="max-width: 600px; margin: 0 auto; padding: 2rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 16px; text-align: center;">
-            <p style="margin-bottom: 1rem;"><strong style="color: var(--accent-cyan);">赛题</strong>：Proj 59 内存受限环境的大语言模型推理优化问题</p>
-            <p style="margin-bottom: 1rem;"><strong style="color: var(--accent-cyan);">赛题维护</strong>：南开大学 宫晓利老师</p>
-            <p><strong style="color: var(--accent-cyan);">赛道</strong>：操作系统功能挑战赛</p>
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">// 赛题信息</span>
+            <h2 class="section-title">赛题信息</h2>
         </div>
-    </section>
+        <div style="max-width: 600px; margin: 0 auto; padding: 2rem; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); text-align: center;">
+            <p style="margin-bottom: 1rem; color: var(--text-secondary);"><strong style="color: var(--accent-bright);">赛题</strong>：Proj 59 内存受限环境的大语言模型推理优化问题</p>
+            <p style="margin-bottom: 1rem; color: var(--text-secondary);"><strong style="color: var(--accent-bright);">赛题维护</strong>：南开大学 宫晓利老师</p>
+            <p style="color: var(--text-secondary);"><strong style="color: var(--accent-bright);">赛道</strong>：操作系统功能挑战赛</p>
+        </div>
+    </div>
+</section>
 
-    <footer class="footer">
+<footer class="footer">
+    <div class="container">
         <p>SLIM-ARC · 2026 全国大学生系统能力大赛操作系统设计赛 Proj 59</p>
         <p>中山大学 · 依托Agent答辩OS团队</p>
-    </footer>
+    </div>
+</footer>
 
-    <script src="js/particles.js"></script>
-    <script src="js/main.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>

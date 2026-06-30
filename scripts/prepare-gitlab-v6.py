@@ -49,7 +49,25 @@ def main():
         "logs/ablation/ablation-20260623-020129.csv",
         "logs/ablation/ablation-20260623-020442.csv",
         "logs/ablation/ablation-20260623-024304.csv",
+        # reports/Competition_Report 只保留 main.pdf 和 figures/*.png
+        "reports/Competition_Report/main.tex",
+        "reports/Competition_Report/main.aux",
+        "reports/Competition_Report/main.bbl",
+        "reports/Competition_Report/main.blg",
+        "reports/Competition_Report/main.out",
+        "reports/Competition_Report/main.toc",
+        "reports/Competition_Report/reference.bib",
+        "reports/Competition_Report/README.md",
+        "reports/Competition_Report/LICENSE",
         "reports/Competition_Report/main_original.tex",
+        # figures 下只保留 *.png，删除 .py .md
+        "reports/Competition_Report/figures/draw_matplotlib.md",
+        "reports/Competition_Report/figures/figure_prompts.md",
+        "reports/Competition_Report/figures/generate_fa_scaling.py",
+        "reports/Competition_Report/figures/generate_figures_v2.py",
+        "reports/Competition_Report/figures/generate_updated_figures.py",
+        # demo 的 llama_cli_server.py fallback 不需要进 GitLab
+        "scripts/demo/llama_cli_server.py",
     }
     
     DAYS = ["2026-06-21", "2026-06-22", "2026-06-23", "2026-06-24", "2026-06-25", "2026-06-26"]

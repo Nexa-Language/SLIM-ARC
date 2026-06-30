@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-06-30 WSL2 网络栈 Bug（未修复）
+
+### 变更描述
+发现 WSL2 内核 6.18.35.2 的 TCP bind 系统调用异常：所有指定端口 bind() 返回 EADDRINUSE，但 /proc/net/tcp 无占用记录。导致 llama-server 和 Python http.server 都无法启动端口监听。6/29 能跑，6/30 突然不行，代码未变。
+
+### 影响
+- Demo 系统（scripts/demo/）无法运行，无法录屏
+- 详见 [`docs/bug-wsl2-network-bind.md`](docs/bug-wsl2-network-bind.md)
+
+### 建议修复（用户在 Windows 侧）
+- `wsl --shutdown` + `netsh winsock reset` + `netsh int ip reset` + 重启电脑
+- 或改用 bind(0) 随机端口方案（llama_cli_server.py）
+
+### 教训
+1. 诊断 WSL2 网络问题时应先检查 `/proc/net/tcp` 和 `dmesg`，不要盲目重启
+2. 绝不盲目 `kill -9` 未知 PID（曾误杀 VSCode Server 进程导致 VSCode 重连）
+3. WSL2 内核网络栈不稳定，比赛环境应准备纯 Linux 备用机
+
+---
+
 ## 2026-06-26 审计修复 + 文档全面更新
 
 ### 变更描述

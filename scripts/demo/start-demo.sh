@@ -46,6 +46,37 @@ echo ""
 # 确保日志目录存在
 mkdir -p "$PROJECT_ROOT/logs"
 
+# 启动前清理残留进程（避免端口冲突）
+# 只清理明确的服务进程，不碰脚本本身
+echo "[0/3] 清理残留进程..."
+PIDS_TO_KILL=$(pgrep -f "llama-server|scripts/demo/monitor\.py|http\.server 8090" 2>/dev/null || true)
+if [ -n "$PIDS_TO_KILL" ]; then
+    echo "  发现残留进程: $PIDS_TO_KILL"
+    # 排除当前脚本及其父进程
+    SELF_PID=$$
+    for p in $PIDS_TO_KILL; do
+        if [ "$p" != "$SELF_PID" ] && [ "$p" != "$PPID" ]; then
+            kill "$p" 2>/dev/null || true
+        fi
+    done
+    sleep 2
+    # 强制杀还在的
+    REMAIN=$(pgrep -f "llama-server|scripts/demo/monitor\.py|http\.server 8090" 2>/dev/null || true)
+    if [ -n "$REMAIN" ]; then
+        for p in $REMAIN; do
+            if [ "$p" != "$SELF_PID" ] && [ "$p" != "$PPID" ]; then
+                kill -9 "$p" 2>/dev/null || true
+            fi
+        done
+        sleep 1
+    fi
+    echo "  已清理"
+else
+    echo "  无残留"
+fi
+# 确保端口空闲
+sleep 1
+
 # 导出环境变量给 monitor
 export SLIM_ARC_MODEL="$MODEL_NAME"
 export SLIM_ARC_MODEL_SIZE="$MODEL_SIZE"
@@ -82,13 +113,24 @@ echo "  PID: $HTTP_PID"
 
 echo ""
 echo "等待服务就绪..."
+# 80B 模型加载需要更久（mmap 38GB）
+MAX_WAIT=8
+if [ "$MODEL_CHOICE" = "80b" ]; then
+    MAX_WAIT=36  # 36 * 5s = 180s = 3 分钟
+fi
 # 检查 llama-server
-for i in 1 2 3 4 5 6 7 8; do
+for i in $(seq 1 $MAX_WAIT); do
     if curl -s http://127.0.0.1:8080/health > /dev/null 2>&1; then
         echo "  llama-server 就绪 ✓"
         break
     fi
-    echo "  等待 llama-server ($i/8)..."
+    # 检查进程是否还活着
+    if ! kill -0 $LLAMA_PID 2>/dev/null; then
+        echo "  ⚠️ llama-server 进程已退出！查看 logs/demo-llama-server.log"
+        tail -5 "$PROJECT_ROOT/logs/demo-llama-server.log" 2>/dev/null
+        exit 1
+    fi
+    echo "  等待 llama-server ($i/$MAX_WAIT)..."
     sleep 5
 done
 

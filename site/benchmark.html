@@ -3,34 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>基准测试 | SLIM-ARC</title>
+    <title>实验数据 | SLIM-ARC</title>
     <link rel="stylesheet" href="css/style.css">
     <link rel="icon" href="assets/logo_nobg.png">
+    <style>
+        .bench-table {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto 1.5rem;
+            border-collapse: collapse;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            font-size: 0.9rem;
+        }
+        .bench-table th, .bench-table td {
+            padding: 0.75rem 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .bench-table th {
+            background: var(--bg-elevated);
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .bench-table td.highlight {
+            color: var(--accent-bright);
+            font-weight: 600;
+            font-family: var(--font-mono);
+        }
+        .bench-table tr:last-child td { border-bottom: none; }
+        .bench-table tr:hover { background: var(--bg-elevated); }
+        .bench-note {
+            text-align: center;
+            color: var(--text-muted);
+            max-width: 700px;
+            margin: 1rem auto 2rem;
+            font-size: 0.88rem;
+        }
+    </style>
 </head>
 <body>
-    <canvas id="particle-canvas"></canvas>
-    
-    <nav class="nav">
-        <div class="nav-logo">
+
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="index.html" class="nav-logo">
             <img src="assets/logo_nobg.png" alt="SLIM-ARC" class="nav-logo-img">
             <span class="nav-title">SLIM-ARC</span>
-        </div>
+        </a>
         <div class="nav-links">
             <a href="index.html">首页</a>
             <a href="architecture.html">架构</a>
             <a href="benchmark.html" class="active">基准测试</a>
             <a href="team.html">团队</a>
-            <a href="https://github.com/Nexa-Language/SLIM-ARC" target="_blank" class="nav-github">GitHub</a>
+            <a href="https://gitlab.eduxiji.net/T2026105589911358/project3136859-389100" target="_blank" class="nav-cta">GitLab ↗</a>
         </div>
-    </nav>
+    </div>
+</nav>
 
-    <header class="page-header">
-        <h1 class="gradient-text">实验数据</h1>
-        <p>遵循综述 ALEM 协议，三档环境 × 标准基准测试的系统化评估</p>
-    </header>
+<section class="hero" style="padding: 4rem 0 2rem;">
+    <div class="container">
+        <div class="hero-badge"><span class="dot"></span>// 实验数据</div>
+        <h1 class="hero-title"><span class="gradient-text">实验数据</span></h1>
+        <p class="hero-desc">遵循综述 ALEM 协议，三档环境 × 标准基准测试的系统化评估</p>
+    </div>
+</section>
 
-    <section style="padding-top: 2rem;">
-        <h2 class="section-title">三档环境性能（80B Q4_K_M）</h2>
+<section class="section" style="border-top: none;">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">// 核心实验</span>
+            <h2 class="section-title">三档环境性能（80B）</h2>
+        </div>
         <table class="bench-table reveal">
             <thead>
                 <tr><th>环境</th><th>线程</th><th>配置</th><th>pp (t/s)</th><th>tg (t/s)</th><th>vs baseline</th></tr>
@@ -43,10 +91,15 @@
                 <tr><td>32GB (热缓存)</td><td>8</td><td>SLIM-ARC (KV f16)</td><td>1.90</td><td>1.24</td><td>—</td></tr>
             </tbody>
         </table>
-    </section>
+    </div>
+</section>
 
-    <section>
-        <h2 class="section-title">FlashAttention 加速</h2>
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">// FlashAttention</span>
+            <h2 class="section-title">注意力融合加速</h2>
+        </div>
         <table class="bench-table reveal">
             <thead>
                 <tr><th>配置</th><th>pp64 (t/s)</th><th>tg48 (t/s)</th><th>提升</th></tr>
@@ -57,10 +110,15 @@
                 <tr><td class="highlight">-fa auto (最优)</td><td class="highlight">12.99</td><td class="highlight">5.16</td><td class="highlight">+71.4%</td></tr>
             </tbody>
         </table>
-    </section>
+    </div>
+</section>
 
-    <section>
-        <h2 class="section-title">GSM8K 推理精度（ALEM 协议）</h2>
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">// GSM8K 精度</span>
+            <h2 class="section-title">推理精度边界</h2>
+        </div>
         <table class="bench-table reveal">
             <thead>
                 <tr><th>模型</th><th>量化</th><th>GSM8K Acc</th><th>t/s</th><th>说明</th></tr>
@@ -68,16 +126,19 @@
             <tbody>
                 <tr><td>Qwen3-4B</td><td>Q4_K_M</td><td class="highlight">75%</td><td>7.8</td><td>推理保持</td></tr>
                 <tr><td>Qwen3-Next-80B</td><td>Q4_K_M + KV q4_0</td><td>50%</td><td>0.7</td><td>部分保持</td></tr>
-                <tr><td>Qwen3-Next-80B</td><td>IQ4_XS + KV q4_0</td><td style="color: var(--accent-pink)">0%</td><td>1.7</td><td>推理崩溃</td></tr>
+                <tr><td>Qwen3-Next-80B</td><td>IQ4_XS + KV q4_0</td><td style="color: var(--amber)">0%</td><td>1.7</td><td>推理崩溃</td></tr>
             </tbody>
         </table>
-        <p style="text-align: center; color: var(--text-secondary); max-width: 700px; margin: 2rem auto;">
-            关键发现：IQ4_XS 保持语言流畅性但数学推理崩溃，证明 PPL 不充分，GSM8K 更敏感。
-        </p>
-    </section>
+        <p class="bench-note">关键发现：IQ4_XS 保持语言流畅性但数学推理崩溃，证明 PPL 不充分，GSM8K 更敏感。</p>
+    </div>
+</section>
 
-    <section>
-        <h2 class="section-title">KV Eviction 效果</h2>
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <span class="section-eyebrow">// KV Eviction</span>
+            <h2 class="section-title">KV 缓存驱逐</h2>
+        </div>
         <table class="bench-table reveal">
             <thead>
                 <tr><th>配置</th><th>pp64 (t/s)</th><th>tg48 (t/s)</th><th>vs baseline</th></tr>
@@ -87,17 +148,17 @@
                 <tr><td class="highlight">KV eviction (sink=4, window=32)</td><td>4.85</td><td class="highlight">3.30</td><td class="highlight">+9.6%</td></tr>
             </tbody>
         </table>
-        <p style="text-align: center; color: var(--text-secondary); max-width: 700px; margin: 2rem auto;">
-            KV 内存释放给权重缓存，decode 反而加速 9.6%。
-        </p>
-    </section>
+        <p class="bench-note">KV 内存释放给权重缓存，decode 反而加速 9.6%。</p>
+    </div>
+</section>
 
-    <footer class="footer">
+<footer class="footer">
+    <div class="container">
         <p>SLIM-ARC · 2026 全国大学生系统能力大赛操作系统设计赛 Proj 59</p>
         <p>中山大学 · 依托Agent答辩OS团队</p>
-    </footer>
+    </div>
+</footer>
 
-    <script src="js/particles.js"></script>
-    <script src="js/main.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>
