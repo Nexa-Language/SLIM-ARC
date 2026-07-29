@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/llama-gemma3-cli.dir/deprecation-warning.cpp.o -o ../../bin/llama-gemma3-cli 

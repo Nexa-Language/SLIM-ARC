@@ -1,0 +1,39 @@
+cff-version: 1.2.0
+message: "If you use FlexInfer in your research, please cite the EuroMLSys paper."
+title: "FlexInfer"
+authors:
+  - family-names: Du
+    given-names: Hongchao
+  - family-names: Wu
+    given-names: Shangyu
+  - family-names: Kharlamova
+    given-names: Arina
+  - family-names: Guan
+    given-names: Nan
+  - family-names: Xue
+    given-names: Chun Jason
+preferred-citation:
+  type: conference-paper
+  title: "FlexInfer: Breaking Memory Constraint via Flexible and Efficient Offloading for On-Device LLM Inference"
+  authors:
+    - family-names: Du
+      given-names: Hongchao
+    - family-names: Wu
+      given-names: Shangyu
+    - family-names: Kharlamova
+      given-names: Arina
+    - family-names: Guan
+      given-names: Nan
+    - family-names: Xue
+      given-names: Chun Jason
+  collection-title: "Proceedings of the 5th Workshop on Machine Learning and Systems"
+  collection-type: proceedings
+  conference: "EuroMLSys '25"
+  location: "Rotterdam, Netherlands"
+  year: 2025
+  month: 3
+  start: 56
+  end: 65
+  publisher: "Association for Computing Machinery"
+  doi: "10.1145/3721146.3721961"
+  url: "https://doi.org/10.1145/3721146.3721961"

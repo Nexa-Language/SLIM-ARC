@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/llama-quantize-stats.dir/quantize-stats.cpp.o ../../common/CMakeFiles/build_info.dir/build-info.cpp.o -o ../../bin/llama-quantize-stats  -Wl,-rpath,/root/proj/Competition/OS-26/SLIM-ARC/src/flexinfer/build-host/src:/root/proj/Competition/OS-26/SLIM-ARC/src/flexinfer/build-host/ggml/src: ../../src/libllama.so ../../ggml/src/libggml.so 

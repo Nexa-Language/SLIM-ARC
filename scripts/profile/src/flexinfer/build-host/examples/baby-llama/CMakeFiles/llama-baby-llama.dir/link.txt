@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/llama-baby-llama.dir/baby-llama.cpp.o -o ../../bin/llama-baby-llama  -Wl,-rpath,/root/proj/Competition/OS-26/SLIM-ARC/src/flexinfer/build-host/src:/root/proj/Competition/OS-26/SLIM-ARC/src/flexinfer/build-host/ggml/src: ../../common/libcommon.a ../../src/libllama.so ../../ggml/src/libggml.so 

@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/llama-convert-llama2c-to-ggml.dir/convert-llama2c-to-ggml.cpp.o -o ../../bin/llama-convert-llama2c-to-ggml  -Wl,-rpath,/root/proj/Competition/OS-26/SLIM-ARC/src/flexinfer/build-host/src:/root/proj/Competition/OS-26/SLIM-ARC/src/flexinfer/build-host/ggml/src: ../../common/libcommon.a ../../src/libllama.so ../../ggml/src/libggml.so 

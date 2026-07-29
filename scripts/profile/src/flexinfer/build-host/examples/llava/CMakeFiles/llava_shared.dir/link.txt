@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -O3 -DNDEBUG -shared -Wl,-soname,libllava_shared.so -o libllava_shared.so CMakeFiles/llava.dir/llava.cpp.o CMakeFiles/llava.dir/clip.cpp.o  -Wl,-rpath,/root/proj/Competition/OS-26/SLIM-ARC/src/flexinfer/build-host/src:/root/proj/Competition/OS-26/SLIM-ARC/src/flexinfer/build-host/ggml/src: ../../src/libllama.so ../../ggml/src/libggml.so 

@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/test-backend-ops.dir/test-backend-ops.cpp.o CMakeFiles/test-backend-ops.dir/get-model.cpp.o -o ../bin/test-backend-ops  -Wl,-rpath,/root/proj/Competition/OS-26/SLIM-ARC/src/flexinfer/build-host/src:/root/proj/Competition/OS-26/SLIM-ARC/src/flexinfer/build-host/ggml/src: ../common/libcommon.a ../src/libllama.so ../ggml/src/libggml.so 

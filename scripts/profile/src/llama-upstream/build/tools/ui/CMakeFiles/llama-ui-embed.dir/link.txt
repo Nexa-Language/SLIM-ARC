@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/llama-ui-embed.dir/embed.cpp.o -o llama-ui-embed 

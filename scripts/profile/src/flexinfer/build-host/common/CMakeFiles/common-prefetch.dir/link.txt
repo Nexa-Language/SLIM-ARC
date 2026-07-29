@@ -1,0 +1,2 @@
+/usr/bin/ar qc libcommon-prefetch.a CMakeFiles/common-prefetch.dir/arg.cpp.o CMakeFiles/common-prefetch.dir/common.cpp.o CMakeFiles/common-prefetch.dir/console.cpp.o CMakeFiles/common-prefetch.dir/json-schema-to-grammar.cpp.o CMakeFiles/common-prefetch.dir/log.cpp.o CMakeFiles/common-prefetch.dir/ngram-cache.cpp.o CMakeFiles/common-prefetch.dir/sampling.cpp.o CMakeFiles/common-prefetch.dir/train.cpp.o CMakeFiles/build_info.dir/build-info.cpp.o
+/usr/bin/ranlib libcommon-prefetch.a

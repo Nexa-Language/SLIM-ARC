@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/test-barrier.dir/test-barrier.cpp.o CMakeFiles/test-barrier.dir/get-model.cpp.o -o ../bin/test-barrier  -Wl,-rpath,/root/proj/Competition/OS-26/SLIM-ARC/src/flexinfer/build-host/src:/root/proj/Competition/OS-26/SLIM-ARC/src/flexinfer/build-host/ggml/src: ../common/libcommon.a ../src/libllama.so ../ggml/src/libggml.so 

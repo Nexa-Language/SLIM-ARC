@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/flexinfer-bench.dir/llama-bench.cpp.o -o ../../bin/flexinfer-bench  -Wl,-rpath,/root/proj/Competition/OS-26/SLIM-ARC/src/flexinfer/build-host/src:/root/proj/Competition/OS-26/SLIM-ARC/src/flexinfer/build-host/ggml/src: ../../common/libcommon-prefetch.a ../../src/libllama-prefetch.so ../../ggml/src/libggml-prefetch.so 

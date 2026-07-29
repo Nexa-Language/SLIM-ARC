@@ -1,0 +1,22 @@
+FlexInfer
+=========
+
+This repository contains the FlexInfer research artifact.
+
+FlexInfer includes code derived from the llama.cpp project and its associated
+components, including ggml and gguf-py. Those components are distributed under
+MIT-style license terms. Retain the upstream copyright and permission notices
+when redistributing source or binary artifacts.
+
+Relevant upstream components in this repository include:
+
+- `ggml/`
+- `gguf-py/`
+- `src/`, `include/`, `common/`, and `examples/` code originating from the
+  llama.cpp ecosystem
+- additional embedded third-party source files that retain their own notices,
+  including `common/json.hpp`, `common/stb_image.h`,
+  `examples/server/httplib.h`, and `ggml/src/ggml-sycl/`
+
+See `LICENSE`, `gguf-py/LICENSE`, and source-file notices where present. Model
+weights are not included in this repository.

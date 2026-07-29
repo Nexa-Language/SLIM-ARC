@@ -1,0 +1,1 @@
+/usr/bin/c++ -fPIC -O3 -DNDEBUG -shared -Wl,-soname,libggml-prefetch.so -o libggml-prefetch.so CMakeFiles/ggml-prefetch.dir/ggml.c.o CMakeFiles/ggml-prefetch.dir/ggml-alloc.c.o CMakeFiles/ggml-prefetch.dir/ggml-backend.cpp.o CMakeFiles/ggml-prefetch.dir/ggml-quants.c.o CMakeFiles/ggml-prefetch.dir/ggml-thread-status.c.o CMakeFiles/ggml-prefetch.dir/ggml-aarch64.c.o  -lm 

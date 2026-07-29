@@ -1,0 +1,13 @@
+gguf==0.10.0
+importlib-metadata==8.0.0
+importlib-resources==6.4.0
+jaraco.collections==5.1.0
+pip-chill==1.0.3
+platformdirs==4.2.2
+protobuf==4.25.5
+sentencepiece==0.2.0
+tomli==2.0.1
+torch==2.2.2
+transformers==4.45.1
+numpy==1.26.4
+huggingface-hub==0.27.0
