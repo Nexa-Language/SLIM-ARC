@@ -1,0 +1,116 @@
+{
+  "name": "@vite-pwa/assets-generator",
+  "type": "module",
+  "version": "1.0.2",
+  "description": "Zero-config PWA Assets Generator",
+  "author": "antfu <anthonyfu117@hotmail.com>",
+  "license": "MIT",
+  "funding": "https://github.com/sponsors/antfu",
+  "homepage": "https://github.com/vite-pwa/assets-generator#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vite-pwa/assets-generator.git"
+  },
+  "bugs": "https://github.com/vite-pwa/assets-generator/issues",
+  "keywords": [
+    "sharp",
+    "sharp-ico",
+    "pwa",
+    "pwa icons generator",
+    "pwa assets generator"
+  ],
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    },
+    "./config": {
+      "import": "./dist/config.mjs",
+      "require": "./dist/config.cjs"
+    },
+    "./presets": {
+      "import": "./dist/presets.mjs",
+      "require": "./dist/presets.cjs"
+    },
+    "./presets/minimal": {
+      "import": "./dist/presets/minimal.mjs",
+      "require": "./dist/presets/minimal.cjs"
+    },
+    "./presets/minimal-2023": {
+      "import": "./dist/presets/minimal-2023.mjs",
+      "require": "./dist/presets/minimal-2023.cjs"
+    },
+    "./api": {
+      "import": "./dist/api.mjs",
+      "require": "./dist/api.cjs"
+    },
+    "./api/instructions": {
+      "import": "./dist/api/instructions.mjs",
+      "require": "./dist/api/instructions.cjs"
+    },
+    "./api/generate-html-markup": {
+      "import": "./dist/api/generate-html-markup.mjs",
+      "require": "./dist/api/generate-html-markup.cjs"
+    },
+    "./api/generate-manifest-icons-entry": {
+      "import": "./dist/api/generate-manifest-icons-entry.mjs",
+      "require": "./dist/api/generate-manifest-icons-entry.cjs"
+    },
+    "./api/generate-assets": {
+      "import": "./dist/api/generate-assets.mjs",
+      "require": "./dist/api/generate-assets.cjs"
+    },
+    "./package.json": "./package.json",
+    "./*": "./*"
+  },
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "typesVersions": {
+    "*": {
+      "*": [
+        "./dist/*",
+        "./*"
+      ]
+    }
+  },
+  "bin": {
+    "pwa-assets-generator": "./bin/pwa-assets-generator.mjs"
+  },
+  "files": [
+    "bin",
+    "dist"
+  ],
+  "engines": {
+    "node": ">=16.14.0"
+  },
+  "dependencies": {
+    "cac": "^6.7.14",
+    "colorette": "^2.0.20",
+    "consola": "^3.4.2",
+    "sharp": "^0.33.5",
+    "sharp-ico": "^0.1.5",
+    "unconfig": "^7.3.1"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^5.4.1",
+    "@antfu/ni": "^26.1.0",
+    "@types/debug": "^4.1.12",
+    "@types/node": "^18.17.15",
+    "bumpp": "^10.3.1",
+    "eslint": "^9.37.0",
+    "esno": "^4.8.0",
+    "typescript": "^5.8.2",
+    "unbuild": "^3.5.0",
+    "vitest": "^3.0.9"
+  },
+  "scripts": {
+    "build": "unbuild && tsx scripts/postbuild.ts",
+    "lint": "eslint .",
+    "lint:fix": "nr lint --fix",
+    "release": "bumpp",
+    "run-playground": "pnpm -C playground run build",
+    "test": "vitest run"
+  }
+}
