@@ -1,0 +1,2 @@
+/usr/bin/ar qc libllama-common-base.a CMakeFiles/llama-common-base.dir/build-info.cpp.o
+/usr/bin/ranlib libllama-common-base.a

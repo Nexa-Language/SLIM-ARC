@@ -1,0 +1,2 @@
+/usr/bin/ar qc libgguf-model-data.a CMakeFiles/gguf-model-data.dir/gguf-model-data.cpp.o
+/usr/bin/ranlib libgguf-model-data.a
