@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/llama-qwen2vl-cli.dir/deprecation-warning.cpp.o -o ../../bin/llama-qwen2vl-cli 
