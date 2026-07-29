@@ -1,0 +1,30 @@
+{
+	"version": 3,
+	"file": "mod.d.ts",
+	"names": [
+		"print",
+		"SvelteNode",
+		"Directive",
+		"AttributeLike",
+		"Block",
+		"ElementLike",
+		"HtmlNode",
+		"Tag",
+		"TemplateNode",
+		"SupportedSvelteNode",
+		"Node",
+		"Options"
+	],
+	"sources": [
+		"../src/mod.js",
+		"../src/nodes.js",
+		"../src/options.js"
+	],
+	"sourcesContent": [
+		null,
+		null,
+		null
+	],
+	"mappings": ";;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;mBAkEgBA,KAAKA;;;;;;;;;;;;;MCzDkCC,UAAUA;;;;MAKwIC,SAASA;MAGnJC,aAAaA;;;;MAgCiBC,KAAKA;;;;MA+DqKC,WAAWA;MAiC5OC,QAAQA;;;;MAmC8CC,GAAGA;;;;MAoB+BC,YAAYA;;;;;MA8B9DC,mBAAmBA;;;;MAMhDC,IAAIA;;;;;;OCtKtCC,OAAOA",
+	"ignoreList": []
+}

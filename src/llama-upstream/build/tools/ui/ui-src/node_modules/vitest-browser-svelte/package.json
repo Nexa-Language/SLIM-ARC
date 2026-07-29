@@ -1,0 +1,73 @@
+{
+  "name": "vitest-browser-svelte",
+  "type": "module",
+  "version": "2.1.1",
+  "description": "Render Svelte components in Vitest Browser Mode",
+  "author": "Vitest Community",
+  "license": "MIT",
+  "funding": "https://opencollective.com/vitest",
+  "homepage": "https://github.com/vitest-community/vitest-browser-svelte#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vitest-community/vitest-browser-svelte.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vitest-community/vitest-browser-svelte/issues"
+  },
+  "keywords": [
+    "svelte",
+    "vitest",
+    "browser",
+    "testing"
+  ],
+  "exports": {
+    ".": {
+      "types": "./types/index.d.ts",
+      "default": "./src/index.js"
+    },
+    "./pure": {
+      "types": "./types/pure.d.ts",
+      "default": "./src/pure.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "./src/index.js",
+  "module": "./src/index.js",
+  "types": "./types/index.d.ts",
+  "files": [
+    "src",
+    "types"
+  ],
+  "peerDependencies": {
+    "svelte": "^3 || ^4 || ^5 || ^5.0.0-next.0",
+    "vitest": "^4.0.0"
+  },
+  "dependencies": {
+    "@testing-library/svelte-core": "^1.0.0"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^2.24.1",
+    "@playwright/test": "^1.58.2",
+    "@sveltejs/vite-plugin-svelte": "^6.2.1",
+    "@types/node": "^24.10.1",
+    "@vitest/browser-playwright": "4.1.0-beta.6",
+    "bumpp": "^9.4.2",
+    "changelogithub": "^0.13.9",
+    "eslint": "^9.8.0",
+    "playwright": "^1.58.2",
+    "svelte": "^5.34.2",
+    "tsup": "^8.2.4",
+    "tsx": "^4.17.0",
+    "typescript": "^5.5.4",
+    "vite": "^7.1.9",
+    "vitest": "4.1.0-beta.6",
+    "zx": "^8.1.4"
+  },
+  "scripts": {
+    "test": "vitest",
+    "publish-ci": "tsx scripts/publish-ci.ts",
+    "release": "tsx scripts/release.ts",
+    "lint": "eslint --cache .",
+    "lint:fix": "pnpm lint --fix"
+  }
+}
