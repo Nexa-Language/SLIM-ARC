@@ -1,0 +1,1 @@
+import"clsx";import"../../../../../chunks/url2.js";import"style-to-object";import"../../../../../chunks/url.js";import"@sveltejs/kit/internal/server";import"../../../../../chunks/root.js";import{v as t}from"../../../../../chunks/api-key-validation.js";const s=async({fetch:o})=>{await t()};export{s as load};

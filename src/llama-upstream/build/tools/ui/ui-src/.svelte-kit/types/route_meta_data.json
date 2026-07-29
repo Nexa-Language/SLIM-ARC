@@ -1,0 +1,12 @@
+{
+	"/(chat)": [
+		"src/routes/(chat)/+page.ts"
+	],
+	"/": [],
+	"/(chat)/chat/[id]": [
+		"src/routes/(chat)/chat/[id]/+page.ts"
+	],
+	"/mcp-servers": [],
+	"/settings": [],
+	"/settings/[[section]]": []
+}

@@ -1,0 +1,1 @@
+import{s as n}from"./root.js";import{I as e}from"./url2.js";function m(r,s){r.component(p=>{let{$$slots:a,$$events:i,...o}=s;e(p,n([{name:"arrow-right"},o,{iconNode:[["path",{d:"M5 12h14"}],["path",{d:"m12 5 7 7-7 7"}]],children:t=>{o.children?.(t),t.push("<!---->")},$$slots:{default:!0}}]))})}export{m as A};

@@ -1,0 +1,508 @@
+{
+  ".svelte-kit/generated/server/internal.js": {
+    "file": "internal.js",
+    "name": "internal",
+    "src": ".svelte-kit/generated/server/internal.js",
+    "isEntry": true,
+    "imports": [
+      "_root.js",
+      "_environment.js",
+      "_server.js",
+      "_internal.js"
+    ]
+  },
+  "_ActionIcon.js": {
+    "file": "chunks/ActionIcon.js",
+    "name": "ActionIcon",
+    "imports": [
+      "_root.js",
+      "_sidebar-menu-button.js",
+      "_popper-layer-force-mount.js",
+      "_url2.js"
+    ]
+  },
+  "_DialogConfirmation.bHHIbcsu.css": {
+    "file": "_app/immutable/assets/DialogConfirmation.bHHIbcsu.css",
+    "src": "_DialogConfirmation.bHHIbcsu.css"
+  },
+  "_DialogConfirmation.js": {
+    "file": "chunks/DialogConfirmation.js",
+    "name": "DialogConfirmation",
+    "imports": [
+      "_sidebar-menu-button.js",
+      "_root.js",
+      "_url2.js",
+      "_trash-2.js",
+      "_input.js",
+      "_popper-layer-force-mount.js",
+      "_index.js",
+      "_label.js"
+    ],
+    "css": [
+      "_app/immutable/assets/DialogConfirmation.bHHIbcsu.css"
+    ]
+  },
+  "_DialogModelNotAvailable.js": {
+    "file": "chunks/DialogModelNotAvailable.js",
+    "name": "DialogModelNotAvailable",
+    "imports": [
+      "_root.js",
+      "_index.js",
+      "_url.js",
+      "_utils2.js",
+      "_exports.js",
+      "_sidebar-menu-button.js",
+      "_url2.js",
+      "_arrow-right.js"
+    ]
+  },
+  "_McpServerIdentity.js": {
+    "file": "chunks/McpServerIdentity.js",
+    "name": "McpServerIdentity",
+    "imports": [
+      "_popper-layer-force-mount.js",
+      "_sidebar-menu-button.js",
+      "_root.js",
+      "_url2.js",
+      "_index.js",
+      "_DialogConfirmation.js",
+      "_url.js",
+      "_utils2.js",
+      "_exports.js"
+    ]
+  },
+  "_api-key-validation.js": {
+    "file": "chunks/api-key-validation.js",
+    "name": "api-key-validation",
+    "imports": [
+      "_url.js",
+      "_root.js",
+      "_url2.js"
+    ]
+  },
+  "_app.js": {
+    "file": "chunks/app.js",
+    "name": "app"
+  },
+  "_arrow-right.js": {
+    "file": "chunks/arrow-right.js",
+    "name": "arrow-right",
+    "imports": [
+      "_root.js",
+      "_url2.js"
+    ]
+  },
+  "_card.js": {
+    "file": "chunks/card.js",
+    "name": "card",
+    "imports": [
+      "_root.js",
+      "_sidebar-menu-button.js",
+      "_url2.js"
+    ]
+  },
+  "_chat.svelte.js": {
+    "file": "chunks/chat.svelte.js",
+    "name": "chat.svelte",
+    "imports": [
+      "_root.js",
+      "_url2.js",
+      "_sidebar-menu-button.js",
+      "_index.js",
+      "_conversations.svelte.js",
+      "_url.js",
+      "_DialogConfirmation.js"
+    ]
+  },
+  "_conversations.svelte.js": {
+    "file": "chunks/conversations.svelte.js",
+    "name": "conversations.svelte",
+    "imports": [
+      "_root.js",
+      "_sidebar-menu-button.js",
+      "_url2.js",
+      "_url.js"
+    ]
+  },
+  "_dialog-footer.js": {
+    "file": "chunks/dialog-footer.js",
+    "name": "dialog-footer",
+    "imports": [
+      "_root.js",
+      "_url2.js",
+      "_sidebar-menu-button.js",
+      "_trash-2.js"
+    ]
+  },
+  "_environment.js": {
+    "file": "chunks/environment.js",
+    "name": "environment"
+  },
+  "_exports.js": {
+    "file": "chunks/exports.js",
+    "name": "exports",
+    "imports": [
+      "_root.js"
+    ]
+  },
+  "_index.js": {
+    "file": "chunks/index.js",
+    "name": "index",
+    "imports": [
+      "_server.js",
+      "_url.js",
+      "_root.js",
+      "_url2.js",
+      "_sidebar-menu-button.js",
+      "_conversations.svelte.js"
+    ]
+  },
+  "_index2.js": {
+    "file": "chunks/index2.js",
+    "name": "index",
+    "imports": [
+      "_root.js",
+      "_sidebar-menu-button.js",
+      "_conversations.svelte.js"
+    ]
+  },
+  "_input.js": {
+    "file": "chunks/input.js",
+    "name": "input",
+    "imports": [
+      "_root.js",
+      "_sidebar-menu-button.js"
+    ]
+  },
+  "_internal.js": {
+    "file": "chunks/internal.js",
+    "name": "internal",
+    "imports": [
+      "_root.js",
+      "_environment.js",
+      "_server.js"
+    ]
+  },
+  "_label.js": {
+    "file": "chunks/label.js",
+    "name": "label",
+    "imports": [
+      "_root.js",
+      "_sidebar-menu-button.js"
+    ]
+  },
+  "_popper-layer-force-mount.js": {
+    "file": "chunks/popper-layer-force-mount.js",
+    "name": "popper-layer-force-mount",
+    "imports": [
+      "_root.js",
+      "_sidebar-menu-button.js",
+      "_url2.js"
+    ]
+  },
+  "_refresh-cw.js": {
+    "file": "chunks/refresh-cw.js",
+    "name": "refresh-cw",
+    "imports": [
+      "_root.js",
+      "_url2.js"
+    ]
+  },
+  "_render-context.js": {
+    "file": "chunks/render-context.js",
+    "name": "render-context"
+  },
+  "_root.js": {
+    "file": "chunks/root.js",
+    "name": "root",
+    "imports": [
+      "_render-context.js"
+    ]
+  },
+  "_server.js": {
+    "file": "chunks/server.js",
+    "name": "server"
+  },
+  "_sidebar-menu-button.C8AtXost.css": {
+    "file": "_app/immutable/assets/sidebar-menu-button.C8AtXost.css",
+    "src": "_sidebar-menu-button.C8AtXost.css"
+  },
+  "_sidebar-menu-button.js": {
+    "file": "chunks/sidebar-menu-button.js",
+    "name": "sidebar-menu-button",
+    "imports": [
+      "_root.js",
+      "_url.js",
+      "_utils2.js",
+      "_exports.js",
+      "_url2.js",
+      "_server.js",
+      "_render-context.js"
+    ],
+    "css": [
+      "_app/immutable/assets/sidebar-menu-button.C8AtXost.css"
+    ]
+  },
+  "_trash-2.js": {
+    "file": "chunks/trash-2.js",
+    "name": "trash-2",
+    "imports": [
+      "_root.js",
+      "_sidebar-menu-button.js",
+      "_url2.js"
+    ]
+  },
+  "_url.js": {
+    "file": "chunks/url.js",
+    "name": "url"
+  },
+  "_url2.js": {
+    "file": "chunks/url2.js",
+    "name": "url",
+    "imports": [
+      "_root.js"
+    ]
+  },
+  "_utils.js": {
+    "file": "chunks/utils.js",
+    "name": "utils",
+    "imports": [
+      "_utils2.js",
+      "_render-context.js"
+    ]
+  },
+  "_utils2.js": {
+    "file": "chunks/utils2.js",
+    "name": "utils"
+  },
+  "node_modules/@sveltejs/kit/src/runtime/app/server/remote/index.js": {
+    "file": "remote-entry.js",
+    "name": "remote-entry",
+    "src": "node_modules/@sveltejs/kit/src/runtime/app/server/remote/index.js",
+    "isEntry": true,
+    "imports": [
+      "_utils.js",
+      "_render-context.js",
+      "_server.js",
+      "_environment.js"
+    ]
+  },
+  "node_modules/@sveltejs/kit/src/runtime/server/index.js": {
+    "file": "index.js",
+    "name": "index",
+    "src": "node_modules/@sveltejs/kit/src/runtime/server/index.js",
+    "isEntry": true,
+    "imports": [
+      "_utils.js",
+      "_render-context.js",
+      "_server.js",
+      "_url.js",
+      "_utils2.js",
+      "_exports.js",
+      "_internal.js"
+    ]
+  },
+  "node_modules/workbox-window/build/workbox-window.prod.es5.mjs": {
+    "file": "chunks/workbox-window.prod.es5.js",
+    "name": "workbox-window.prod.es5",
+    "src": "node_modules/workbox-window/build/workbox-window.prod.es5.mjs",
+    "isDynamicEntry": true
+  },
+  "src/routes/(chat)/+layout.svelte": {
+    "file": "entries/pages/(chat)/_layout.svelte.js",
+    "name": "entries/pages/(chat)/_layout.svelte",
+    "src": "src/routes/(chat)/+layout.svelte",
+    "isEntry": true,
+    "imports": [
+      "_root.js",
+      "_DialogConfirmation.js",
+      "_sidebar-menu-button.js",
+      "_url2.js",
+      "_url.js",
+      "_utils2.js",
+      "_exports.js",
+      "_index.js",
+      "_conversations.svelte.js",
+      "_chat.svelte.js",
+      "_McpServerIdentity.js",
+      "_ActionIcon.js",
+      "_input.js",
+      "_dialog-footer.js",
+      "_label.js",
+      "_refresh-cw.js",
+      "_arrow-right.js",
+      "_trash-2.js",
+      "_card.js",
+      "_index2.js",
+      "_popper-layer-force-mount.js"
+    ]
+  },
+  "src/routes/(chat)/+page.svelte": {
+    "file": "entries/pages/(chat)/_page.svelte.js",
+    "name": "entries/pages/(chat)/_page.svelte",
+    "src": "src/routes/(chat)/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_root.js",
+      "_sidebar-menu-button.js",
+      "_url2.js",
+      "_app.js",
+      "_url.js",
+      "_index.js",
+      "_utils2.js",
+      "_exports.js",
+      "_DialogModelNotAvailable.js"
+    ]
+  },
+  "src/routes/(chat)/+page.ts": {
+    "file": "entries/pages/(chat)/_page.ts.js",
+    "name": "entries/pages/(chat)/_page.ts",
+    "src": "src/routes/(chat)/+page.ts",
+    "isEntry": true,
+    "imports": [
+      "_url2.js",
+      "_url.js",
+      "_root.js",
+      "_api-key-validation.js"
+    ]
+  },
+  "src/routes/(chat)/chat/[id]/+page.svelte": {
+    "file": "entries/pages/(chat)/chat/_id_/_page.svelte.js",
+    "name": "entries/pages/(chat)/chat/_id_/_page.svelte",
+    "src": "src/routes/(chat)/chat/[id]/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_root.js",
+      "_url.js",
+      "_utils2.js",
+      "_exports.js",
+      "_sidebar-menu-button.js",
+      "_url2.js",
+      "_app.js",
+      "_index.js",
+      "_conversations.svelte.js",
+      "_DialogModelNotAvailable.js"
+    ]
+  },
+  "src/routes/(chat)/chat/[id]/+page.ts": {
+    "file": "entries/pages/(chat)/chat/_id_/_page.ts.js",
+    "name": "entries/pages/(chat)/chat/_id_/_page.ts",
+    "src": "src/routes/(chat)/chat/[id]/+page.ts",
+    "isEntry": true,
+    "imports": [
+      "_url2.js",
+      "_url.js",
+      "_root.js",
+      "_api-key-validation.js"
+    ]
+  },
+  "src/routes/+error.svelte": {
+    "file": "entries/pages/_error.svelte.js",
+    "name": "entries/pages/_error.svelte",
+    "src": "src/routes/+error.svelte",
+    "isEntry": true,
+    "imports": [
+      "_root.js",
+      "_url.js",
+      "_utils2.js",
+      "_exports.js",
+      "_sidebar-menu-button.js",
+      "_url2.js",
+      "_app.js",
+      "_server.js",
+      "_input.js",
+      "_label.js",
+      "_refresh-cw.js"
+    ]
+  },
+  "src/routes/+layout.svelte": {
+    "file": "entries/pages/_layout.svelte.js",
+    "name": "entries/pages/_layout.svelte",
+    "src": "src/routes/+layout.svelte",
+    "isEntry": true,
+    "imports": [
+      "_root.js",
+      "_url.js",
+      "_utils2.js",
+      "_exports.js",
+      "_sidebar-menu-button.js",
+      "_ActionIcon.js",
+      "_url2.js",
+      "_chat.svelte.js",
+      "_conversations.svelte.js",
+      "_DialogConfirmation.js",
+      "_index.js",
+      "_app.js",
+      "_input.js",
+      "_label.js",
+      "_trash-2.js",
+      "_card.js"
+    ],
+    "dynamicImports": [
+      "node_modules/workbox-window/build/workbox-window.prod.es5.mjs"
+    ],
+    "css": [
+      "_app/immutable/assets/_layout.DxzEI5GJ.css"
+    ]
+  },
+  "src/routes/mcp-servers/+page.svelte": {
+    "file": "entries/pages/mcp-servers/_page.svelte.js",
+    "name": "entries/pages/mcp-servers/_page.svelte",
+    "src": "src/routes/mcp-servers/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_url2.js",
+      "_url.js",
+      "_root.js",
+      "_utils2.js",
+      "_exports.js",
+      "_sidebar-menu-button.js",
+      "_index2.js",
+      "_conversations.svelte.js",
+      "_input.js",
+      "_dialog-footer.js",
+      "_trash-2.js",
+      "_card.js"
+    ]
+  },
+  "src/routes/settings/+layout.svelte": {
+    "file": "entries/pages/settings/_layout.svelte.js",
+    "name": "entries/pages/settings/_layout.svelte",
+    "src": "src/routes/settings/+layout.svelte",
+    "isEntry": true,
+    "imports": [
+      "_sidebar-menu-button.js",
+      "_ActionIcon.js",
+      "_url2.js",
+      "_url.js",
+      "_root.js"
+    ]
+  },
+  "src/routes/settings/[[section]]/+page.svelte": {
+    "file": "entries/pages/settings/__section__/_page.svelte.js",
+    "name": "entries/pages/settings/__section__/_page.svelte",
+    "src": "src/routes/settings/[[section]]/+page.svelte",
+    "isEntry": true,
+    "imports": [
+      "_root.js",
+      "_sidebar-menu-button.js",
+      "_url2.js",
+      "_conversations.svelte.js",
+      "_DialogConfirmation.js",
+      "_McpServerIdentity.js",
+      "_url.js",
+      "_index.js",
+      "_utils2.js",
+      "_exports.js",
+      "_label.js",
+      "_index2.js",
+      "_trash-2.js",
+      "_input.js",
+      "_popper-layer-force-mount.js",
+      "_refresh-cw.js"
+    ],
+    "css": [
+      "_app/immutable/assets/_page.CV-KWLNP.css"
+    ]
+  }
+}
