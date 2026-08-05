@@ -153,7 +153,10 @@ def patch_model_loader(filepath):
             }
         }
     }
-}"""
+"""
+    # SLIM-ARC FIX 2026-08-05: removed trailing "}" from prefetch_block.
+    # init_mappings already ends with its own "}" right after the size loop,
+    # so the old extra "}" produced "expected declaration before '}'".
 
     # Insert before the closing brace of init_mappings
     # Find "size_data += ggml_nbytes" loop end and insert after
@@ -181,6 +184,11 @@ def patch_context(filepath):
     if '<vector>' not in content:
         content = content.replace('#include <limits>', '#include <limits>\n#include <vector>', 1)
         print("  added <vector>")
+    # SLIM-ARC FIX 2026-08-05: the inserted graph_compute hook uses INT_MAX,
+    # which requires <climits>. Keep this separate for independent idempotency.
+    if '#include <climits>' not in content:
+        content = content.replace('#include <limits>', '#include <limits>\n#include <climits>', 1)
+        print("  added <climits>")
 
     # Insert graph_compute SLIM-ARC block before ggml_backend_sched_graph_compute_async
     slim_block = """

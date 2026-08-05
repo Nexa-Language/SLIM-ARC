@@ -27,6 +27,13 @@ struct tensor_prefetch_info {
     uint64_t signature; // monotonic counter to detect graph changes
 };
 
+// SLIM-ARC FIX 2026-08-05: runtime compute phase used by set_phase().
+// Consumed by the graph_compute hook inserted by scripts/apply-slim-arc.py.
+enum class compute_phase {
+    PREFILL,   // batched / prefill graph compute
+    DECODE,    // token-by-token decode graph compute
+};
+
 class prefetch_scheduler {
   public:
     explicit prefetch_scheduler(int n_threads = 2, int window = 3);
@@ -46,6 +53,24 @@ class prefetch_scheduler {
     // Collect statistics
     size_t total_prefetched_bytes() const { return total_bytes_.load(); }
     int    total_prefetch_calls()   const { return total_calls_.load(); }
+
+    // SLIM-ARC FIX 2026-08-05: interface required by the hooks inserted by
+    // scripts/apply-slim-arc.py and by slim-arc-unified-scheduler.cpp.
+    // Set current compute phase (PREFILL vs DECODE).
+    void set_phase(compute_phase phase) { phase_.store(phase); }
+    // Current effective prefetch lookahead window (in layers).
+    int effective_window() const { return window_; }
+    // Set weight prefetch bandwidth budget (bytes per cycle).
+    void set_memory_budget(size_t bytes) { memory_budget_.store(bytes); }
+    // Register a 3D-merged MoE expert tensor (ne[2] == n_experts).
+    void register_expert_tensor(const char * name, void * addr, size_t size,
+                                int layer, int n_experts);
+    // Cache router-selected expert IDs for a layer (from ffn_moe_topk).
+    void cache_router_experts(int layer, const int * experts, int n);
+    // Get cached router expert IDs for a layer; sets *n to count, returns nullptr if none.
+    const int * get_cached_experts(int layer, int * n) const;
+    // Issue madvise(WILLNEED) for the given experts of a layer.
+    void prefetch_experts(int layer, const int * experts, int n);
 
   private:
     void worker_loop();
@@ -67,6 +92,19 @@ class prefetch_scheduler {
 
     // tensor registry indexed by layer
     std::vector<std::vector<tensor_prefetch_info>> tensors_by_layer_;
+
+    // SLIM-ARC FIX 2026-08-05: phase/budget state and MoE expert bookkeeping.
+    std::atomic<compute_phase> phase_{compute_phase::PREFILL};
+    std::atomic<size_t>        memory_budget_{0};
+
+    // per-expert sub-range of a 3D-merged expert tensor
+    struct expert_tensor_info {
+        void * base_addr;        // tensor start address
+        size_t per_expert_size;  // bytes per expert (size / n_experts)
+        int    n_experts;        // number of experts
+    };
+    std::vector<std::vector<expert_tensor_info>> expert_tensors_by_layer_;
+    std::vector<std::vector<int>>                cached_experts_by_layer_;
 };
 
 // Global singleton (set by llama_context during init)
@@ -75,5 +113,9 @@ void set_global_prefetch_scheduler(prefetch_scheduler * s);
 
 // Helper: extract layer index from tensor name (blk.%d.*)
 int tensor_layer_from_name(const char * name);
+
+// SLIM-ARC FIX 2026-08-05: register an mmap region for potential dynamic MADV
+// switching (called by llama-model-loader when MADV_RANDOM is applied).
+void register_mmap_region(void * addr, size_t size);
 
 } // namespace slim_arc

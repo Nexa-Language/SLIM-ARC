@@ -1,0 +1,4 @@
+Script started on 2026-08-05 01:29:45+08:00 [COMMAND="/usr/bin/time -v timeout 300 ./src/llama-upstream/build/bin/llama-cli -m data/models/Qwen3-4B-Q4_K_M.gguf -t 4 -c 256 -p "The capital of China is" -n 32 --single-turn < /dev/null" TERM="xterm-256color" TTY="/dev/pts/11" COLUMNS="104" LINES="13"]
+bash: line 1: /usr/bin/time: No such file or directory
+
+Script done on 2026-08-05 01:29:45+08:00 [COMMAND_EXIT_CODE="127"]

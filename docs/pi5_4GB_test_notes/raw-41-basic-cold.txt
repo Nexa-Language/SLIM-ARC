@@ -1,0 +1,39 @@
+Script started on 2026-08-05 01:19:07+08:00 [COMMAND="timeout 300 ./src/llama-upstream/build/bin/llama-cli -m data/models/Qwen3-4B-Q4_K_M.gguf -t 4 -c 256 -p "The capital of China is" -n 32 --single-turn < /dev/null" TERM="xterm-256color" TTY="/dev/pts/12" COLUMNS="104" LINES="13"]
+
+
+Loading model... |-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/ 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b1-1c3c967
+model      : data/models/Qwen3-4B-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+[1m[32m
+> The capital of China is
+[0m[90m
+[Start thinking]
+
+Okay, the user is asking for the capital of China. Let me recall. China's capital is Beijing. But wait, I should make sure.[0m
+[35m
+[ Prompt: 9.6 t/s | Generation: 4.1 t/s ]
+[0m
+
+Exiting...
+
+Script done on 2026-08-05 01:19:22+08:00 [COMMAND_EXIT_CODE="0"]

@@ -7,16 +7,27 @@
 
 #include <algorithm>
 #include <cstring>
+#include <utility>
 #include <sys/mman.h>
 
 namespace slim_arc {
 
 namespace {
 prefetch_scheduler * g_scheduler = nullptr;
+// SLIM-ARC FIX 2026-08-05: registry of mmap regions registered for potential
+// dynamic MADV switching (populated by llama-model-loader).
+std::mutex                             g_mmap_mtx;
+std::vector<std::pair<void *, size_t>> g_mmap_regions;
 }
 
 prefetch_scheduler * get_global_prefetch_scheduler() { return g_scheduler; }
 void set_global_prefetch_scheduler(prefetch_scheduler * s) { g_scheduler = s; }
+
+void register_mmap_region(void * addr, size_t size) {
+    if (!addr || size == 0) return;
+    std::lock_guard<std::mutex> lk(g_mmap_mtx);
+    g_mmap_regions.emplace_back(addr, size);
+}
 
 int tensor_layer_from_name(const char * name) {
     if (!name) return -1;
@@ -68,6 +79,54 @@ void prefetch_scheduler::notify_layer_compute(int current_layer) {
         target_signature_ = ++signature_;
     }
     cv_.notify_one();
+}
+
+void prefetch_scheduler::register_expert_tensor(const char * name, void * addr, size_t size,
+                                                int layer, int n_experts) {
+    (void) name;  // name kept for interface symmetry with register_tensor
+    if (layer < 0 || addr == nullptr || size == 0 || n_experts <= 1) return;
+    if ((size_t)layer >= expert_tensors_by_layer_.size()) {
+        expert_tensors_by_layer_.resize(layer + 1);
+    }
+    expert_tensors_by_layer_[layer].push_back({addr, size / (size_t)n_experts, n_experts});
+}
+
+void prefetch_scheduler::cache_router_experts(int layer, const int * experts, int n) {
+    if (layer < 0 || experts == nullptr || n <= 0) return;
+    std::lock_guard<std::mutex> lk(mtx_);
+    if ((size_t)layer >= cached_experts_by_layer_.size()) {
+        cached_experts_by_layer_.resize(layer + 1);
+    }
+    cached_experts_by_layer_[layer].assign(experts, experts + n);
+}
+
+const int * prefetch_scheduler::get_cached_experts(int layer, int * n) const {
+    if (n) *n = 0;
+    if (layer < 0 || (size_t)layer >= cached_experts_by_layer_.size()) return nullptr;
+    const auto & v = cached_experts_by_layer_[layer];
+    if (v.empty()) return nullptr;
+    if (n) *n = (int) v.size();
+    return v.data();
+}
+
+void prefetch_scheduler::prefetch_experts(int layer, const int * experts, int n) {
+    if (!enabled_.load()) return;
+    if (layer < 0 || experts == nullptr || n <= 0) return;
+    if ((size_t)layer >= expert_tensors_by_layer_.size()) return;
+    size_t bytes_this_round = 0;
+    std::lock_guard<std::mutex> lk(mtx_);
+    for (const auto & et : expert_tensors_by_layer_[layer]) {
+        if (et.base_addr == nullptr || et.per_expert_size == 0) continue;
+        for (int i = 0; i < n; ++i) {
+            int eid = experts[i];
+            if (eid < 0 || eid >= et.n_experts) continue;
+            void * eaddr = (uint8_t *) et.base_addr + (size_t) eid * et.per_expert_size;
+            (void) posix_madvise(eaddr, et.per_expert_size, POSIX_MADV_WILLNEED);
+            bytes_this_round += et.per_expert_size;
+        }
+    }
+    total_bytes_.fetch_add(bytes_this_round);
+    total_calls_.fetch_add(1);
 }
 
 void prefetch_scheduler::worker_loop() {

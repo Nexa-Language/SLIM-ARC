@@ -1,0 +1,39 @@
+Script started on 2026-08-05 01:17:55+08:00 [COMMAND="timeout 300 ./src/llama-upstream/build/bin/llama-cli -m data/models/Qwen3-4B-Q4_K_M.gguf -t 4 -c 128 -p "Hi" -n 8 --single-turn < /dev/null" TERM="xterm-256color" TTY="/dev/pts/12" COLUMNS="104" LINES="13"]
+
+
+Loading model... |-\|/-\|/-\|/-\|/-\|/-\|/-\|/ 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b1-1c3c967
+model      : data/models/Qwen3-4B-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+[1m[32m
+> Hi
+[0m[90m
+[Start thinking]
+
+Okay, the user just said[0m
+[35m
+[ Prompt: 11.6 t/s | Generation: 3.8 t/s ]
+[0m
+
+Exiting...
+
+Script done on 2026-08-05 01:18:01+08:00 [COMMAND_EXIT_CODE="0"]
