@@ -1,0 +1,17 @@
+llama-bench: benchmark 1/4: starting
+llama-bench: benchmark 1/4: prompt run 1/1
+| model                          |       size |     params | backend    | threads |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --------------: | -------------------: |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       4 |            pp32 |          0.35 ± 0.00 |
+llama-bench: benchmark 2/4: starting
+llama-bench: benchmark 2/4: generation run 1/1
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       4 |            tg16 |          0.23 ± 0.00 |
+llama-bench: benchmark 3/4: starting
+llama-bench: benchmark 3/4: prompt run 1/1
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       8 |            pp32 |          0.89 ± 0.00 |
+llama-bench: benchmark 4/4: starting
+llama-bench: benchmark 4/4: generation run 1/1
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       8 |            tg16 |          0.48 ± 0.00 |
+
+build: 360e134 (1)
+B6 EXIT=0

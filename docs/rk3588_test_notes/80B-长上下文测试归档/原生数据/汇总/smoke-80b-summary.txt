@@ -1,0 +1,19 @@
+# Phase 2 冒烟测试汇总 - 2026-08-06
+# 模型: Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf (45.09 GiB)
+# 命令: llama-cli -p "Hello, how are you?" -n 16 -c 256 -t 4 -st -no-cnv
+# 结论: 三组配置全部 EXIT=0, 无 OOM, 80B 在 8GB RK3588 端侧可运行
+
+## 1. 默认 (SLIM-ARC 全开) - raw-80b-smoke-default.txt
+# Prompt: 0.5 t/s | Generation: 0.5 t/s | 耗时: 122.0s | RSS峰值: 6.29 GiB | EXIT=0
+# 输出: "Hello! I'm doing great, thank you for asking! 😊 How about"
+
+## 2. SLIM_ARC_DISABLE=1 - raw-80b-smoke-disable.txt
+# Prompt: 1.7 t/s | Generation: 1.9 t/s | 耗时: 54.8s | RSS峰值: 6.26 GiB | EXIT=0
+
+## 3. SLIM_ARC_NO_MADV_RANDOM=1 - raw-80b-smoke-nomadv.txt
+# Prompt: 1.4 t/s | Generation: 1.8 t/s | 耗时: 55.4s | RSS峰值: 6.50 GiB | EXIT=0
+
+## 关键观察
+# - 80B mmap 加载可行, 虚拟地址空间 46.6GiB, 驻留内存仅 ~6.3GiB (按需分页生效证据)
+# - SLIM-ARC 开启时 pp/tg 较慢 (0.5 vs 1.7/1.8), 疑似 MADV_RANDOM 关闭 readahead 所致
+# - 需 Phase 4 strace 确认 MADV_RANDOM/WILLNEED 系统调用

@@ -1,0 +1,80 @@
+===== SLIM-ARC git status =====
+On branch main
+Your branch is up to date with 'origin/main'.
+
+Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git restore <file>..." to discard changes in working directory)
+	modified:   patches/llama-upstream/slim-arc-prefetch.cpp
+	modified:   patches/llama-upstream/slim-arc-prefetch.h
+	modified:   scripts/apply-slim-arc.py
+
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	docs/prompt.md
+	docs/rk3588_test_notes/
+
+no changes added to commit (use "git add" and/or "git commit -a")
+===== 产物清单 (docs/rk3588_test_notes/) =====
+total 312
+drwxrwxr-x 2 orangepi orangepi  4096 Aug  6 01:42 .
+drwxrwxr-x 8 orangepi orangepi  4096 Aug  6 00:35 ..
+-rw-rw-r-- 1 orangepi orangepi   704 Aug  6 00:44 apply-slim-arc-log-2.txt
+-rw-rw-r-- 1 orangepi orangepi   819 Aug  6 00:46 apply-slim-arc-log-3.txt
+-rw-rw-r-- 1 orangepi orangepi  1073 Aug  6 00:40 apply-slim-arc-log.txt
+-rw-rw-r-- 1 orangepi orangepi  1156 Aug  6 00:56 binaries-check.txt
+-rw-rw-r-- 1 orangepi orangepi  9927 Aug  6 00:42 build-rk3588-attempt-1.log
+-rw-rw-r-- 1 orangepi orangepi  3540 Aug  6 00:45 build-rk3588-attempt-2.log
+-rw-rw-r-- 1 orangepi orangepi 22913 Aug  6 00:56 build-rk3588-attempt-3.log
+-rw-rw-r-- 1 orangepi orangepi   583 Aug  6 00:57 cgroup-prep.txt
+-rw-rw-r-- 1 orangepi orangepi  3304 Aug  6 00:40 cmake-config-log.txt
+-rw-rw-r-- 1 orangepi orangepi 42662 Aug  6 01:39 download-olmoe.log
+-rw-rw-r-- 1 orangepi orangepi 24413 Aug  6 01:02 download-qwen3-4b.log
+-rw-rw-r-- 1 orangepi orangepi  4816 Aug  6 00:35 env-snapshot-rk3588.txt
+-rw-rw-r-- 1 orangepi orangepi   600 Aug  6 00:36 git-status-snapshot.txt
+-rw-rw-r-- 1 orangepi orangepi   113 Aug  6 00:56 hf-download-probe.txt
+-rw-rw-r-- 1 orangepi orangepi  1375 Aug  6 00:57 hf-download-test.txt
+-rw-rw-r-- 1 orangepi orangepi   424 Aug  6 01:03 model-verify.txt
+-rwxrwxr-x 1 orangepi orangepi   698 Aug  6 01:19 monitor-peak-rss.sh
+-rw-rw-r-- 1 orangepi orangepi   561 Aug  6 00:37 network-check.txt
+-rw-rw-r-- 1 orangepi orangepi   300 Aug  6 01:30 olmoe-download-probe.txt
+-rw-rw-r-- 1 orangepi orangepi   658 Aug  6 01:30 olmoe-files.txt
+-rw-rw-r-- 1 orangepi orangepi  1669 Aug  6 01:30 olmoe-search.txt
+-rw-rw-r-- 1 orangepi orangepi   287 Aug  6 01:40 olmoe-verify.txt
+-rw-rw-r-- 1 orangepi orangepi  1181 Aug  6 01:18 raw-bench-faoff.txt
+-rw-rw-r-- 1 orangepi orangepi  1299 Aug  6 01:12 raw-bench-kvq4.txt
+-rw-rw-r-- 1 orangepi orangepi   559 Aug  6 01:07 raw-bench-p128n64.txt
+-rw-rw-r-- 1 orangepi orangepi   558 Aug  6 01:05 raw-bench-p64n32.txt
+-rw-rw-r-- 1 orangepi orangepi  1227 Aug  6 01:22 raw-infer-c512.out
+-rw-rw-r-- 1 orangepi orangepi     0 Aug  6 01:22 raw-infer-c512.stderr
+-rw-rw-r-- 1 orangepi orangepi  1224 Aug  6 01:22 raw-infer-cold-c1024.out
+-rw-rw-r-- 1 orangepi orangepi     0 Aug  6 01:22 raw-infer-cold-c1024.stderr
+-rw-rw-r-- 1 orangepi orangepi  1234 Aug  6 01:22 raw-infer-hot-c1024.out
+-rw-rw-r-- 1 orangepi orangepi     0 Aug  6 01:22 raw-infer-hot-c1024.stderr
+-rw-rw-r-- 1 orangepi orangepi  6497 Aug  6 01:29 raw-kv-evict.out
+-rw-rw-r-- 1 orangepi orangepi  1181 Aug  6 01:30 raw-nomadv.out
+-rw-rw-r-- 1 orangepi orangepi  1913 Aug  6 01:41 raw-olmoe.out
+-rw-rw-r-- 1 orangepi orangepi     0 Aug  6 01:40 raw-olmoe.stderr
+-rw-rw-r-- 1 orangepi orangepi  1348 Aug  6 01:03 raw-smoke-default.txt
+-rw-rw-r-- 1 orangepi orangepi  1360 Aug  6 01:03 raw-smoke-disable.txt
+-rw-rw-r-- 1 orangepi orangepi  9647 Aug  6 01:41 RK3588-SLIMARC测试报告-2026-08-05.md
+-rw-rw-r-- 1 orangepi orangepi  5438 Aug  6 00:57 root-cause-build-2026-08-05.md
+-rw-rw-r-- 1 orangepi orangepi   577 Aug  6 00:38 src-status.txt
+-rw-rw-r-- 1 orangepi orangepi  2366 Aug  6 00:36 storage-info.txt
+-rw-rw-r-- 1 orangepi orangepi  1357 Aug  6 00:36 submodule-check.txt
+-rw-rw-r-- 1 orangepi orangepi   653 Aug  6 01:42 t6-finalize.txt
+-rw-rw-r-- 1 orangepi orangepi   130 Aug  6 01:22 test-cold-hot.log
+-rwxrwxr-x 1 orangepi orangepi  1467 Aug  6 01:22 test-cold-hot.sh
+-rw-rw-r-- 1 orangepi orangepi  1391 Aug  6 01:29 test-kv-evict-summary.txt
+-rw-rw-r-- 1 orangepi orangepi   216 Aug  6 01:30 test-nomadv-summary.txt
+-rw-rw-r-- 1 orangepi orangepi  1278 Aug  6 00:36 toolchain-check.txt
+-rw-rw-r-- 1 orangepi orangepi   483 Aug  6 00:39 upstream-status.txt
+===== 镜像一致性验证 (patches vs src) =====
+一致: slim-arc-prefetch.h
+一致: slim-arc-prefetch.cpp
+一致: slim-arc-unified-scheduler.h
+一致: slim-arc-unified-scheduler.cpp
+一致: slim-arc-kv-eviction.h
+一致: slim-arc-kv-eviction.cpp
+一致: slim-arc-on-demand.h
+一致: slim-arc-on-demand.cpp

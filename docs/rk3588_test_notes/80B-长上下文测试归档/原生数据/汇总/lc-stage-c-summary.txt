@@ -1,0 +1,23 @@
+# 阶段 C 结果汇总（-c 8192 大上下文）
+# 日期: 2026-08-07
+
+## bench 结果
+# LC14 默认 n128:  pp 2.44 | tg 0.53 | EXIT=0
+# LC15 DISABLE n128: pp 6.34 | tg 2.15 | EXIT=0
+# LC16 NO_MADV n128: pp 6.34 | tg 2.13 | EXIT=0
+# LC17 默认 n256:  pp 2.43 | tg 0.57 | EXIT=0
+# LC18 NO_PREFETCH n256: pp 2.40 | tg 0.55 | EXIT=0
+
+## cli 端到端 (c8192 n256)
+# LC19 默认:   Prompt 0.5 | Gen 0.5 | RSS峰值 6.50GiB | EXIT=0 | 无OOM
+# LC20 DISABLE: Prompt 2.1 | Gen 1.0 | RSS峰值 6.50GiB | EXIT=0 | 无OOM
+
+## 关键结论
+# 1. -c 8192 大上下文下 SLIM-ARC 仍负优化: tg 0.53 vs 2.15 (约4x)
+# 2. -n 256 长生成下预取无交叉点: LC17(0.57) vs LC18(0.55) 几乎相同
+# 3. MADV_RANDOM 仍为主因: LC14 vs LC16 (2.44 vs 6.34)
+# 4. RSS 峰值稳定 6.50GiB < 8GB, 无 OOM, 无 swap 迹象
+# 5. 大上下文 KV cache 增量未显著推高 RSS (计划估算 256-768MiB, 实测稳定)
+
+## 内存边界结论
+# -c 8192 f16 KV 下 RSS 6.50GB, 余量约 1.5GB -> -c 16384 预计可测 (准入满足)

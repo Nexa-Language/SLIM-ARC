@@ -1,0 +1,21 @@
+# 阶段 A 结果汇总（-p 512 n64, t4, 长上下文测试）
+# 日期: 2026-08-07
+# 注意: llama-bench 不支持 -c 参数，用 -p 512 控制上下文规模
+# 与短上下文 B1-B4 (-p 32 n16) 对比
+
+## 结果
+# LC1 默认全开:  pp 2.43 | tg 0.43 | EXIT=0
+# LC2 DISABLE:   pp 6.35 | tg 1.96 | EXIT=0
+# LC3 NO_MADV:   pp 6.33 | tg 1.97 | EXIT=0
+# LC4 NO_PREFETCH: pp 2.41 | tg 0.45 | EXIT=0
+
+## 趋势校准
+# LC1 < LC3 ≈ LC2 (pp), LC1 ≈ LC4 => 与短上下文 B1 < B3 < B2 趋势一致 ✅
+# MADV_RANDOM 仍是主要性能杀手 (LC1 vs LC3: pp 2.43 vs 6.33)
+# 预取无显著影响 (LC1 vs LC4: pp 2.43 vs 2.41)
+
+## 对比短上下文 B1-B4
+# B1 pp 0.39 -> LC1 pp 2.43 (prompt 更长时 pp 提升, 合理)
+# B2 pp 2.02 -> LC2 pp 6.35
+# tg: B1 0.23 -> LC1 0.43; B2 0.89 -> LC2 1.96
+# 说明: prompt 从 32 增至 512 tokens 时, 吞吐均提升 (长 prompt 摊薄固定开销)

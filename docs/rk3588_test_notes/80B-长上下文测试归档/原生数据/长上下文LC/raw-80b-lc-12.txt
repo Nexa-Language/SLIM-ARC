@@ -1,0 +1,36 @@
+
+
+Loading model... |-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\| 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b1-360e134
+model      : /home/orangepi/ssd/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+
+> Please write a detailed essay about the history of computing, covering the key milestones from the invention of the transistor to modern AI. Include at least three major eras and discuss their impact on society.
+**The History of Computing: From the Transistor to Modern AI — Three Eras That Transformed Society**
+
+The history of computing is a remarkable saga of human ingenuity, marked by revolutionary breakthroughs that have fundamentally reshaped civilization. From the humble transistor to today’s artificial intelligence systems, computing has evolved through distinct eras, each characterized by transformative technologies and profound societal impacts. This essay explores three major eras in computing history — the Transistor Era (1947–1970s), the Microprocessor and Personal Computing Era (1970s–1990s), and the Internet and Artificial
+
+[ Prompt: 2.3 t/s | Generation: 2.0 t/s ]
+
+
+Exiting...
+LC12 EXIT=0

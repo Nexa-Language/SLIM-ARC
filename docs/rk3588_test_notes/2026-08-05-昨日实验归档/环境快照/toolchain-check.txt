@@ -1,0 +1,26 @@
+===== 工具链 =====
+cmake version 3.22.1
+gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
+g++ (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0
+GNU Make 4.3
+Python 3.10.12
+===== 磁盘剩余 =====
+/dev/mmcblk0p2   28G  4.6G   24G  17% /
+===== 内存可用 =====
+Mem:           7.8Gi       1.0Gi       3.3Gi        16Mi       3.4Gi       6.6Gi
+Swap:          3.9Gi          0B       3.9Gi
+===== apply-slim-arc.py =====
+-rw-rw-r-- 1 orangepi orangepi 16578 Aug  6 00:10 scripts/apply-slim-arc.py
+===== patches 目录 =====
+total 56
+drwxrwxr-x 2 orangepi orangepi 4096 Aug  6 00:10 .
+drwxrwxr-x 3 orangepi orangepi 4096 Aug  6 00:10 ..
+-rw-rw-r-- 1 orangepi orangepi 3647 Aug  6 00:10 slim-arc-integration.patch
+-rw-rw-r-- 1 orangepi orangepi 5453 Aug  6 00:10 slim-arc-kv-eviction.cpp
+-rw-rw-r-- 1 orangepi orangepi 3011 Aug  6 00:10 slim-arc-kv-eviction.h
+-rw-rw-r-- 1 orangepi orangepi 7919 Aug  6 00:10 slim-arc-on-demand.cpp
+-rw-rw-r-- 1 orangepi orangepi 4054 Aug  6 00:10 slim-arc-on-demand.h
+-rw-rw-r-- 1 orangepi orangepi 3258 Aug  6 00:10 slim-arc-prefetch.cpp
+-rw-rw-r-- 1 orangepi orangepi 2652 Aug  6 00:10 slim-arc-prefetch.h
+-rw-rw-r-- 1 orangepi orangepi 4745 Aug  6 00:10 slim-arc-unified-scheduler.cpp
+-rw-rw-r-- 1 orangepi orangepi 3802 Aug  6 00:10 slim-arc-unified-scheduler.h

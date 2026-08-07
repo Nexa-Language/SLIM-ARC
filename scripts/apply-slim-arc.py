@@ -153,9 +153,12 @@ def patch_model_loader(filepath):
             }
         }
     }
-}"""
+"""
 
     # Insert before the closing brace of init_mappings
+    # SLIM-ARC FIX 2026-08-05: prefetch_block 不再以 '}' 关闭函数 —— 原函数
+    # init_mappings 自身的右大括号仍保留在插入点之后，若此处多写一个 '}' 会产生
+    # "expected declaration before '}' token" 编译错误（重复大括号）。
     # Find "size_data += ggml_nbytes" loop end and insert after
     size_loop_end = "    for (const auto & it : weights_map) {\n        size_data += ggml_nbytes(it.second.tensor);\n    }"
     if 'set_global_prefetch_scheduler' not in content:
@@ -181,6 +184,11 @@ def patch_context(filepath):
     if '<vector>' not in content:
         content = content.replace('#include <limits>', '#include <limits>\n#include <vector>', 1)
         print("  added <vector>")
+    # SLIM-ARC FIX 2026-08-05: llama-context.cpp 使用 INT_MAX，需 <climits>（修复 INT_MAX 级联错误，
+    # 否则 max_layer 声明被吞导致 'not declared in this scope'）。<limits> 不保证提供 INT_MAX。
+    if '<climits>' not in content:
+        content = content.replace('#include <limits>', '#include <limits>\n#include <climits>', 1)
+        print("  added <climits>")
 
     # Insert graph_compute SLIM-ARC block before ggml_backend_sched_graph_compute_async
     slim_block = """

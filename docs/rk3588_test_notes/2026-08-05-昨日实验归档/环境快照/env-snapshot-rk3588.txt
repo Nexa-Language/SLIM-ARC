@@ -1,0 +1,133 @@
+===== 环境快照生成时间 =====
+Wed Aug  5 04:35:57 PM UTC 2026
+===== uname =====
+Linux orangepi5plus 5.10.160-rockchip-rk3588 #1.2.0 SMP Wed Nov 20 18:11:49 CST 2024 aarch64 aarch64 aarch64 GNU/Linux
+===== 发行版 =====
+PRETTY_NAME="Orange Pi 1.2.0 Jammy"
+NAME="Ubuntu"
+VERSION_ID="22.04"
+VERSION="22.04.5 LTS (Jammy Jellyfish)"
+VERSION_CODENAME=jammy
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=jammy
+===== CPU =====
+Architecture:                    aarch64
+CPU op-mode(s):                  32-bit, 64-bit
+Byte Order:                      Little Endian
+CPU(s):                          8
+On-line CPU(s) list:             0-7
+Vendor ID:                       ARM
+Model name:                      Cortex-A55
+Model:                           0
+Thread(s) per core:              1
+Core(s) per socket:              4
+Socket(s):                       1
+Stepping:                        r2p0
+CPU max MHz:                     1800.0000
+CPU min MHz:                     408.0000
+BogoMIPS:                        48.00
+Flags:                           fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp
+Model name:                      Cortex-A76
+Model:                           0
+Thread(s) per core:              1
+Core(s) per socket:              2
+Socket(s):                       2
+Stepping:                        r4p0
+CPU max MHz:                     2400.0000
+CPU min MHz:                     408.0000
+BogoMIPS:                        48.00
+Flags:                           fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm lrcpc dcpop asimddp
+L1d cache:                       384 KiB (8 instances)
+L1i cache:                       384 KiB (8 instances)
+L2 cache:                        2.5 MiB (8 instances)
+L3 cache:                        3 MiB (1 instance)
+Vulnerability Itlb multihit:     Not affected
+Vulnerability L1tf:              Not affected
+Vulnerability Mds:               Not affected
+Vulnerability Meltdown:          Not affected
+Vulnerability Mmio stale data:   Not affected
+Vulnerability Retbleed:          Not affected
+Vulnerability Spec store bypass: Mitigation; Speculative Store Bypass disabled via prctl
+Vulnerability Spectre v1:        Mitigation; __user pointer sanitization
+Vulnerability Spectre v2:        Vulnerable: Unprivileged eBPF enabled
+Vulnerability Srbds:             Not affected
+Vulnerability Tsx async abort:   Not affected
+===== 内存 =====
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       1.0Gi       3.4Gi        16Mi       3.3Gi       6.6Gi
+Swap:          3.9Gi          0B       3.9Gi
+===== meminfo 前20行 =====
+MemTotal:        8130936 kB
+MemFree:         3561792 kB
+MemAvailable:    6939548 kB
+Buffers:           53168 kB
+Cached:          3202076 kB
+SwapCached:            0 kB
+Active:           456044 kB
+Inactive:        3717048 kB
+Active(anon):        616 kB
+Inactive(anon):   934040 kB
+Active(file):     455428 kB
+Inactive(file):  2783008 kB
+Unevictable:           0 kB
+Mlocked:               0 kB
+SwapTotal:       4065464 kB
+SwapFree:        4065464 kB
+Dirty:                28 kB
+Writeback:             0 kB
+AnonPages:        917908 kB
+Mapped:           183336 kB
+===== cgroup =====
+cgroup.controllers
+cgroup.max.depth
+cgroup.max.descendants
+cgroup.procs
+cgroup.stat
+cgroup.subtree_control
+cgroup.threads
+cpu.pressure
+cpuset.cpus.effective
+cpuset.mems.effective
+cpu.stat
+dev-hugepages.mount
+dev-mqueue.mount
+init.scope
+io.pressure
+io.stat
+memory.pressure
+memory.stat
+proc-sys-fs-binfmt_misc.mount
+sys-fs-fuse-connections.mount
+sys-kernel-config.mount
+sys-kernel-debug.mount
+sys-kernel-tracing.mount
+system.slice
+user.slice
+===== CONFIG_MEMCG =====
+CONFIG_MEMCG=y
+CONFIG_MEMCG_SWAP=y
+CONFIG_MEMCG_KMEM=y
+# CONFIG_SLUB_MEMCG_SYSFS_ON is not set
+===== 存储设备 =====
+NAME         SIZE TYPE MOUNTPOINT MODEL
+mtdblock0     16M disk            
+mmcblk0     29.7G disk            
+├─mmcblk0p1    1G part /boot      
+└─mmcblk0p2 28.4G part /          
+zram0        3.9G disk [SWAP]     
+zram1        200M disk /var/log   
+===== 磁盘 =====
+Filesystem     Type   Size  Used Avail Use% Mounted on
+tmpfs          tmpfs  795M   17M  778M   3% /run
+/dev/mmcblk0p2 ext4    28G  4.6G   24G  17% /
+tmpfs          tmpfs  3.9G     0  3.9G   0% /dev/shm
+tmpfs          tmpfs  5.0M  4.0K  5.0M   1% /run/lock
+tmpfs          tmpfs  3.9G  4.0K  3.9G   1% /tmp
+/dev/mmcblk0p1 vfat  1022M  123M  900M  12% /boot
+/dev/zram1     ext4   188M  1.8M  172M   2% /var/log
+tmpfs          tmpfs  795M     0  795M   0% /run/user/1000

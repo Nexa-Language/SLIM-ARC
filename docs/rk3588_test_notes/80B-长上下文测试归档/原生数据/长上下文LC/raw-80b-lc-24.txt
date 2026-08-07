@@ -1,0 +1,147 @@
+
+
+Loading model... |-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\ 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b1-360e134
+model      : /home/orangepi/ssd/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+
+> The history of artificial intelligence spans several decades. The history of artificial intelligence spans several decades. The history of artificial intelligence spans several decades. The history of artificial intelligence spans several decades. The history of artificial intelligence spans several decades. The history of artificial intelligence spans several decades. The history of artificial intelligence spans several decades. The history of artificial intelligence spans several decades. The  ... (truncated)
+ItSLIM-ARC KV eviction: ENABLED (sink=4, window=256)
+SLIM-ARC KV eviction: evicted [4,1104) (seq_len 1360->260)
+ seemsSLIM-ARC KV eviction: evicted [1104,1105) (seq_len 1361->1360)
+ youSLIM-ARC KV eviction: evicted [1105,1106) (seq_len 1362->1361)
+'veSLIM-ARC KV eviction: evicted [1106,1107) (seq_len 1363->1362)
+ pastSLIM-ARC KV eviction: evicted [1107,1108) (seq_len 1364->1363)
+edSLIM-ARC KV eviction: evicted [1108,1109) (seq_len 1365->1364)
+ aSLIM-ARC KV eviction: evicted [1109,1110) (seq_len 1366->1365)
+ largeSLIM-ARC KV eviction: evicted [1110,1111) (seq_len 1367->1366)
+ blockSLIM-ARC KV eviction: evicted [1111,1112) (seq_len 1368->1367)
+ ofSLIM-ARC KV eviction: evicted [1112,1113) (seq_len 1369->1368)
+ repetitiveSLIM-ARC KV eviction: evicted [1113,1114) (seq_len 1370->1369)
+ textSLIM-ARC KV eviction: evicted [1114,1115) (seq_len 1371->1370)
+ aboutSLIM-ARC KV eviction: evicted [1115,1116) (seq_len 1372->1371)
+ AISLIM-ARC KV eviction: evicted [1116,1117) (seq_len 1373->1372)
+.SLIM-ARC KV eviction: evicted [1117,1118) (seq_len 1374->1373)
+ IfSLIM-ARC KV eviction: evicted [1118,1119) (seq_len 1375->1374)
+ youSLIM-ARC KV eviction: evicted [1119,1120) (seq_len 1376->1375)
+'dSLIM-ARC KV eviction: evicted [1120,1121) (seq_len 1377->1376)
+ likeSLIM-ARC KV eviction: evicted [1121,1122) (seq_len 1378->1377)
+ helpSLIM-ARC KV eviction: evicted [1122,1123) (seq_len 1379->1378)
+ withSLIM-ARC KV eviction: evicted [1123,1124) (seq_len 1380->1379)
+ somethingSLIM-ARC KV eviction: evicted [1124,1125) (seq_len 1381->1380)
+ specificSLIM-ARC KV eviction: evicted [1125,1126) (seq_len 1382->1381)
+—SLIM-ARC KV eviction: evicted [1126,1127) (seq_len 1383->1382)
+likeSLIM-ARC KV eviction: evicted [1127,1128) (seq_len 1384->1383)
+ understandingSLIM-ARC KV eviction: evicted [1128,1129) (seq_len 1385->1384)
+ AISLIM-ARC KV eviction: evicted [1129,1130) (seq_len 1386->1385)
+ conceptsSLIM-ARC KV eviction: evicted [1130,1131) (seq_len 1387->1386)
+,SLIM-ARC KV eviction: evicted [1131,1132) (seq_len 1388->1387)
+ writingSLIM-ARC KV eviction: evicted [1132,1133) (seq_len 1389->1388)
+ aSLIM-ARC KV eviction: evicted [1133,1134) (seq_len 1390->1389)
+ paperSLIM-ARC KV eviction: evicted [1134,1135) (seq_len 1391->1390)
+,SLIM-ARC KV eviction: evicted [1135,1136) (seq_len 1392->1391)
+ codingSLIM-ARC KV eviction: evicted [1136,1137) (seq_len 1393->1392)
+,SLIM-ARC KV eviction: evicted [1137,1138) (seq_len 1394->1393)
+ orSLIM-ARC KV eviction: evicted [1138,1139) (seq_len 1395->1394)
+ justSLIM-ARC KV eviction: evicted [1139,1140) (seq_len 1396->1395)
+ wantSLIM-ARC KV eviction: evicted [1140,1141) (seq_len 1397->1396)
+ aSLIM-ARC KV eviction: evicted [1141,1142) (seq_len 1398->1397)
+ summarySLIM-ARC KV eviction: evicted [1142,1143) (seq_len 1399->1398)
+ orSLIM-ARC KV eviction: evicted [1143,1144) (seq_len 1400->1399)
+ analysisSLIM-ARC KV eviction: evicted [1144,1145) (seq_len 1401->1400)
+—SLIM-ARC KV eviction: evicted [1145,1146) (seq_len 1402->1401)
+pleaseSLIM-ARC KV eviction: evicted [1146,1147) (seq_len 1403->1402)
+ feelSLIM-ARC KV eviction: evicted [1147,1148) (seq_len 1404->1403)
+ freeSLIM-ARC KV eviction: evicted [1148,1149) (seq_len 1405->1404)
+ toSLIM-ARC KV eviction: evicted [1149,1150) (seq_len 1406->1405)
+ askSLIM-ARC KV eviction: evicted [1150,1151) (seq_len 1407->1406)
+!
+
+SLIM-ARC KV eviction: evicted [1151,1152) (seq_len 1408->1407)
+ForSLIM-ARC KV eviction: evicted [1152,1153) (seq_len 1409->1408)
+ exampleSLIM-ARC KV eviction: evicted [1153,1154) (seq_len 1410->1409)
+:
+SLIM-ARC KV eviction: evicted [1154,1155) (seq_len 1411->1410)
+-SLIM-ARC KV eviction: evicted [1155,1156) (seq_len 1412->1411)
+ “SLIM-ARC KV eviction: evicted [1156,1157) (seq_len 1413->1412)
+CanSLIM-ARC KV eviction: evicted [1157,1158) (seq_len 1414->1413)
+ youSLIM-ARC KV eviction: evicted [1158,1159) (seq_len 1415->1414)
+ explainSLIM-ARC KV eviction: evicted [1159,1160) (seq_len 1416->1415)
+ howSLIM-ARC KV eviction: evicted [1160,1161) (seq_len 1417->1416)
+ neuralSLIM-ARC KV eviction: evicted [1161,1162) (seq_len 1418->1417)
+ networksSLIM-ARC KV eviction: evicted [1162,1163) (seq_len 1419->1418)
+ workSLIM-ARC KV eviction: evicted [1163,1164) (seq_len 1420->1419)
+?”SLIM-ARC KV eviction: evicted [1164,1165) (seq_len 1421->1420)
+
+SLIM-ARC KV eviction: evicted [1165,1166) (seq_len 1422->1421)
+-SLIM-ARC KV eviction: evicted [1166,1167) (seq_len 1423->1422)
+ “SLIM-ARC KV eviction: evicted [1167,1168) (seq_len 1424->1423)
+WhatSLIM-ARC KV eviction: evicted [1168,1169) (seq_len 1425->1424)
+ areSLIM-ARC KV eviction: evicted [1169,1170) (seq_len 1426->1425)
+ theSLIM-ARC KV eviction: evicted [1170,1171) (seq_len 1427->1426)
+ ethicalSLIM-ARC KV eviction: evicted [1171,1172) (seq_len 1428->1427)
+ concernsSLIM-ARC KV eviction: evicted [1172,1173) (seq_len 1429->1428)
+ aroundSLIM-ARC KV eviction: evicted [1173,1174) (seq_len 1430->1429)
+ AISLIM-ARC KV eviction: evicted [1174,1175) (seq_len 1431->1430)
+ todaySLIM-ARC KV eviction: evicted [1175,1176) (seq_len 1432->1431)
+?”SLIM-ARC KV eviction: evicted [1176,1177) (seq_len 1433->1432)
+
+SLIM-ARC KV eviction: evicted [1177,1178) (seq_len 1434->1433)
+-SLIM-ARC KV eviction: evicted [1178,1179) (seq_len 1435->1434)
+ “SLIM-ARC KV eviction: evicted [1179,1180) (seq_len 1436->1435)
+HelpSLIM-ARC KV eviction: evicted [1180,1181) (seq_len 1437->1436)
+ meSLIM-ARC KV eviction: evicted [1181,1182) (seq_len 1438->1437)
+ writeSLIM-ARC KV eviction: evicted [1182,1183) (seq_len 1439->1438)
+ anSLIM-ARC KV eviction: evicted [1183,1184) (seq_len 1440->1439)
+ introductionSLIM-ARC KV eviction: evicted [1184,1185) (seq_len 1441->1440)
+ toSLIM-ARC KV eviction: evicted [1185,1186) (seq_len 1442->1441)
+ aSLIM-ARC KV eviction: evicted [1186,1187) (seq_len 1443->1442)
+ reportSLIM-ARC KV eviction: evicted [1187,1188) (seq_len 1444->1443)
+ onSLIM-ARC KV eviction: evicted [1188,1189) (seq_len 1445->1444)
+ AISLIM-ARC KV eviction: evicted [1189,1190) (seq_len 1446->1445)
+ advancementsSLIM-ARC KV eviction: evicted [1190,1191) (seq_len 1447->1446)
+.”
+
+SLIM-ARC KV eviction: evicted [1191,1192) (seq_len 1448->1447)
+ISLIM-ARC KV eviction: evicted [1192,1193) (seq_len 1449->1448)
+’mSLIM-ARC KV eviction: evicted [1193,1194) (seq_len 1450->1449)
+ hereSLIM-ARC KV eviction: evicted [1194,1195) (seq_len 1451->1450)
+ toSLIM-ARC KV eviction: evicted [1195,1196) (seq_len 1452->1451)
+ helpSLIM-ARC KV eviction: evicted [1196,1197) (seq_len 1453->1452)
+—SLIM-ARC KV eviction: evicted [1197,1198) (seq_len 1454->1453)
+justSLIM-ARC KV eviction: evicted [1198,1199) (seq_len 1455->1454)
+ letSLIM-ARC KV eviction: evicted [1199,1200) (seq_len 1456->1455)
+ meSLIM-ARC KV eviction: evicted [1200,1201) (seq_len 1457->1456)
+ knowSLIM-ARC KV eviction: evicted [1201,1202) (seq_len 1458->1457)
+ whatSLIM-ARC KV eviction: evicted [1202,1203) (seq_len 1459->1458)
+ youSLIM-ARC KV eviction: evicted [1203,1204) (seq_len 1460->1459)
+ needSLIM-ARC KV eviction: evicted [1204,1205) (seq_len 1461->1460)
+!SLIM-ARC KV eviction: evicted [1205,1206) (seq_len 1462->1461)
+SLIM-ARC KV eviction: evicted [1206,1207) (seq_len 1463->1462)
+ 😊SLIM-ARC KV eviction: evicted [1207,1208) (seq_len 1464->1463)
+
+
+[ Prompt: 3.3 t/s | Generation: 0.4 t/s ]
+
+
+Exiting...
+LC24 EXIT=0

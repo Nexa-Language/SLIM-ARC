@@ -1,0 +1,16 @@
+===== HF 直连下载测试 (前1MB) =====
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+curl: (35) OpenSSL SSL_connect: Connection reset by peer in connection to huggingface.co:443 
+http_code=000 size=0 speed=0B/s
+curl_rc=35
+ls: cannot access '/tmp/hf-test.bin': No such file or directory
+===== HF 镜像 hf-mirror.com 直连测试 =====
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100  1146  100  1146    0     0   1571      0 --:--:-- --:--:-- --:--:--  1569
+  0     0    0     0    0     0      0      0 --:--:--  0:00:01 --:--:--     0  9 1024k    9  100k    0     0  49538      0  0:00:21  0:00:02  0:00:19  104k100 1024k  100 1024k    0     0   437k      0  0:00:02  0:00:02 --:--:--  842k
+http_code=206 size=1048576 speed=447843B/s
+mirror_rc=0
+-rw-rw-r-- 1 orangepi orangepi 1048576 Aug  6 00:57 /tmp/hf-mirror-test.bin

@@ -1,0 +1,5 @@
+===== 探测 OLMoE GGUF 候选URL (hf-mirror) =====
+--- https://hf-mirror.com/bartowski/OLMoE-1B-7B-0924-GGUF/resolve/main/OLMoE-1B-7B-0924-Q4_K_M.gguf ---
+http_code=404 size=20
+--- https://hf-mirror.com/MMoid/OLMoE-1B-7B-0924-GGUF/resolve/main/OLMoE-1B-7B-0924-Q4_K_M.gguf ---
+http_code=404 size=20

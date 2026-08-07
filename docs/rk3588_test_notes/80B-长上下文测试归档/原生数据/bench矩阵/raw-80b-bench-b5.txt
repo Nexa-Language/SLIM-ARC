@@ -1,0 +1,11 @@
+llama-bench: benchmark 1/2: starting
+llama-bench: benchmark 1/2: prompt run 1/1
+| model                          |       size |     params | backend    | threads |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --------------: | -------------------: |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       4 |            pp64 |          0.55 ± 0.00 |
+llama-bench: benchmark 2/2: starting
+llama-bench: benchmark 2/2: generation run 1/1
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       4 |            tg32 |          0.30 ± 0.00 |
+
+build: 360e134 (1)
+B5 EXIT=0

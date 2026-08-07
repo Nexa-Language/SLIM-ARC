@@ -1,0 +1,4 @@
+[posix_madvise] advice=WILLNEED(3) len=48410988384 total_WILLNEED=1
+[posix_madvise] advice=DONTNEED(4) len=6291456 total_DONTNEED=1
+[posix_madvise] advice=DONTNEED(4) len=6291456 total_DONTNEED=2
+[posix_madvise] advice=DONTNEED(4) len=6291456 total_DONTNEED=3

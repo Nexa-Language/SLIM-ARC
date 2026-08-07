@@ -1,0 +1,34 @@
+# Phase 3 性能矩阵 + Phase 4 专项验证汇总 - 2026-08-06
+# 模型: Qwen3-Next-80B-A3B-Instruct-Q4_K_M (45.08 GiB, 79.67B 总参数, 48层, MoE A3B)
+
+## B1-B7 llama-bench 矩阵 (r1, no-warmup)
+# B1 基线默认(p32n16t4):  pp 0.39 | tg 0.23
+# B2 SLIM_ARC_DISABLE(p32n16t4):  pp 2.02 | tg 0.89
+# B3 NO_MADV_RANDOM(p32n16t4):  pp 1.41 | tg 0.65
+# B4 NO_PREFETCH(p32n16t4):  pp 0.37 | tg 0.24
+# B5 长上下文(p64n32t4):  pp 0.55 | tg 0.30
+# B6 线程8(p32n16t8):  pp 0.89 | tg 0.48
+# B7 线程2(p32n16t2):  pp 0.23 | tg 0.17
+# 全部 EXIT=0
+
+## 消融分析
+# SLIM-ARC 全开 vs DISABLE: pp -80% (0.39 vs 2.02), tg -74% (0.23 vs 0.89)
+# MADV_RANDOM 为主要开销: B3(禁MADV) 1.41/0.65 显著快于 B1(全开) 0.39/0.23
+# 预取影响小: B4(禁预取) 0.37/0.24 ≈ B1
+# 线程扩展: t8 (0.89/0.48) > t4 (0.39/0.23) > t2 (0.23/0.17)
+
+## TTFT (首 token 延迟, llama-cli -n 1)
+# 总耗时 121.1s (含模型加载~60s + prefill + 首token), RSS峰值 6.38GiB
+# 符合计划预期 TTFT > 60s
+
+## 模型加载
+# 元数据读取 ~0.13s (807张量)
+# 加载+初始化+warmup ~60s, 总启动到首token ~121s
+# 内存: model 46288MiB (45.2GiB) 虚拟映射, RSS 峰值 ~6.3-6.5GiB (< 8GB)
+
+## Phase 4 madvise 验证 (LD_PRELOAD 拦截)
+# 默认配置: posix_madvise(RANDOM, 45.1GiB) x1 = SLIM-ARC 按需分页触发!
+#          posix_madvise(WILLNEED, 45.1GiB) x1 = mmap 初始预取
+#          posix_madvise(DONTNEED, 6MiB) x3 = KV cache 释放
+# NO_MADV_RANDOM 配置: RANDOM 调用消失, WILLNEED 保留 => 开关有效
+# 结论: SLIM-ARC MADV_RANDOM 在端侧 >6GB 模型首次确认触发

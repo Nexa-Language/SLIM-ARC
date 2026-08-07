@@ -1,0 +1,14 @@
+===== llama-bench KV q4_0 (-ctk q4_0 -ctv q4_0) -p 64 -n 32 =====
+| model                          |       size |     params | backend    | threads | type_k | type_v |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | -----: | -----: | --------------: | -------------------: |
+| qwen3 4B Q4_K - Medium         |   2.32 GiB |     4.02 B | CPU        |       4 |   q4_0 |   q4_0 |            pp64 |          8.31 ± 0.10 |
+| qwen3 4B Q4_K - Medium         |   2.32 GiB |     4.02 B | CPU        |       4 |   q4_0 |   q4_0 |            tg32 |          5.05 ± 0.29 |
+
+build: 360e134 (1)
+===== llama-bench KV q4_0 -p 128 -n 64 =====
+| model                          |       size |     params | backend    | threads | type_k | type_v |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | -----: | -----: | --------------: | -------------------: |
+| qwen3 4B Q4_K - Medium         |   2.32 GiB |     4.02 B | CPU        |       4 |   q4_0 |   q4_0 |           pp128 |          7.82 ± 0.04 |
+| qwen3 4B Q4_K - Medium         |   2.32 GiB |     4.02 B | CPU        |       4 |   q4_0 |   q4_0 |            tg64 |          3.79 ± 0.16 |
+
+build: 360e134 (1)

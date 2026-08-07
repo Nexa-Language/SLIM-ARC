@@ -1,0 +1,21 @@
+# Phase 1 模型下载与校验记录 - 2026-08-06
+# 模型: Qwen/Qwen3-Next-80B-A3B-Instruct-GGUF
+
+## 下载信息
+# 文件: /home/orangepi/ssd/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf
+# 大小: 48410988384 bytes (45.09 GiB) - 与服务器 Content-Length 完全一致
+# 下载工具: 自定义 Python 多线程分块脚本 (8 并发, 64MB/块, HTTP Range)
+# 下载耗时: 6862s (~114 分钟), 失败块: 0
+# 平均速度: ~6.5-14 MB/s (hf-mirror.com)
+# 说明: 初始 wget 单线程仅 0.6MB/s, 改用多线程后提速约 20 倍
+
+## SHA256 校验
+# d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a  /home/orangepi/ssd/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf
+
+## llama-cli 识别测试
+# build: b1-360e134
+# model: Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf
+# ftype: Q4_K - Medium (Q4_K_M)
+# modalities: text
+# 结果: 成功加载并输出 "Hello" (Prompt: 0.8 t/s)
+# 结论: GGUF 完整可被 llama.cpp 识别, mmap 加载可行, 未立即 OOM

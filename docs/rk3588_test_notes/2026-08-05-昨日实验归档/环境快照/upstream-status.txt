@@ -1,0 +1,14 @@
+===== git log =====
+360e134 tests: re-enable MiniMax M3 in `test-llama-archs` (#26633)
+===== git status =====
+On branch master
+Your branch is up to date with 'origin/master'.
+
+nothing to commit, working tree clean
+===== 版本 =====
+===== 是否已应用 slim-arc（检查源文件） =====
+ls: cannot access 'src/slim-arc-*': No such file or directory
+===== 是否已有 build 目录 =====
+ls: cannot access 'build/': No such file or directory
+===== src 下源文件数量 =====
+30

@@ -1,0 +1,20 @@
+===== 二进制 =====
+-rwxrwxr-x 1 orangepi orangepi   15096 Aug  6 00:56 build/bin/llama-bench
+-rwxrwxr-x 1 orangepi orangepi 1255464 Aug  6 00:56 build/bin/llama-cli
+===== llama-cli 版本 =====
+version: 1 (360e134)
+built with GNU 11.4.0 for Linux aarch64
+===== 验证 SLIM-ARC 符号 =====
+00000000001c3ff0 T _ZN8slim_arc18prefetch_scheduler11worker_loopEv
+00000000001c45b4 T _ZN8slim_arc18prefetch_scheduler15register_tensorEPKcPvmi
+00000000001c43c0 T _ZN8slim_arc18prefetch_scheduler16prefetch_expertsEiPKii
+00000000001c43c4 T _ZN8slim_arc18prefetch_scheduler20cache_router_expertsEiPKii
+00000000001c3f70 T _ZN8slim_arc18prefetch_scheduler20notify_layer_computeEi
+00000000001c4284 T _ZN8slim_arc18prefetch_scheduler21issue_expert_willneedEiPKii
+00000000001c4734 T _ZN8slim_arc18prefetch_scheduler22register_expert_tensorEPKcPvmii
+00000000001c38a0 T _ZN8slim_arc18prefetch_schedulerC1Eii
+00000000001c38a0 T _ZN8slim_arc18prefetch_schedulerC2Eii
+00000000001c3d50 T _ZN8slim_arc18prefetch_schedulerD1Ev
+===== 内存余量 =====
+Mem:           7.8Gi       1.9Gi       2.1Gi        16Mi       3.7Gi       5.7Gi
+Swap:          3.9Gi          0B       3.9Gi

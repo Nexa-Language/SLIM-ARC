@@ -1,0 +1,10 @@
+===== GGUF magic 验证 =====
+000000 47 47 55 46
+(期望 46 55 47 47 = GGUF)
+===== 文件大小 =====
+-rw-rw-r-- 1 orangepi orangepi 2497280256 Aug  6 01:02 /home/orangepi/SLIM-ARC/data/models/Qwen3-4B-Q4_K_M.gguf
+===== 磁盘剩余 =====
+/dev/mmcblk0p2   28G  7.1G   21G  26% /
+===== 内存 =====
+Mem:           7.8Gi       2.0Gi        40Mi        16Mi       5.7Gi       5.7Gi
+Swap:          3.9Gi          0B       3.9Gi

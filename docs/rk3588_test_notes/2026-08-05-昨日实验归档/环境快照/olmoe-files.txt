@@ -1,0 +1,13 @@
+===== davidrpugh/OLMoE-1B-7B-0924-Instruct-Q4_K_M-GGUF =====
+olmoe-1b-7b-0924-instruct-q4_k_m.gguf 4213512736
+===== Nickc01/OLMoE-1B-7B-0924-Instruct-Q4_K_M-GGUF =====
+olmoe-1b-7b-0924-instruct-q4_k_m.gguf 4213512736
+===== bartowski/OLMoE-1B-7B-0924-Instruct-GGUF =====
+OLMoE-1B-7B-0924-Instruct-IQ2_M.gguf 2328333120
+OLMoE-1B-7B-0924-Instruct-IQ3_M.gguf 3076543296
+OLMoE-1B-7B-0924-Instruct-IQ3_XS.gguf 2865779520
+OLMoE-1B-7B-0924-Instruct-IQ4_XS.gguf 3715103552
+OLMoE-1B-7B-0924-Instruct-Q2_K.gguf 2562763584
+OLMoE-1B-7B-0924-Instruct-Q2_K_L.gguf 2663371584
+OLMoE-1B-7B-0924-Instruct-Q3_K_L.gguf 3611317056
+OLMoE-1B-7B-0924-Instruct-Q3_K_M.gguf 3343930176
