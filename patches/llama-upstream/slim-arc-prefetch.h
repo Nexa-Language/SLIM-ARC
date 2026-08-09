@@ -29,6 +29,12 @@ enum class compute_phase {
     DECODE,
 };
 
+// SLIM-ARC FIX 2026-08-07: 动态 MADV 阶段切换前置声明。
+// 供 prefetch_scheduler::set_phase() 内联调用（定义在 slim-arc-prefetch.cpp）。
+// PREFILL -> MADV_SEQUENTIAL（顺序预读）；DECODE -> MADV_RANDOM（按需分页）。
+// SLIM_ARC_DYNAMIC_MADV=0 禁用。
+void apply_dynamic_madv(compute_phase phase);
+
 struct tensor_prefetch_info {
     void *   addr;      // mmap address of tensor data
     size_t   size;      // tensor data size in bytes
@@ -66,7 +72,11 @@ class prefetch_scheduler {
 
     // ---- SLIM-ARC FIX 2026-08-05: 补齐 Pi5 端修复所需接口 ----
     // 设置计算阶段（prefill / decode）
-    void set_phase(compute_phase phase) { phase_.store(phase); }
+    // SLIM-ARC FIX 2026-08-07: 触发动态 MADV 切换（PREFILL->SEQUENTIAL / DECODE->RANDOM）
+    void set_phase(compute_phase phase) {
+        phase_.store(phase);
+        apply_dynamic_madv(phase);
+    }
     // 当前预取窗口大小（供 graph_compute 计算待预取层范围）
     int  effective_window() const { return window_; }
     // 内存预算（供 unified_io_scheduler 分配权重预取额度）
@@ -80,6 +90,16 @@ class prefetch_scheduler {
     const int * get_cached_experts(int layer, int * n) const;
     // 对指定层的给定专家发起 WILLNEED 预取
     void prefetch_experts(int layer, const int * expert_ids, int n);
+
+    // ---- SLIM-ARC FIX 2026-08-09: 专家预取可观测性指标（文献 1：先可观测再优化）----
+    // 输出命中率/浪费字节等汇总（析构时调用）
+    void dump_metrics() const;
+    size_t expert_prefetch_bytes() const { return expert_prefetch_bytes_.load(); }
+    size_t expert_hit_bytes()     const { return expert_hit_bytes_.load(); }
+    size_t expert_waste_bytes()   const { return expert_waste_bytes_.load(); }
+    // 统一 I/O 预算下发与每步重置（改进 3，供 unified_io_scheduler::tick 调用）
+    void set_expert_budget(size_t bytes) { expert_budget_.store(bytes); }
+    void reset_expert_budget_usage() { expert_budget_used_.store(0); }
 
   private:
     void worker_loop();
@@ -96,6 +116,12 @@ class prefetch_scheduler {
     std::atomic<size_t>     total_bytes_{0};
     std::atomic<int>        total_calls_{0};
 
+    // ---- SLIM-ARC FIX 2026-08-09: 专家预取可观测性指标（改进 1）----
+    std::atomic<size_t>     expert_prefetch_bytes_{0};  // 实际 WILLNEED 下发字节
+    std::atomic<size_t>     expert_hit_bytes_{0};       // 预取且下一 token 使用的字节
+    std::atomic<size_t>     expert_waste_bytes_{0};     // 预取但未使用的字节
+    std::atomic<int>        router_samples_{0};         // 统计采样数
+
     std::vector<std::thread>          workers_;
     std::mutex                        mtx_;
     std::condition_variable           cv_;
@@ -108,6 +134,25 @@ class prefetch_scheduler {
     std::vector<std::vector<expert_tensor_info>>   experts_by_layer_;
     // Router-selected expert IDs per layer (for next-layer prediction)
     mutable std::vector<std::vector<int>>          cached_router_experts_;
+    // 最近一次实际下发的预取专家集合（每层，供命中率统计，改进 1）
+    mutable std::vector<std::vector<int>>          last_prefetched_experts_;
+    // ---- SLIM-ARC FIX 2026-08-09: 置信度门控（改进 2）----
+    // 上一步（t-2）路由，用于"连续两 token 稳定专家"高置信度过滤
+    mutable std::vector<std::vector<int>>          prev_router_experts_;
+    // SLIM_ARC_EXPERT_CONF=1 时启用 2-token 稳定性门控
+    bool                                           conf_gating_ = false;
+
+    // ---- SLIM-ARC FIX 2026-08-09: 统一 I/O 预算限制（改进 3，文献 admission control）----
+    // 0 = 不限；>0 时每 graph_compute step 专家 WILLNEED 累计字节不超过该预算
+    std::atomic<size_t>                            expert_budget_{0};
+    // 本 step 已用专家预算（每 graph_compute 由 unified tick 重置）
+    std::atomic<size_t>                            expert_budget_used_{0};
+
+    // ---- SLIM-ARC FIX 2026-08-09: 组合预测器（改进 4，文献 ReMoE/DALI locality）----
+    // SLIM_ARC_EXPERT_POP=K：预取 temporal 并集 top-K 热门专家
+    int                                            pop_k_ = 0;
+    // 每层专家激活频次计数（近窗口）
+    mutable std::vector<std::vector<int>>          expert_pop_counts_;
 };
 
 // Global singleton (set by llama_context during init)
@@ -117,8 +162,10 @@ void set_global_prefetch_scheduler(prefetch_scheduler * s);
 // Helper: extract layer index from tensor name (blk.%d.*)
 int tensor_layer_from_name(const char * name);
 
-// SLIM-ARC FIX 2026-08-05: mmap 区域注册表（供动态 MADV 切换；当前仅记录）。
-// 在 init_mappings 中为 >6GB 模型设置 MADV_RANDOM 时调用。
+// SLIM-ARC FIX 2026-08-05: mmap 区域注册表（供动态 MADV 切换）。
+// 在 init_mappings 中为 >6GB 模型设置 MADV 建议时调用。
+// SLIM-ARC FIX 2026-08-07: 初始建议由 register_mmap_region 改为 MADV_SEQUENTIAL，
+// 配合 apply_dynamic_madv() 在 prefill/decode 阶段动态切换。
 void register_mmap_region(void * addr, size_t size);
 
 } // namespace slim_arc

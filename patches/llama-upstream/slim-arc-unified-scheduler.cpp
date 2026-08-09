@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>  // SLIM-ARC FIX 2026-08-09: getenv（改进 3 预算开关）
 
 namespace slim_arc {
 
@@ -78,6 +79,14 @@ void unified_io_scheduler::tick(int current_layer, int lookahead) {
     // 2. Issue prefetch requests within budget
     if (weight_prefetcher_) {
         weight_prefetcher_->set_memory_budget(budget.weight_bytes);
+        // SLIM-ARC FIX 2026-08-09: 改进 3——把统一 I/O 预算的专家额度下发到 prefetch
+        // scheduler（文献 admission control：按 expert budget 限流，防止 ~959MB 全层
+        // 突发抢占 I/O）。SLIM_ARC_EXPERT_BUDGET=1 时启用（MOE_DECODE 专家占比 60%）。
+        static bool expert_budget_on = getenv("SLIM_ARC_EXPERT_BUDGET") != nullptr;
+        if (expert_budget_on) {
+            weight_prefetcher_->set_expert_budget(budget.expert_bytes);
+            weight_prefetcher_->reset_expert_budget_usage();  // 每 step 重置累计用量
+        }
         weight_prefetcher_->notify_layer_compute(current_layer);
     }
 

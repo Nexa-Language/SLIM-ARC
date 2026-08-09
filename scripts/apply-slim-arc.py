@@ -16,7 +16,12 @@ import shutil
 def main():
     root = sys.argv[1] if len(sys.argv) > 1 else "src/llama-upstream"
     src_dir = os.path.join(root, "src")
-    patches_dir = "patches/llama-upstream"
+    # SLIM-ARC FIX 2026-08-08: 镜像同步路径修复——patches_dir 基于脚本自身位置解析，
+    # 不再依赖 CWD。此前从 /home/orangepi 运行会导致 Step 1 复制失败（patches 找不到），
+    # 违反 red-line 镜像规则（patches/ 与 src/ 必须同步）。
+    patches_dir = os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "patches", "llama-upstream")
 
     if not os.path.isdir(src_dir):
         print(f"Error: {src_dir} not found. Clone upstream first:")
@@ -83,25 +88,39 @@ def patch_model_loader(filepath):
 
     # Add MADV_RANDOM in init_mappings (after mapping creation)
     madv_marker = "mmaps_used.emplace_back(mapping->size(), 0);"
+    # SLIM-ARC FIX 2026-08-07: 加载时初始建议改为 MADV_SEQUENTIAL（保住 prefill 顺序预读，
+    # 消除端侧 RK3588 负优化）。后续由 slim_arc::apply_dynamic_madv() 在 decode 阶段
+    # 动态切换到 MADV_RANDOM（MoE 专家按需分页）。SLIM_ARC_DYNAMIC_MADV=0 可回退到旧行为。
     madv_block = """mmaps_used.emplace_back(mapping->size(), 0);
 
-            // SLIM-ARC: MADV_RANDOM for large models (>6GB) to enable demand paging.
-            // Tradeoff: prefill slower (no readahead), decode 3-4x faster (MoE sparsity).
-            // SLIM_ARC_NO_MADV_RANDOM=1 to disable.
+            // SLIM-ARC: demand-paging advice for large models (>6GB).
+            // FIX 2026-08-07: 初始用 MADV_SEQUENTIAL（prefill 顺序预读），
+            // decode 阶段由 apply_dynamic_madv() 切到 MADV_RANDOM（MoE 按需分页）。
+            // SLIM_ARC_NO_MADV_RANDOM=1 to disable; SLIM_ARC_DYNAMIC_MADV=0 禁用动态切换。
             {
                 bool slim_arc_disabled = getenv("SLIM_ARC_DISABLE") != nullptr;
                 bool no_madv = getenv("SLIM_ARC_NO_MADV_RANDOM") != nullptr;
                 size_t msz = mapping->size();
                 if (!slim_arc_disabled && !no_madv && msz > (6ULL << 30) &&
                     mapping->addr() && msz > 0) {
-                    (void) posix_madvise(mapping->addr(), msz, POSIX_MADV_RANDOM);
-                    // SLIM-ARC: register mmap region for dynamic MADV switching
+                    // register_mmap_region 内部会按动态模式设置初始 SEQUENTIAL 建议
                     slim_arc::register_mmap_region(mapping->addr(), msz);
                 }
             }"""
-    if 'POSIX_MADV_RANDOM' not in content:
+    # SLIM-ARC FIX 2026-08-07: 幂等处理——若已存在旧版静态 MADV_RANDOM 块，
+    # 先用正则整体删除（避免新旧块重复并存），再插入新的动态模式块。
+    old_madv_pattern = re.compile(
+        r"\n?\s*// SLIM-ARC: MADV_RANDOM for large models \(>6GB\).*?"
+        r"register_mmap_region\(mapping->addr\(\), msz\);\n\s*\}\n\s*\}",
+        re.DOTALL,
+    )
+    if old_madv_pattern.search(content):
+        content = old_madv_pattern.sub("\n", content, count=1)
+        print("  removed old static MADV_RANDOM block")
+
+    if 'register_mmap_region(mapping->addr(), msz)' not in content:
         content = content.replace(madv_marker, madv_block, 1)
-        print("  added MADV_RANDOM block")
+        print("  added MADV advice block (dynamic mode)")
 
     # Add prefetch_scheduler + unified scheduler registration after weights_map loop
     # Find the size_data computation loop and insert after it
@@ -193,6 +212,9 @@ def patch_context(filepath):
     # Insert graph_compute SLIM-ARC block before ggml_backend_sched_graph_compute_async
     slim_block = """
     // SLIM-ARC: Collect graph layer range + unified scheduler tick + expert prefetch
+    // SLIM-ARC FIX 2026-08-08: 层范围扫描也支持 "-<N>" 后缀回退解析。
+    // Qwen3-Next decode 图节点名（ffn_moe_topk-N / gate-N）无 blk. 前缀，
+    // tensor_layer_from_name 失败会导致 min_layer=INT_MAX，层预取与专家预取被跳过。
     int min_layer = INT_MAX, max_layer = -1;
     {
         int n_nodes = ggml_graph_n_nodes(gf);
@@ -200,6 +222,12 @@ def patch_context(filepath):
             struct ggml_tensor * t = ggml_graph_node(gf, i);
             if (t && t->name) {
                 int layer = slim_arc::tensor_layer_from_name(t->name);
+                if (layer < 0) {
+                    const char * dash = strrchr(t->name, '-');
+                    if (dash && *(dash + 1) >= '0' && *(dash + 1) <= '9') {
+                        layer = atoi(dash + 1);
+                    }
+                }
                 if (layer >= 0) {
                     if (layer < min_layer) min_layer = layer;
                     if (layer > max_layer) max_layer = layer;
@@ -210,6 +238,12 @@ def patch_context(filepath):
     if (auto * u = slim_arc::get_global_unified_scheduler()) {
         u->set_phase(batched ? slim_arc::runtime_phase::PREFILL_SHORT
                               : slim_arc::runtime_phase::MOE_DECODE);
+        // SLIM-ARC FIX 2026-08-07: unified 分支也需触发 prefetch 的 set_phase，
+        // 以驱动动态 MADV 阶段切换（PREFILL->SEQUENTIAL / DECODE->RANDOM）。
+        if (auto * s = slim_arc::get_global_prefetch_scheduler()) {
+            s->set_phase(batched ? slim_arc::compute_phase::PREFILL
+                                  : slim_arc::compute_phase::DECODE);
+        }
         if (min_layer != INT_MAX) {
             u->tick(min_layer, 3);
             if (auto * s = slim_arc::get_global_prefetch_scheduler()) {
@@ -218,9 +252,12 @@ def patch_context(filepath):
                         s->notify_layer_compute(l);
                     }
                 }
+                // SLIM-ARC FIX 2026-08-08: 预测器改为时间预测（l 层用上一 token 同层路由，
+                // 而非上一层的跨层路由）。实测精度 temporal=35% vs spatial=4.5%，
+                // 空间预测 95% 为无效预取，在 I/O 受限场景反而抢占带宽。
                 for (int l = min_layer; l <= max_layer; ++l) {
                     int nc = 0;
-                    const int * ce = s->get_cached_experts(l - 1, &nc);
+                    const int * ce = s->get_cached_experts(l, &nc);
                     if (ce && nc > 0) s->prefetch_experts(l, ce, nc);
                 }
             }
@@ -235,9 +272,10 @@ def patch_context(filepath):
                     s->notify_layer_compute(l);
                 }
             }
+            // SLIM-ARC FIX 2026-08-08: 同 unified 分支——时间预测（l 层用上一 token 同层路由）
             for (int l = min_layer; l <= max_layer; ++l) {
                 int nc = 0;
-                const int * ce = s->get_cached_experts(l - 1, &nc);
+                const int * ce = s->get_cached_experts(l, &nc);
                 if (ce && nc > 0) s->prefetch_experts(l, ce, nc);
             }
         }
@@ -252,6 +290,9 @@ def patch_context(filepath):
     # Add router hook after graph_compute (extract ffn_moe_topk)
     router_block = """
     // SLIM-ARC Phase 2a: Extract MoE router expert IDs after compute
+    // SLIM-ARC FIX 2026-08-08: 修复层号解析——Qwen3-Next 的 ffn_moe_topk 节点名
+    // 为 "ffn_moe_topk-<layer>"（无 blk. 前缀），tensor_layer_from_name 解析失败导致
+    // 专家预取从未触发。此处直接从 "-<N>" 后缀提取层号。
     if (status == GGML_STATUS_SUCCESS) {
         if (auto * s = slim_arc::get_global_prefetch_scheduler()) {
             int n_nodes = ggml_graph_n_nodes(gf);
@@ -260,6 +301,13 @@ def patch_context(filepath):
                 if (!t || !t->name) continue;
                 if (strstr(t->name, "ffn_moe_topk") != nullptr && t->data != nullptr) {
                     int layer = slim_arc::tensor_layer_from_name(t->name);
+                    if (layer < 0) {
+                        // 回退：从 "ffn_moe_topk-<N>" 提取层号
+                        const char * dash = strrchr(t->name, '-');
+                        if (dash && *(dash + 1) >= '0' && *(dash + 1) <= '9') {
+                            layer = atoi(dash + 1);
+                        }
+                    }
                     if (layer < 0) continue;
                     int n_expert_used = (int) t->ne[0];
                     if (n_expert_used <= 0) continue;
@@ -274,13 +322,16 @@ def patch_context(filepath):
                         }
                     }
                     if (!ue.empty()) s->cache_router_experts(layer, ue.data(), (int) ue.size());
-                    break;
+                    // SLIM-ARC FIX 2026-08-08: 移除 break——缓存所有层的 topk 专家，
+                    // 使跨层/跨步预测可用（原实现只缓存第一层，专家预取几乎从不触发）。
                 }
             }
         }
     }
 """
-    if 'ffn_moe_topk' not in content:
+    # SLIM-ARC FIX 2026-08-08: 幂等性修复——用 cache_router_experts 作为插入标记
+    # （ffn_moe_topk 可能出现在层扫描注释中导致误判已存在，跳过插入）。
+    if 'cache_router_experts' not in content:
         content = content.replace(
             "    return status;\n}",
             router_block + "    return status;\n}",
