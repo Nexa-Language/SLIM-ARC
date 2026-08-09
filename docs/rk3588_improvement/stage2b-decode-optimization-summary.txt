@@ -1,0 +1,20 @@
+# 阶段 2b：decode 阶段优化 - 消融结果（2026-08-08）
+
+## 消融实验（llama-bench -p 32 -n 16 -t 4, Q4_K_M）
+# decode 建议         | pp(t/s) | tg(t/s) | 说明
+# RANDOM(旧默认,按需)  | 2.82   | 0.25   | 45GB/8GB 放不下，随机读拖慢 decode 5.4x
+# SEQUENTIAL(新默认)   | 2.81   | 1.35   | 保留内核顺序预读，利用 SSD 顺序带宽
+# NORMAL(内核默认)     | 2.57   | 1.41   | 最优 tg
+# 禁用(上游最优)       | 2.74   | 1.41   | 参考
+
+## 结论：RK3588 45GB/8GB 极端比例下，decode 阶段 MADV_RANDOM 是严重负优化
+# - WSL 场景（模型可部分常驻）RANDOM 有收益；RK3588 工作集完全放不下，每次 decode
+#   都要 SSD 读，RANDOM 按需随机读远慢于 SEQUENTIAL 顺序预读
+# - 因此默认策略改为：prefill=SEQUENTIAL，decode=SEQUENTIAL（完全避免 RANDOM）
+# - 保留 SLIM_ARC_DECODE_MADV=RANDOM/NORMAL 可覆盖（供内存充足场景）
+
+## 改进前后全开对比（默认动态 MADV, decode=SEQUENTIAL）
+# 改进前 全开(静态RANDOM): pp 0.44 | tg 0.26
+# 改进后 全开(动态MADV):   pp 2.84 | tg 1.40
+# 禁用(上游最优):          pp 2.74 | tg 1.41
+# => SLIM-ARC 从负优化转为追平/略超禁用（pp +545%, tg +438%）

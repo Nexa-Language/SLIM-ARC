@@ -1,0 +1,22 @@
+# 阶段 4：长上下文 + 长生成验证（2026-08-08）
+
+## 长上下文（llama-bench -p 512 n128 t4, Q4_K_M）
+# 动态 MADV 全开: pp 6.09 | tg 2.08
+# 禁用:          pp 6.33 | tg 2.15
+# 差距仅 ~4%（改进前为 ~4x 负优化）
+
+## KV eviction 协同（cli, -c 8192, 长prompt~850, n64, KV_EVICT W=256）
+# KV eviction: ENABLED (sink=4, window=256) + evicted 日志正常
+# 动态 MADV 不干扰 KV eviction，两者协同正常
+# 输出连贯: "It seems you've repeated the phrase"
+
+## 改进全量对比
+# 场景           | 改进前全开    | 改进后全开    | 禁用
+# 短上下文 p32n16 | 0.44/0.26   | 2.84/1.40   | 2.74/1.41
+# 长上下文 p512n128| 2.41/0.53   | 6.09/2.08   | 6.33/2.15
+# => SLIM-ARC 从 4x 负优化转为 ~0-4% 持平
+
+## 阶段 3 决策：MADV_RANDOM 粒度细化（仅专家区域）在 RK3588 端侧不再需要
+# 消融已证明：RK3588 45GB/8GB 极端比例下，decode 阶段 RANDOM 是负优化（0.25 vs 1.40），
+# 完全避免 RANDOM（prefill/decode 均 SEQUENTIAL）最优。粒度细化属于内存相对充足
+# 场景（WSL）的优化，RK3588 端侧保持 SEQUENTIAL 策略即可，无需细化。

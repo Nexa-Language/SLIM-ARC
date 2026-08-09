@@ -1,0 +1,221 @@
+[SLIM-ARC-DBG] register_expert_tensor name=blk.0.ffn_down_exps.weight layer=0 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.0.ffn_gate_exps.weight layer=0 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.0.ffn_up_exps.weight layer=0 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.1.ffn_down_exps.weight layer=1 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.1.ffn_gate_exps.weight layer=1 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.1.ffn_up_exps.weight layer=1 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.2.ffn_down_exps.weight layer=2 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.2.ffn_gate_exps.weight layer=2 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.2.ffn_up_exps.weight layer=2 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.3.ffn_down_exps.weight layer=3 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.3.ffn_gate_exps.weight layer=3 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.3.ffn_up_exps.weight layer=3 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.4.ffn_down_exps.weight layer=4 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.4.ffn_gate_exps.weight layer=4 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.4.ffn_up_exps.weight layer=4 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.5.ffn_down_exps.weight layer=5 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.5.ffn_gate_exps.weight layer=5 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.5.ffn_up_exps.weight layer=5 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.6.ffn_down_exps.weight layer=6 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.6.ffn_gate_exps.weight layer=6 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.6.ffn_up_exps.weight layer=6 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.7.ffn_down_exps.weight layer=7 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.7.ffn_gate_exps.weight layer=7 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.7.ffn_up_exps.weight layer=7 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.8.ffn_down_exps.weight layer=8 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.8.ffn_gate_exps.weight layer=8 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.8.ffn_up_exps.weight layer=8 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.9.ffn_down_exps.weight layer=9 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.9.ffn_gate_exps.weight layer=9 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.9.ffn_up_exps.weight layer=9 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.10.ffn_down_exps.weight layer=10 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.10.ffn_gate_exps.weight layer=10 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.10.ffn_up_exps.weight layer=10 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.11.ffn_down_exps.weight layer=11 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.11.ffn_gate_exps.weight layer=11 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.11.ffn_up_exps.weight layer=11 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.12.ffn_down_exps.weight layer=12 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.12.ffn_gate_exps.weight layer=12 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.12.ffn_up_exps.weight layer=12 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.13.ffn_down_exps.weight layer=13 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.13.ffn_gate_exps.weight layer=13 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.13.ffn_up_exps.weight layer=13 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.14.ffn_down_exps.weight layer=14 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.14.ffn_gate_exps.weight layer=14 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.14.ffn_up_exps.weight layer=14 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.15.ffn_down_exps.weight layer=15 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.15.ffn_gate_exps.weight layer=15 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.15.ffn_up_exps.weight layer=15 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.16.ffn_down_exps.weight layer=16 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.16.ffn_gate_exps.weight layer=16 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.16.ffn_up_exps.weight layer=16 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.17.ffn_down_exps.weight layer=17 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.17.ffn_gate_exps.weight layer=17 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.17.ffn_up_exps.weight layer=17 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.18.ffn_down_exps.weight layer=18 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.18.ffn_gate_exps.weight layer=18 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.18.ffn_up_exps.weight layer=18 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.19.ffn_down_exps.weight layer=19 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.19.ffn_gate_exps.weight layer=19 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.19.ffn_up_exps.weight layer=19 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.20.ffn_down_exps.weight layer=20 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.20.ffn_gate_exps.weight layer=20 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.20.ffn_up_exps.weight layer=20 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.21.ffn_down_exps.weight layer=21 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.21.ffn_gate_exps.weight layer=21 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.21.ffn_up_exps.weight layer=21 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.22.ffn_down_exps.weight layer=22 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.22.ffn_gate_exps.weight layer=22 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.22.ffn_up_exps.weight layer=22 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.23.ffn_down_exps.weight layer=23 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.23.ffn_gate_exps.weight layer=23 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.23.ffn_up_exps.weight layer=23 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.24.ffn_down_exps.weight layer=24 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.24.ffn_gate_exps.weight layer=24 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.24.ffn_up_exps.weight layer=24 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.25.ffn_down_exps.weight layer=25 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.25.ffn_gate_exps.weight layer=25 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.25.ffn_up_exps.weight layer=25 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.26.ffn_down_exps.weight layer=26 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.26.ffn_gate_exps.weight layer=26 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.26.ffn_up_exps.weight layer=26 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.27.ffn_down_exps.weight layer=27 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.27.ffn_gate_exps.weight layer=27 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.27.ffn_up_exps.weight layer=27 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.28.ffn_down_exps.weight layer=28 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.28.ffn_gate_exps.weight layer=28 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.28.ffn_up_exps.weight layer=28 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.29.ffn_down_exps.weight layer=29 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.29.ffn_gate_exps.weight layer=29 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.29.ffn_up_exps.weight layer=29 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.30.ffn_down_exps.weight layer=30 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.30.ffn_gate_exps.weight layer=30 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.30.ffn_up_exps.weight layer=30 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.31.ffn_down_exps.weight layer=31 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.31.ffn_gate_exps.weight layer=31 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.31.ffn_up_exps.weight layer=31 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.32.ffn_down_exps.weight layer=32 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.32.ffn_gate_exps.weight layer=32 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.32.ffn_up_exps.weight layer=32 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.33.ffn_down_exps.weight layer=33 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.33.ffn_gate_exps.weight layer=33 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.33.ffn_up_exps.weight layer=33 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.34.ffn_down_exps.weight layer=34 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.34.ffn_gate_exps.weight layer=34 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.34.ffn_up_exps.weight layer=34 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.35.ffn_down_exps.weight layer=35 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.35.ffn_gate_exps.weight layer=35 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.35.ffn_up_exps.weight layer=35 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.36.ffn_down_exps.weight layer=36 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.36.ffn_gate_exps.weight layer=36 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.36.ffn_up_exps.weight layer=36 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.37.ffn_down_exps.weight layer=37 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.37.ffn_gate_exps.weight layer=37 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.37.ffn_up_exps.weight layer=37 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.38.ffn_down_exps.weight layer=38 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.38.ffn_gate_exps.weight layer=38 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.38.ffn_up_exps.weight layer=38 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.39.ffn_down_exps.weight layer=39 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.39.ffn_gate_exps.weight layer=39 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.39.ffn_up_exps.weight layer=39 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.40.ffn_down_exps.weight layer=40 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.40.ffn_gate_exps.weight layer=40 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.40.ffn_up_exps.weight layer=40 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.41.ffn_down_exps.weight layer=41 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.41.ffn_gate_exps.weight layer=41 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.41.ffn_up_exps.weight layer=41 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.42.ffn_down_exps.weight layer=42 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.42.ffn_gate_exps.weight layer=42 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.42.ffn_up_exps.weight layer=42 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.43.ffn_down_exps.weight layer=43 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.43.ffn_gate_exps.weight layer=43 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.43.ffn_up_exps.weight layer=43 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.44.ffn_down_exps.weight layer=44 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.44.ffn_gate_exps.weight layer=44 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.44.ffn_up_exps.weight layer=44 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.45.ffn_down_exps.weight layer=45 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.45.ffn_gate_exps.weight layer=45 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.45.ffn_up_exps.weight layer=45 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.46.ffn_down_exps.weight layer=46 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.46.ffn_gate_exps.weight layer=46 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.46.ffn_up_exps.weight layer=46 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.47.ffn_down_exps.weight layer=47 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.47.ffn_gate_exps.weight layer=47 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.47.ffn_up_exps.weight layer=47 nexp=512 size=301989888
+[SLIM-ARC-DBG] node[54] name=gate-0 data=0x7404a53880
+[SLIM-ARC-DBG] node[55] name=gate-0 (reshaped) data=0x7404a53880
+[SLIM-ARC-DBG] node[79] name=ffn_moe_logits-0 data=0x7404a43880
+[SLIM-ARC-DBG] node[80] name=ffn_moe_probs-0 data=0x7404a43880
+[SLIM-ARC-DBG] node[81] name=ffn_moe_probs-0 (reshaped) data=0x7404a43880
+[SLIM-ARC-DBG] node[82] name=ffn_moe_argsort-0 data=0x7404ac3880
+[SLIM-ARC-DBG] node[83] name=ffn_moe_topk-0 data=0x7404ac3880
+[SLIM-ARC-DBG] node[84] name=ffn_moe_weights-0 data=0x7404b43880
+[SLIM-ARC-DBG] node[85] name=ffn_moe_weights-0 (reshaped) data=0x7404b43880
+[SLIM-ARC-DBG] node[86] name=ffn_moe_weights_sum-0 data=0x7404422040
+[SLIM-ARC-DBG] total moe-like nodes=1620
+[SLIM-ARC-DBG] node[54] name=gate-0 data=0x7404a53880
+[SLIM-ARC-DBG] node[55] name=gate-0 (reshaped) data=0x7404a53880
+[SLIM-ARC-DBG] node[79] name=ffn_moe_logits-0 data=0x7404a43880
+[SLIM-ARC-DBG] node[80] name=ffn_moe_probs-0 data=0x7404a43880
+[SLIM-ARC-DBG] node[81] name=ffn_moe_probs-0 (reshaped) data=0x7404a43880
+[SLIM-ARC-DBG] node[82] name=ffn_moe_argsort-0 data=0x7404ac3880
+[SLIM-ARC-DBG] node[83] name=ffn_moe_topk-0 data=0x7404ac3880
+[SLIM-ARC-DBG] node[84] name=ffn_moe_weights-0 data=0x7404b43880
+[SLIM-ARC-DBG] node[85] name=ffn_moe_weights-0 (reshaped) data=0x7404b43880
+[SLIM-ARC-DBG] node[86] name=ffn_moe_weights_sum-0 data=0x7404422040
+[SLIM-ARC-DBG] total moe-like nodes=1620
+[SLIM-ARC-DBG] node[54] name=gate-0 data=0x7404a53880
+[SLIM-ARC-DBG] node[55] name=gate-0 (reshaped) data=0x7404a53880
+[SLIM-ARC-DBG] node[79] name=ffn_moe_logits-0 data=0x7404a43880
+[SLIM-ARC-DBG] node[80] name=ffn_moe_probs-0 data=0x7404a43880
+[SLIM-ARC-DBG] node[81] name=ffn_moe_probs-0 (reshaped) data=0x7404a43880
+[SLIM-ARC-DBG] node[82] name=ffn_moe_argsort-0 data=0x7404ac3880
+[SLIM-ARC-DBG] node[83] name=ffn_moe_topk-0 data=0x7404ac3880
+[SLIM-ARC-DBG] node[84] name=ffn_moe_weights-0 data=0x7404b43880
+[SLIM-ARC-DBG] node[85] name=ffn_moe_weights-0 (reshaped) data=0x7404b43880
+[SLIM-ARC-DBG] node[86] name=ffn_moe_weights_sum-0 data=0x7404422040
+[SLIM-ARC-DBG] total moe-like nodes=1620
+[SLIM-ARC-DBG] node[54] name=gate-0 data=0x7404a53880
+[SLIM-ARC-DBG] node[55] name=gate-0 (reshaped) data=0x7404a53880
+[SLIM-ARC-DBG] node[79] name=ffn_moe_logits-0 data=0x7404a43880
+[SLIM-ARC-DBG] node[80] name=ffn_moe_probs-0 data=0x7404a43880
+[SLIM-ARC-DBG] node[81] name=ffn_moe_probs-0 (reshaped) data=0x7404a43880
+[SLIM-ARC-DBG] node[82] name=ffn_moe_argsort-0 data=0x7404ac3880
+[SLIM-ARC-DBG] node[83] name=ffn_moe_topk-0 data=0x7404ac3880
+[SLIM-ARC-DBG] node[84] name=ffn_moe_weights-0 data=0x7404b43880
+[SLIM-ARC-DBG] node[85] name=ffn_moe_weights-0 (reshaped) data=0x7404b43880
+[SLIM-ARC-DBG] node[86] name=ffn_moe_weights_sum-0 data=0x7404422040
+[SLIM-ARC-DBG] total moe-like nodes=1620
+[SLIM-ARC-DBG] node[54] name=gate-0 data=0x7404a53880
+[SLIM-ARC-DBG] node[55] name=gate-0 (reshaped) data=0x7404a53880
+[SLIM-ARC-DBG] node[79] name=ffn_moe_logits-0 data=0x7404a43880
+[SLIM-ARC-DBG] node[80] name=ffn_moe_probs-0 data=0x7404a43880
+[SLIM-ARC-DBG] node[81] name=ffn_moe_probs-0 (reshaped) data=0x7404a43880
+[SLIM-ARC-DBG] node[82] name=ffn_moe_argsort-0 data=0x7404ac3880
+[SLIM-ARC-DBG] node[83] name=ffn_moe_topk-0 data=0x7404ac3880
+[SLIM-ARC-DBG] node[84] name=ffn_moe_weights-0 data=0x7404b43880
+[SLIM-ARC-DBG] node[85] name=ffn_moe_weights-0 (reshaped) data=0x7404b43880
+[SLIM-ARC-DBG] node[86] name=ffn_moe_weights_sum-0 data=0x7404422040
+[SLIM-ARC-DBG] total moe-like nodes=1620
+[SLIM-ARC-DBG] node[54] name=gate-0 data=0x7404a53880
+[SLIM-ARC-DBG] node[55] name=gate-0 (reshaped) data=0x7404a53880
+[SLIM-ARC-DBG] node[79] name=ffn_moe_logits-0 data=0x7404a43880
+[SLIM-ARC-DBG] node[80] name=ffn_moe_probs-0 data=0x7404a43880
+[SLIM-ARC-DBG] node[81] name=ffn_moe_probs-0 (reshaped) data=0x7404a43880
+[SLIM-ARC-DBG] node[82] name=ffn_moe_argsort-0 data=0x7404ac3880
+[SLIM-ARC-DBG] node[83] name=ffn_moe_topk-0 data=0x7404ac3880
+[SLIM-ARC-DBG] node[84] name=ffn_moe_weights-0 data=0x7404b43880
+[SLIM-ARC-DBG] node[85] name=ffn_moe_weights-0 (reshaped) data=0x7404b43880
+[SLIM-ARC-DBG] node[86] name=ffn_moe_weights_sum-0 data=0x7404422040
+[SLIM-ARC-DBG] total moe-like nodes=1620
+[SLIM-ARC-DBG] node[54] name=gate-0 data=0x7404a53880
+[SLIM-ARC-DBG] node[55] name=gate-0 (reshaped) data=0x7404a53880
+[SLIM-ARC-DBG] node[79] name=ffn_moe_logits-0 data=0x7404a43880
+[SLIM-ARC-DBG] node[80] name=ffn_moe_probs-0 data=0x7404a43880
+[SLIM-ARC-DBG] node[81] name=ffn_moe_probs-0 (reshaped) data=0x7404a43880
+[SLIM-ARC-DBG] node[82] name=ffn_moe_argsort-0 data=0x7404ac3880
+[SLIM-ARC-DBG] node[83] name=ffn_moe_topk-0 data=0x7404ac3880
+[SLIM-ARC-DBG] node[84] name=ffn_moe_weights-0 data=0x7404b43880
+[SLIM-ARC-DBG] node[85] name=ffn_moe_weights-0 (reshaped) data=0x7404b43880
+[SLIM-ARC-DBG] node[86] name=ffn_moe_weights_sum-0 data=0x7404422040
+[SLIM-ARC-DBG] total moe-like nodes=1620

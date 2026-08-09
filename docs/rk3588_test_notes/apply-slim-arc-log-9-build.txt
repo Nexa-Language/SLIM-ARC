@@ -1,0 +1,49 @@
+[  1%] Built target cpp-httplib
+[  3%] Built target ggml-base
+[  3%] Built target llama-common-base
+[  3%] Built target llama-ui-embed
+[  5%] Provisioning UI assets
+[ 10%] Built target ggml-cpu
+-- UI: npm not found, skipping npm build
+-- UI: downloading from b1: https://huggingface.co/buckets/ggml-org/llama-ui/resolve/b1/dist.tar.gz
+[ 10%] Built target ggml
+-- UI: download dist.tar.gz from b1 failed: "SSL connect error"
+-- UI: downloading from latest: https://huggingface.co/buckets/ggml-org/llama-ui/resolve/latest/dist.tar.gz
+-- UI: download dist.tar.gz from latest failed: "SSL connect error"
+-- UI: HF download failed
+CMake Warning at /home/orangepi/src/llama-upstream/scripts/ui-assets.cmake:359 (message):
+  UI: no assets available - building without an embedded UI.  In a
+  disconnected environment, download the pre-built UI from a llama.cpp
+  release at https://github.com/ggml-org/llama.cpp/releases and extract to
+  tools/ui/dist.
+
+
+[ 10%] Built target llama-ui-assets
+[ 10%] Built target llama-ui
+Consolidate compiler generated dependencies of target llama
+[ 10%] Building CXX object src/CMakeFiles/llama.dir/slim-arc-unified-scheduler.cpp.o
+[ 10%] Building CXX object src/CMakeFiles/llama.dir/llama-context.cpp.o
+[ 10%] Building CXX object src/CMakeFiles/llama.dir/slim-arc-prefetch.cpp.o
+[ 10%] Building CXX object src/CMakeFiles/llama.dir/llama-model-loader.cpp.o
+[ 10%] Building CXX object src/CMakeFiles/llama.dir/llama-kv-cache.cpp.o
+/home/orangepi/src/llama-upstream/src/slim-arc-prefetch.cpp: In member function ‘void slim_arc::prefetch_scheduler::register_tensor(const char*, void*, size_t, int)’:
+/home/orangepi/src/llama-upstream/src/slim-arc-prefetch.cpp:118:55: warning: unused parameter ‘name’ [-Wunused-parameter]
+  118 | void prefetch_scheduler::register_tensor(const char * name, void * addr, size_t size, int layer) {
+      |                                          ~~~~~~~~~~~~~^~~~
+/home/orangepi/src/llama-upstream/src/slim-arc-prefetch.cpp: In member function ‘void slim_arc::prefetch_scheduler::register_expert_tensor(const char*, void*, size_t, int, int)’:
+/home/orangepi/src/llama-upstream/src/slim-arc-prefetch.cpp:171:62: warning: unused parameter ‘name’ [-Wunused-parameter]
+  171 | void prefetch_scheduler::register_expert_tensor(const char * name, void * addr, size_t size, int layer, int n_experts) {
+      |                                                 ~~~~~~~~~~~~~^~~~
+[ 10%] Linking CXX shared library ../bin/libllama.so
+[ 67%] Built target llama
+[ 68%] Linking CXX shared library ../../bin/libmtmd.so
+[ 68%] Linking CXX shared library ../bin/libllama-common.so
+[ 84%] Built target mtmd
+[ 94%] Built target llama-common
+[ 98%] Built target server-context
+[ 98%] Linking CXX shared library ../../bin/libllama-server-impl.so
+[ 98%] Built target llama-server-impl
+[ 98%] Linking CXX shared library ../../bin/libllama-cli-impl.so
+[100%] Built target llama-cli-impl
+[100%] Linking CXX executable ../../bin/llama-cli
+[100%] Built target llama-cli

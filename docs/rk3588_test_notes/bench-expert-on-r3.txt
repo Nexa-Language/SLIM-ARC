@@ -1,0 +1,2 @@
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       4 |            pp32 |          2.75 ± 0.00 |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       4 |            tg16 |          1.44 ± 0.00 |

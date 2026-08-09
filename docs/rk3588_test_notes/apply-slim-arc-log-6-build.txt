@@ -1,0 +1,76 @@
+CMAKE_BUILD_TYPE=Release
+-- Warning: ccache not found - consider installing it for faster compilation or disable this warning with GGML_CCACHE=OFF
+-- CMAKE_SYSTEM_PROCESSOR: aarch64
+-- GGML_SYSTEM_ARCH: ARM
+-- Including CPU backend
+-- ARM detected
+-- ARM detected flags: -mcpu=cortex-a76.cortex-a55+crypto
+-- Checking for ARM features using flags:
+--   -U__ARM_FEATURE_MATMUL_INT8
+--   -U__ARM_FEATURE_SVE
+--   -mcpu=cortex-a76.cortex-a55+crypto+dotprod+noi8mm+nosve
+-- Adding CPU backend variant ggml-cpu: -U__ARM_FEATURE_MATMUL_INT8;-U__ARM_FEATURE_SVE;-mcpu=cortex-a76.cortex-a55+crypto+dotprod+noi8mm+nosve 
+-- ggml version: 0.18.1
+-- ggml commit:  360e134
+-- OpenSSL found: 3.0.2
+-- Generating embedded license file for target: llama-app
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/orangepi/src/llama-upstream/build
+Consolidate compiler generated dependencies of target llama-ui-embed
+Consolidate compiler generated dependencies of target llama-common-base
+Consolidate compiler generated dependencies of target ggml-base
+Consolidate compiler generated dependencies of target cpp-httplib
+[  0%] Built target llama-ui-embed
+[  0%] Built target llama-common-base
+[  0%] Built target cpp-httplib
+[  3%] Built target ggml-base
+[  5%] Provisioning UI assets
+-- UI: npm not found, skipping npm build
+-- UI: downloading from b1: https://huggingface.co/buckets/ggml-org/llama-ui/resolve/b1/dist.tar.gz
+Consolidate compiler generated dependencies of target ggml-cpu
+[ 10%] Built target ggml-cpu
+Consolidate compiler generated dependencies of target ggml
+-- UI: download dist.tar.gz from b1 failed: "SSL connect error"
+-- UI: downloading from latest: https://huggingface.co/buckets/ggml-org/llama-ui/resolve/latest/dist.tar.gz
+[ 10%] Built target ggml
+-- UI: download dist.tar.gz from latest failed: "SSL connect error"
+-- UI: HF download failed
+CMake Warning at /home/orangepi/src/llama-upstream/scripts/ui-assets.cmake:359 (message):
+  UI: no assets available - building without an embedded UI.  In a
+  disconnected environment, download the pre-built UI from a llama.cpp
+  release at https://github.com/ggml-org/llama.cpp/releases and extract to
+  tools/ui/dist.
+
+
+[ 10%] Built target llama-ui-assets
+Consolidate compiler generated dependencies of target llama-ui
+[ 10%] Built target llama-ui
+Consolidate compiler generated dependencies of target llama
+[ 10%] Building CXX object src/CMakeFiles/llama.dir/slim-arc-prefetch.cpp.o
+[ 10%] Building CXX object src/CMakeFiles/llama.dir/llama-context.cpp.o
+[ 10%] Building CXX object src/CMakeFiles/llama.dir/llama-kv-cache.cpp.o
+[ 10%] Building CXX object src/CMakeFiles/llama.dir/llama-model-loader.cpp.o
+/home/orangepi/src/llama-upstream/src/slim-arc-prefetch.cpp: In member function ‘void slim_arc::prefetch_scheduler::register_tensor(const char*, void*, size_t, int)’:
+/home/orangepi/src/llama-upstream/src/slim-arc-prefetch.cpp:114:55: warning: unused parameter ‘name’ [-Wunused-parameter]
+  114 | void prefetch_scheduler::register_tensor(const char * name, void * addr, size_t size, int layer) {
+      |                                          ~~~~~~~~~~~~~^~~~
+[ 10%] Linking CXX shared library ../bin/libllama.so
+[ 67%] Built target llama
+Consolidate compiler generated dependencies of target llama-common
+Consolidate compiler generated dependencies of target mtmd
+[ 68%] Linking CXX shared library ../bin/libllama-common.so
+[ 68%] Linking CXX shared library ../../bin/libmtmd.so
+[ 84%] Built target mtmd
+[ 94%] Built target llama-common
+Consolidate compiler generated dependencies of target server-context
+[ 98%] Built target server-context
+Consolidate compiler generated dependencies of target llama-server-impl
+[ 98%] Linking CXX shared library ../../bin/libllama-server-impl.so
+[ 98%] Built target llama-server-impl
+Consolidate compiler generated dependencies of target llama-cli-impl
+[ 98%] Linking CXX shared library ../../bin/libllama-cli-impl.so
+[100%] Built target llama-cli-impl
+Consolidate compiler generated dependencies of target llama-cli
+[100%] Linking CXX executable ../../bin/llama-cli
+[100%] Built target llama-cli
