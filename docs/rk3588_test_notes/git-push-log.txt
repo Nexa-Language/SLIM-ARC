@@ -8,6 +8,8 @@ SLIM-ARC demo-ui 整合：git 操作留痕日志
 远程：origin git@github.com:Nexa-Language/SLIM-ARC.git
 分支：haoma
 
+（注：本文件自身于 86e0c19 提交，第二次 push 后追加如下补充记录）
+
 ----------------------------------------------------------------
 1. git status（改动范围，操作前）
 ----------------------------------------------------------------
@@ -104,6 +106,20 @@ To github.com:Nexa-Language/SLIM-ARC.git
 - 本地 haoma = c22dcad
 - 远程 haoma = c22dcad（git ls-remote 确认 refs/heads/haoma = c22dcadb…）
 - 未跟踪：scripts/demo/index.html.bak（本地备份，有意不提交）
+
+----------------------------------------------------------------
+7. 补充记录（本留痕文件自身的提交与推送）
+----------------------------------------------------------------
+git add docs/rk3588_test_notes/git-push-log.txt
+git commit -m "docs: 记录 demo-ui 汇总 git 操作留痕 (git-push-log)"
+结果：[haoma 86e0c19] 1 file changed, 110 insertions(+)
+
+git push origin haoma
+结果（exit code 0，成功）：
+To github.com:Nexa-Language/SLIM-ARC.git
+   c22dcad..86e0c19  haoma -> haoma
+
+最终状态：本地 haoma = 86e0c19，远程 haoma = 86e0c19，`## haoma...origin/haoma` 同步。
 
 ================================================================
 留痕完成。全部操作非交互，无失败需修复（上游配置小卡点已定位根因并解决）。
