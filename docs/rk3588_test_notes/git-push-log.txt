@@ -1,0 +1,110 @@
+================================================================
+SLIM-ARC demo-ui 整合：git 操作留痕日志
+================================================================
+日期：2026-08-10
+操作人：Zoo（自动执行，全程非交互）
+关联文档：docs/rk3588_test_notes/demo-ui-summary-2026-08-10.md
+仓库：/home/orangepi/SLIM-ARC
+远程：origin git@github.com:Nexa-Language/SLIM-ARC.git
+分支：haoma
+
+----------------------------------------------------------------
+1. git status（改动范围，操作前）
+----------------------------------------------------------------
+分支 haoma。
+Changes not staged for commit:
+  modified:   scripts/demo/index.html
+  modified:   scripts/demo/llama_cli_server.py
+  modified:   scripts/demo/start-demo.sh
+Untracked files:
+  docs/rk3588_test_notes/demo-ui-2026-08-10/
+  docs/rk3588_test_notes/demo-ui-analysis-2026-08-10/
+  docs/rk3588_test_notes/demo-ui-debug-2026-08-10/
+  docs/rk3588_test_notes/demo-ui-scrollfix-2026-08-10/
+  docs/rk3588_test_notes/demo-ui-scrollfix-r2-2026-08-10/
+  scripts/demo/index.html.bak
+
+说明：
+- 3 个功能文件为先前已完成的 SLIM-ARC FIX 2026-08-10 修复（git diff 核实），
+  本任务未新增任何功能代码改动。
+- .gitignore 未忽略 docs/rk3588_test_notes/ 与 scripts/demo/（git check-ignore 确认）。
+- scripts/demo/index.html.bak 为本地临时备份（r2 滚动修复前基线），
+  任务未要求提交，保留为未跟踪文件，未纳入本提交。
+
+----------------------------------------------------------------
+2. git add
+----------------------------------------------------------------
+git add scripts/demo/index.html scripts/demo/start-demo.sh \
+        scripts/demo/llama_cli_server.py \
+        docs/rk3588_test_notes/demo-ui-2026-08-10 \
+        docs/rk3588_test_notes/demo-ui-debug-2026-08-10 \
+        docs/rk3588_test_notes/demo-ui-analysis-2026-08-10 \
+        docs/rk3588_test_notes/demo-ui-scrollfix-2026-08-10 \
+        docs/rk3588_test_notes/demo-ui-scrollfix-r2-2026-08-10 \
+        docs/rk3588_test_notes/demo-ui-summary-2026-08-10.md
+
+暂存结果：5 个留痕目录全部文件 + 3 个功能文件 + 本次整合文档，
+合计 36 个文件（35 新增 + 3 修改中重复计）。
+
+----------------------------------------------------------------
+3. git commit
+----------------------------------------------------------------
+git commit -m "demo-ui: 修复聊天窗口滚动(2轮)与长文本生成问题，整合UI留痕文档
+
+SLIM-ARC FIX 2026-08-10 汇总：
+- start-demo.sh: LLAMA_DIR 自动探测两种布局（修复 llama-server 路径 bug）
+- llama_cli_server.py: LLAMA_CLI 自动探测两种布局（备用方案同步）
+- index.html:
+  - 移除系统提示 80 字限制 + max_tokens 200->512（修复长文本无法持续生成）
+  - 添加 r.ok HTTP 状态检查、修复 escapeHtml 转义
+  - 滚动修复 2 轮：.chat-messages/.chat 加 min-height:0、.main 加
+    grid-template-rows:minmax(0,1fr)、流式 auto-scroll 底部容差
+- docs/rk3588_test_notes/: 整合 5 个 demo-ui 留痕目录 + 本次总结文档"
+
+结果：
+[haoma c22dcad] demo-ui: 修复聊天窗口滚动(2轮)与长文本生成问题，整合UI留痕文档
+ 36 files changed, 3287 insertions(+), 4 deletions(-)
+
+COMMIT HASH：c22dcadb90ae92a83cacebb9be12373526195660
+
+----------------------------------------------------------------
+4. git push
+----------------------------------------------------------------
+export GIT_TERMINAL_PROMPT=0
+git push origin haoma
+
+结果（exit code 0，成功）：
+To github.com:Nexa-Language/SLIM-ARC.git
+   e664bff..c22dcad  haoma -> haoma
+
+远程地址：git@github.com:Nexa-Language/SLIM-ARC.git
+推送结果：成功 ✅（SSH 免密，未触发交互）
+
+----------------------------------------------------------------
+5. 上游跟踪配置（辅助修正）
+----------------------------------------------------------------
+背景：push 成功后 `git branch --set-upstream-to=origin/haoma` 失败，
+根因：.git/config 的 remote.origin.fetch 仅含 main 分支
+（fetch = +refs/heads/main:refs/remotes/origin/main），
+未包含 haoma，本地无 refs/remotes/origin/haoma 远程跟踪引用。
+
+处理（git 配置调整，非功能代码）：
+  git config --add remote.origin.fetch "+refs/heads/haoma:refs/remotes/origin/haoma"
+  git fetch origin
+  → * [new branch] haoma -> origin/haoma
+
+结果：
+  git rev-parse @{u}        → origin/haoma（上游已生效）
+  git status -sb            → ## haoma...origin/haoma（本地与远程同步）
+  git log --oneline -1 origin/haoma → c22dcad（与本地一致）
+
+----------------------------------------------------------------
+6. 最终同步状态
+----------------------------------------------------------------
+- 本地 haoma = c22dcad
+- 远程 haoma = c22dcad（git ls-remote 确认 refs/heads/haoma = c22dcadb…）
+- 未跟踪：scripts/demo/index.html.bak（本地备份，有意不提交）
+
+================================================================
+留痕完成。全部操作非交互，无失败需修复（上游配置小卡点已定位根因并解决）。
+================================================================
