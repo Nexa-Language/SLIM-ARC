@@ -1,0 +1,35 @@
+================================================================================
+STEP-1 验证记录 — FIX-A（.chat 加 min-height:0）
+日期: 2026-08-10  时间: ~14:38
+================================================================================
+
+改动内容（FIX-A）:
+  scripts/demo/index.html
+  修改前（行 64-67）:
+        .chat {
+            background: var(--bg);
+            display: flex; flex-direction: column;
+        }
+  修改后（行 64-68）:
+        .chat {
+            background: var(--bg);
+            display: flex; flex-direction: column;
+            min-height: 0; /* SLIM-ARC FIX 2026-08-10: grid item(.chat) 默认自动最小尺寸
+            min-height:auto 会把 grid 行撑高，导致内部 .chat-messages 的 overflow-y:auto
+            永不触发；允许 .chat 收缩到 grid 行高，使左栏滚动条可激活 */
+        }
+  说明: 仅新增 1 行（行 67），其余原样。
+
+验证结果（命令级，全部通过）:
+  1) diff index.html.bak index.html
+     => 66a67 仅新增一行，其余无差异（最小改动）。
+  2) md5: 修改前 5aa63cbab2c9d81315752505dc48c208
+          修改后 4d6142487db5825bc35d9ad4ed9aa825（变化确认）
+  3) 行数: 539 -> 540
+  4) grep -n "SLIM-ARC FIX" 命中行 67（FIX-A 新增）与行 76（上次保留的 .chat-messages min-height:0）
+  5) curl -s http://127.0.0.1:8090/index.html => HTTP 200
+  6) curl 输出中命中行 67 的 FIX-A 规则，且 .chat 规则块(64-68)完整 => 前端静态服务已读到新内容
+
+结论: FIX-A 已落盘并被前端服务读取。渲染效果（左栏滚动条出现）需人工浏览器验证，
+      本环境无无头浏览器，不伪造自动化渲染结果。人工验证步骤见 final-report。
+================================================================================

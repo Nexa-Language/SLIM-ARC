@@ -1,0 +1,55 @@
+================================================================================
+第 1 处修改验证记录（step1-verify.txt）
+日期: 2026-08-10
+修改点: scripts/demo/index.html 行 73-75 `.chat-messages` 添加 min-height: 0;
+SLIM-ARC FIX 标注: /* SLIM-ARC FIX 2026-08-10: flexbox 子项默认 min-height:auto 阻止 overflow-y 生效 */
+================================================================================
+
+【1. 文件已更新确认】
+命令: grep -n "min-height" scripts/demo/index.html
+输出:
+  75:            min-height: 0; /* SLIM-ARC FIX 2026-08-10: flexbox 子项默认 min-height:auto 阻止 overflow-y 生效 */
+结果: 新增 min-height 行存在 ✓（原文件无任何 min-height 声明，本次为唯一新增）
+
+【2. 文件哈希变化确认】
+命令: md5sum scripts/demo/index.html
+修复前基线: 25acbdcc29ad6acdc673482d58582b0c
+修复后:       250eac5e85a5ccb66bd12823bc5972c0
+结果: md5 已变化，证明文件内容实际更新 ✓
+
+【3. 前端 http 服务可达性确认】
+命令: curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8090/index.html
+输出: 200
+结果: 服务正常返回 200 ✓
+
+【4. 服务读取到更新后内容的确认】
+命令: curl -s http://127.0.0.1:8090/index.html | grep -n "min-height"
+输出:
+  75:            min-height: 0; /* SLIM-ARC FIX 2026-08-10: flexbox 子项默认 min-height:auto 阻止 overflow-y 生效 */
+结果: http.server（静态服务）直接读取磁盘文件，无需重启即返回更新后内容 ✓
+
+【5. 无头浏览器工具可用性检查】
+检查项: python3 playwright / node puppeteer / python3 selenium / chromium 二进制 / python3 pyppeteer
+结果: 全部不可用（ModuleNotFoundError / node not found / 无 chromium 二进制）。
+结论: 无法在命令行完成真实浏览器渲染验证（overflowY 计算样式 / 滚动条出现）。按要求不伪造验证结果。
+
+--------------------------------------------------------------------------------
+【原理说明】为何该改动能让滚动生效:
+- .chat（行 64-67）为 display:flex; flex-direction:column 容器，.chat-messages 是其 flex 子项。
+- CSS Flexbox 规范: flex 子项默认 min-height:auto，即元素不会被压缩到低于其内容固有最小高度。
+- 因此即便设置 overflow-y:auto，当消息增多时 .chat-messages 只增不减（撑高），内部始终"不溢出"，
+  overflow-y:auto 永不激活；同时把 .chat-input 推出视口，body overflow:hidden 直接裁剪。
+- 添加 min-height:0 后，覆盖默认 min-height:auto，允许 .chat-messages 收缩到 flex 分配的可用空间，
+  内容超出即触发 overflow-y:auto 滚动条，消息窗口可上下滚动。
+
+--------------------------------------------------------------------------------
+【人工浏览器验证步骤】（因无头浏览器不可用，需人工确认）
+1. 打开浏览器访问 http://127.0.0.1:8090/index.html（若已打开请强制刷新 Ctrl+Shift+R 以加载新文件）。
+2. 在左侧聊天框连续发送多条较长消息，或发送一条超长消息，使消息内容明显超出可视高度。
+3. 观察:
+   a) #messages 容器（.chat-messages）右侧出现竖直滚动条;
+   b) 滚动条可上下拖动，历史消息可完整回看;
+   c) 底部输入框 (.chat-input) 始终固定在可视区底部，不被消息推出视口。
+4. 打开浏览器 DevTools (F12) → Elements，选中 #messages，确认其 computed style 中:
+   overflow-y: auto; 且元素实际高度小于 scrollHeight（scrollHeight > clientHeight），证明滚动已激活。
+================================================================================

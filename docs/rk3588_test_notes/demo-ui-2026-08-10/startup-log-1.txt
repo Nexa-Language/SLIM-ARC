@@ -1,0 +1,38 @@
+==============================================
+  SLIM-ARC Live Demo
+  模型: Qwen3-4B-Q4_K_M (2.4 GB)
+  llama-server: http://127.0.0.1:8080
+  monitor:      http://127.0.0.1:8001
+  前端:         http://127.0.0.1:8090
+==============================================
+
+[0/3] 清理残留进程...
+  发现残留进程: 68879
+68880
+69100
+  已清理
+[1/3] 启动 llama-server...
+  PID: 69122
+[2/3] 启动 monitor.py...
+  PID: 69123
+[3/3] 启动前端 http (8090)...
+  PID: 69124
+
+等待服务就绪...
+  等待 llama-server (1/8)...
+  llama-server 就绪 ✓
+  monitor 就绪 ✓
+  前端就绪 ✓
+
+==============================================
+  ✅ Demo 已启动！
+
+  打开浏览器: http://127.0.0.1:8090/index.html
+
+  停止: kill 69122 69123 69124
+  或: ps aux | grep -E 'llama-server|monitor.py|http.server' | grep -v grep | awk '{print $2}' | xargs -r kill
+==============================================
+
+服务运行中。Ctrl+C 停止所有服务。
+（实时日志: tail -f logs/demo-llama-server.log）
+

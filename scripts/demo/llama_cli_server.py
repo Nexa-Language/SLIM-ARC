@@ -33,7 +33,11 @@ app.add_middleware(
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+# SLIM-ARC FIX 2026-08-10: llama-upstream 是独立 git clone，实际位于仓库外
+# (PROJECT_ROOT.parent/src/llama-upstream)，此处自动探测两种布局
 LLAMA_CLI = PROJECT_ROOT / "src/llama-upstream/build/bin/llama-cli"
+if not LLAMA_CLI.exists():
+    LLAMA_CLI = PROJECT_ROOT.parent / "src/llama-upstream/build/bin/llama-cli"
 
 MODELS = {
     "4b": {

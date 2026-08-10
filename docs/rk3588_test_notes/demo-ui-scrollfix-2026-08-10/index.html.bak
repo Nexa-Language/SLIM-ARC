@@ -56,7 +56,6 @@
         .main {
             display: grid;
             grid-template-columns: 1fr 380px;
-            grid-template-rows: minmax(0, 1fr); /* SLIM-ARC FIX 2026-08-10: 默认 auto 行会被 .chat 内容撑高(配合 .chat 的 min-height:auto)，导致左栏 .chat-messages 的 overflow-y:auto 不触发；显式 1fr 使行高固定为容器高度且允许内容溢出不撑行 */
             height: calc(100vh - 56px);
             gap: 1px;
             background: var(--border);
@@ -65,7 +64,6 @@
         .chat {
             background: var(--bg);
             display: flex; flex-direction: column;
-            min-height: 0; /* SLIM-ARC FIX 2026-08-10: grid item(.chat) 默认自动最小尺寸 min-height:auto 会把 grid 行撑高，导致内部 .chat-messages 的 overflow-y:auto 永不触发；允许 .chat 收缩到 grid 行高，使左栏滚动条可激活 */
         }
         .chat-header {
             padding: 16px 24px;
@@ -74,7 +72,6 @@
         }
         .chat-messages {
             flex: 1; overflow-y: auto; padding: 24px;
-            min-height: 0; /* SLIM-ARC FIX 2026-08-10: flexbox 子项默认 min-height:auto 阻止 overflow-y 生效 */
         }
         .msg { margin-bottom: 24px; }
         .msg.user .msg-bubble {
@@ -509,10 +506,7 @@
                                 if (delta && delta.content) {
                                     text += delta.content;
                                     bubble.innerHTML = escapeHtml(text) + '<span class="cursor"></span>';
-                                    // SLIM-ARC FIX 2026-08-10: 仅当用户已在底部附近时才自动滚动，避免阻止回看历史
-                                    if (messages.scrollTop + messages.clientHeight >= messages.scrollHeight - 50) {
-                                        messages.scrollTop = messages.scrollHeight;
-                                    }
+                                    messages.scrollTop = messages.scrollHeight;
                                 }
                             } catch (e) {}
                         }

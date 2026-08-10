@@ -1,0 +1,52 @@
+SLIM-ARC Demo UI 环境预检
+=========================
+日期: 2026-08-10
+主机: Linux 5.10 aarch64 (RK3588, 8GB)
+IP: 192.168.137.74
+
+1. llama-server 二进制
+-----------------------
+预期路径: /home/orangepi/SLIM-ARC/src/llama-upstream/build/bin/llama-server
+实际结果: 该路径不存在（SLIM-ARC/src/ 整个目录不存在）。
+实际位置: /home/orangepi/src/llama-upstream/build/bin/llama-server
+- 说明: src/llama-upstream 是独立 git clone（.gitignore 第265行 src/llama-upstream/ 被忽略），
+  实际位于 /home/orangepi/src/llama-upstream，而非 SLIM-ARC 仓库内部。
+- 初始状态: build/bin/ 下仅有 llama-cli、llama-bench，缺少 llama-server 可执行文件
+  （但已有 libllama-server-impl.so，说明 server 源码已编译 impl 库，仅缺主程序链接产物）。
+- 修复: 执行 cmake --build build --target llama-server -j$(nproc) 成功，
+  生成 /home/orangepi/src/llama-upstream/build/bin/llama-server。
+  版本输出: "version: 1 (360e134) built with GNU 11.4.0 for Linux aarch64"
+- 备注: 构建过程中 UI assets 下载失败（huggingface SSL connect error，离线环境），
+  但不影响 llama-server HTTP 功能（仅影响内置 Web UI 嵌入）。
+
+2. 模型文件
+-----------
+data/models/ 目录实际位置: /home/orangepi/SLIM-ARC/data/models/
+- Qwen3-4B-Q4_K_M.gguf 存在 (2,497,280,256 字节 ≈ 2.4 GB)   → 可用
+- Qwen3-Next-80B-A3B-Instruct-IQ4_XS.gguf 不存在            → 80B 不可用
+- olmoe-1b-7b-0924-instruct-q4_k_m.gguf 存在 (4.2 GB)        → 未列入 demo 脚本
+结论: 本环境磁盘 28G 总量仅剩 17G 可用，80B 模型(38GB)装不下，故选 4B 模型验证 UI。
+
+3. Python 环境
+--------------
+- python3: 3.10.12
+- fastapi: 初始缺失 → 已 pip install fastapi (0.141.1)
+- uvicorn: 初始缺失 → 已 pip install uvicorn (0.52.1)
+- requests: 初始缺失 → 已 pip install requests (2.34.2)
+- pip: 22.0.2，默认 PyPI 源可用（清华源不可用，返回 no matching distribution）
+- 安装位置: /home/orangepi/.local/lib/python3.10/site-packages
+  （pip 全局安装因权限落在 .local，python3 可直接 import）
+
+4. 端口占用
+-----------
+- 8080: 空闲
+- 8001: 空闲
+- 8090: 空闲
+- 相关进程: 无 llama-server / monitor.py / http.server 残留
+
+5. 其他
+-------
+- 内存: 7.8Gi total, 6.4Gi available
+- 磁盘: 28G 总量, 17G 可用
+- 网络: GitHub 不可达；huggingface 不可达；PyPI 默认源可达
+- 代理: 无代理环境变量

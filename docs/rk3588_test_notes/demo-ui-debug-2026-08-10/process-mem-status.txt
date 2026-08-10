@@ -1,0 +1,52 @@
+# 进程/端口/内存/OOM 状态检查
+# 日期: 2026-08-10
+
+## 进程状态
+```
+orangepi   69497  6.7 35.1 3753912 2854144 pts/3 Sl+  19:33   6:08 /home/orangepi/src/llama-upstream/build/bin/llama-server -m /home/orangepi/SLIM-ARC/data/models/Qwen3-4B-Q4_K_M.gguf -t 8 -c 8192 --host 0.0.0.0 --port 8080 -fa auto -ctk q4_0 -ctv q4_0 --no-repack --no-context-shift
+orangepi   69498  1.3  0.5 130816 42920 pts/3    Sl+  19:33   1:13 python3 /home/orangepi/SLIM-ARC/scripts/demo/monitor.py
+orangepi   69499  0.0  0.2 247792 16976 pts/3    Sl+  19:33   0:02 python3 -m http.server 8090 --directory /home/orangepi/SLIM-ARC/scripts/demo
+```
+- llama-server: PID 69497, 占用 35.1% 内存 (~2.8GB), 正常运行
+- monitor.py: PID 69498, 正常运行
+- http.server: PID 69499, 正常运行
+
+## 端口状态
+```
+LISTEN 0  2048  0.0.0.0:8001  -> python3 (monitor.py)
+LISTEN 0   512  0.0.0.0:8080  -> llama-server
+LISTEN 0     5  0.0.0.0:8090  -> python3 (http.server)
+```
+- 三个端口均正常 LISTEN
+
+## 健康检查
+- curl http://127.0.0.1:8080/health → {"status":"ok"}
+- curl http://127.0.0.1:8001/api/health → {"status":"ok","config":{...}}
+- curl http://127.0.0.1:8080/slots → 4个slot, 均未卡在 is_processing
+
+## 内存状态
+```
+               total        used        free      shared  buff/cache   available
+Mem:           7.8Gi       2.3Gi       392Mi       2.0Mi       5.1Gi       5.4Gi
+Swap:          3.9Gi        86Mi       3.8Gi
+```
+- 总内存: 7.8GB, 已用 2.3GB, 可用 5.4GB
+- 无内存不足
+
+## OOM 检查
+- dmesg | grep -i "oom\|out of memory\|killed process" → 无结果
+- journalctl -k | grep -i "oom\|out of memory\|killed process" → 无结果
+- 结论: 无 OOM 事件
+
+## llama-server 日志 (logs/demo-llama-server.log)
+- 正常的 slot 调度和 print_timing 输出
+- 无 warning/error
+- 最后一次请求: task 2016, 200 tokens, 5.87 t/s, 正常完成
+
+## /slots 状态 (排查时)
+- slot 3 显示: n_decoded=18, n_remain=182, has_next_token=false
+  → 这是前端参数请求的结果: 模型仅生成18 token就停止(因系统提示限制)
+  → n_remain=182 说明 max_tokens=200 中还有182个未使用，模型主动停止
+
+## 结论
+进程、端口、内存、OOM 均正常。问题与系统资源无关。

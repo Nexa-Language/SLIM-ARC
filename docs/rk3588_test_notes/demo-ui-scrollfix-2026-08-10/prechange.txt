@@ -1,0 +1,39 @@
+================================================================================
+SLIM-ARC 监视 UI 滚动修复 — 修复前状态留痕（prechange）
+日期: 2026-08-10
+任务: 仅修复 Bug1（对话窗口无法上下滚动）两处；MoE 可视化严禁修改
+依据: docs/rk3588_test_notes/demo-ui-analysis-2026-08-10/ui-bug-analysis-report-2026-08-10.md Bug1
+================================================================================
+
+【目标文件】scripts/demo/index.html
+【基线 MD5】25acbdcc29ad6acdc673482d58582b0c
+【基线行数】535 行
+【备份文件】docs/rk3588_test_notes/demo-ui-scrollfix-2026-08-10/index.html.bak（原样只读备份，md5 与基线一致）
+
+--------------------------------------------------------------------------------
+第 1 处（主因，致命）: .chat-messages CSS 规则缺少 min-height: 0
+位置: 行 73-75
+当前代码（grep -n "chat-messages" 命中行 73 与 253）:
+   73 |        .chat-messages {
+   74 |            flex: 1; overflow-y: auto; padding: 24px;
+   75 |        }
+问题: flex column 布局（.chat, 行 64-67, display:flex;flex-direction:column）子项默认
+      min-height:auto，.chat-messages 不会缩小到低于内容高度，overflow-y:auto 无法激活。
+修复方案: 行 74 后追加 min-height: 0;（带 SLIM-ARC FIX 标注）
+
+--------------------------------------------------------------------------------
+第 2 处（次因）: send() 中流式输出强制 auto-scroll
+位置: 行 509（流式 token 处理内）
+当前代码（grep -n "scrollTop" 命中行 459 与 509）:
+  459 |            messages.scrollTop = messages.scrollHeight;   <-- 发送消息时，保留不变
+  509 |                                    messages.scrollTop = messages.scrollHeight;   <-- 本次修改点
+问题: 每个流式 token 都强制滚到底部，阻止用户生成期间向上回看历史。
+修复方案: 仅当用户已在底部附近（50px 容差）时才自动滚动到底部。
+
+================================================================================
+MoE 可视化相关行（严禁改动，作为改动前后对比基线）:
+  updateExperts() 函数: 约行 327-342（含 Math.random()）
+  专家格初始化 initExperts: 约行 316-325
+  轮询消费 pollMonitor(): 约行 420-422
+  说明: 本次任务绝不触碰以上任何代码。
+================================================================================
