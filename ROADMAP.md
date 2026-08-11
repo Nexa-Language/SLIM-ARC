@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-08-11 pressure admission Task 2：纯预算策略完成
+
+### 变更描述
+- 新增无浮点、无异常的纯函数压力预算策略，计算 cgroup headroom、最低/百分比 reserve、effective budget 与 throttled 状态。
+- 对 invalid、unlimited、I/O error 和内部不一致 snapshot 保持现有 static budget；有效 snapshot 才执行 pressure throttling。
+- 百分比计算通过商/余数拆分和饱和乘加避免 `UINT64_MAX` 溢出；normal 与 ASan/UBSan 测试覆盖零 static budget、reserve 超限和乘法极值。
+
+### 涉及文件
+- `patches/llama-upstream/slim-arc-pressure-budget.h`
+- `patches/llama-upstream/slim-arc-pressure-budget.cpp`
+- `tests/cpp/test-slim-arc-pressure-budget.cpp`
+- `tests/run-cpp-unit.sh`
+- `plan/23-v1-pressure-aware-prefetch.md`
+
+### 决策原因
+- 将预算计算与 cgroup I/O、调度线程分离，可对所有算术边界做确定性验证，并确保读取失败不会被误判成“禁止预取”。
+- reserve 大于 headroom 时 effective budget 明确为零，但只影响预取 admission，不改变模型按需计算路径。
+
+---
+
 ## 2026-08-11 pressure admission Task 1：cgroup 内存快照完成
 
 ### 变更描述

@@ -133,7 +133,7 @@ pressure_budget_result compute_pressure_budget(
     uint32_t reserve_basis_points);
 ```
 
-- [ ] **Step 1: Write table-driven failing tests**
+- [x] **Step 1: Write table-driven failing tests**
 
 ```cpp
 constexpr uint64_t MiB = 1ULL << 20;
@@ -148,13 +148,13 @@ const case_t cases[] = {
 
 Add explicit cases for invalid/unlimited snapshots, `current > max`, zero static budget, multiplication overflow and reserve larger than max.
 
-- [ ] **Step 2: Run and observe the expected compile failure**
+- [x] **Step 2: Run and observe the expected compile failure**
 
 Run: `bash tests/run-cpp-unit.sh test-slim-arc-pressure-budget`
 
 Expected: FAIL before policy files exist.
 
-- [ ] **Step 3: Implement saturating integer-only budget math**
+- [x] **Step 3: Implement saturating integer-only budget math**
 
 Compute percentage reserve without floating point and without overflow. For a valid snapshot:
 
@@ -166,13 +166,13 @@ effective = min(static_budget_bytes, max(headroom - reserve, 0))
 
 For invalid/unlimited data, set `pressure_data_valid=false`, `effective_budget_bytes=static_budget_bytes`, `throttled=false`.
 
-- [ ] **Step 4: Run unit and sanitizer tests**
+- [x] **Step 4: Run unit and sanitizer tests**
 
 Run: `bash tests/run-cpp-unit.sh test-slim-arc-pressure-budget && SLIM_ARC_TEST_SANITIZE=1 bash tests/run-cpp-unit.sh test-slim-arc-pressure-budget`
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit the policy**
+- [x] **Step 5: Commit the policy**
 
 ```text
 [feat][Scheduler][2/4] Compute pressure budget
