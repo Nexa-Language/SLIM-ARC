@@ -196,7 +196,7 @@ Links: plan/23-v1-pressure-aware-prefetch.md
 - Consumes: `prefetch_scheduler::set_memory_budget(size_t bytes)`.
 - Produces: `prefetch_budget_stats { requested_bytes, issued_bytes, skipped_bytes, rounds_throttled }` and `prefetch_scheduler::budget_stats() const`.
 
-- [ ] **Step 1: Write a failing budget-selection test around a pure helper**
+- [x] **Step 1: Write a failing budget-selection test around a pure helper**
 
 Expose a small internal helper:
 
@@ -210,27 +210,27 @@ std::vector<size_t> select_prefetch_items(
 
 Test that `{128, 512, 128}` under a 300-byte budget selects indices `{0, 2}`, requests 768 bytes, issues 256 bytes and skips 512 bytes. Test zero budget, exact boundary and near-`UINT64_MAX` totals.
 
-- [ ] **Step 2: Run the test and verify failure**
+- [x] **Step 2: Run the test and verify failure**
 
 Run: `bash tests/run-cpp-unit.sh test-slim-arc-prefetch-budget`
 
 Expected: FAIL because budget selection is absent.
 
-- [ ] **Step 3: Make the scheduler budget atomic and enforce it per worker round**
+- [x] **Step 3: Make the scheduler budget atomic and enforce it per worker round**
 
 Change `memory_budget_` to `std::atomic<size_t>`. At the start of a worker round, load one immutable budget snapshot. Visit tensors in current layer/window order and issue `posix_madvise(..., POSIX_MADV_WILLNEED)` only for complete items that fit the remaining budget. Never partially advise an arbitrary tensor, and never let unsigned subtraction underflow.
 
-- [ ] **Step 4: Count syscall success and failure separately**
+- [x] **Step 4: Count syscall success and failure separately**
 
 Only add bytes to `issued_bytes` when `posix_madvise` returns 0. Add a `madvise_failures` counter; a failed hint is observable but does not fail inference.
 
-- [ ] **Step 5: Run focused tests plus thread sanitizer where supported**
+- [x] **Step 5: Run focused tests plus thread sanitizer where supported**
 
 Run: `bash tests/run-cpp-unit.sh test-slim-arc-prefetch-budget && SLIM_ARC_TEST_SANITIZE=1 bash tests/run-cpp-unit.sh test-slim-arc-prefetch-budget`
 
 Expected: PASS; issued bytes never exceed budget in concurrent notification tests.
 
-- [ ] **Step 6: Commit enforcement**
+- [x] **Step 6: Commit enforcement**
 
 ```text
 [bug][Scheduler][3/4] Enforce prefetch budget

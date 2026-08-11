@@ -7,8 +7,6 @@
 // posix_madvise(WILLNEED) for tensors in layers N+1..N+window, allowing the
 // kernel to overlap I/O with computation.
 
-#include "ggml.h"
-
 #include <atomic>
 #include <climits>  // SLIM-ARC FIX 2026-08-05: 防护 INT_MAX 级联错误
 #include <condition_variable>
@@ -50,6 +48,20 @@ struct expert_tensor_info {
     int    n_experts;   // number of experts (ne[2])
 };
 
+struct prefetch_budget_stats {
+    uint64_t requested_bytes{0};
+    uint64_t issued_bytes{0};
+    uint64_t skipped_bytes{0};
+    uint64_t rounds_throttled{0};
+    uint64_t madvise_failures{0};
+};
+
+std::vector<size_t> select_prefetch_items(
+    const std::vector<size_t> & item_sizes,
+    uint64_t budget_bytes,
+    uint64_t * requested_bytes,
+    uint64_t * skipped_bytes);
+
 class prefetch_scheduler {
   public:
     explicit prefetch_scheduler(int n_threads = 2, int window = 3);
@@ -80,7 +92,8 @@ class prefetch_scheduler {
     // 当前预取窗口大小（供 graph_compute 计算待预取层范围）
     int  effective_window() const { return window_; }
     // 内存预算（供 unified_io_scheduler 分配权重预取额度）
-    void set_memory_budget(size_t bytes) { memory_budget_ = bytes; }
+    void set_memory_budget(size_t bytes) { memory_budget_.store(bytes); }
+    prefetch_budget_stats budget_stats() const;
 
     // Phase 2a: 注册 MoE 专家张量（3D 合并张量 *_exps）
     void register_expert_tensor(const char * name, void * addr, size_t size, int layer, int n_experts);
@@ -108,13 +121,18 @@ class prefetch_scheduler {
     int n_threads_;
     int window_;
     std::atomic<compute_phase> phase_{compute_phase::DECODE};
-    size_t memory_budget_ = 0;
+    std::atomic<size_t> memory_budget_{0};
     std::atomic<bool>       enabled_{true};
     std::atomic<bool>       stop_{false};
     std::atomic<int>        current_layer_{-1};
     std::atomic<uint64_t>   signature_{0};
     std::atomic<size_t>     total_bytes_{0};
     std::atomic<int>        total_calls_{0};
+    std::atomic<uint64_t>   budget_requested_bytes_{0};
+    std::atomic<uint64_t>   budget_issued_bytes_{0};
+    std::atomic<uint64_t>   budget_skipped_bytes_{0};
+    std::atomic<uint64_t>   budget_rounds_throttled_{0};
+    std::atomic<uint64_t>   budget_madvise_failures_{0};
 
     // ---- SLIM-ARC FIX 2026-08-09: 专家预取可观测性指标（改进 1）----
     std::atomic<size_t>     expert_prefetch_bytes_{0};  // 实际 WILLNEED 下发字节

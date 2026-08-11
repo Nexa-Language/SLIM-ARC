@@ -7,7 +7,7 @@
 
 #include <algorithm>
 #include <cstring>
-#include <utility>
+#include <limits>
 #include <sys/mman.h>
 
 namespace slim_arc {
@@ -18,6 +18,46 @@ prefetch_scheduler * g_scheduler = nullptr;
 // SLIM-ARC FIX 2026-08-05: mmap 区域注册表（供动态 MADV 切换；当前仅记录）。
 std::mutex g_mmap_mtx;
 std::vector<std::pair<void *, size_t>> g_mmap_regions;
+
+uint64_t saturating_add(uint64_t left, uint64_t right) noexcept {
+    const uint64_t maximum = std::numeric_limits<uint64_t>::max();
+    return right > maximum - left ? maximum : left + right;
+}
+
+void atomic_saturating_add(std::atomic<uint64_t> & target, uint64_t increment) noexcept {
+    uint64_t current = target.load();
+    while (!target.compare_exchange_weak(current, saturating_add(current, increment))) {
+    }
+}
+}
+
+std::vector<size_t> select_prefetch_items(
+    const std::vector<size_t> & item_sizes,
+    uint64_t budget_bytes,
+    uint64_t * requested_bytes,
+    uint64_t * skipped_bytes) {
+    uint64_t requested{0};
+    uint64_t skipped{0};
+    uint64_t remaining = budget_bytes;
+    std::vector<size_t> selected;
+    selected.reserve(item_sizes.size());
+    for (size_t index = 0; index < item_sizes.size(); ++index) {
+        const uint64_t size = item_sizes[index];
+        requested = saturating_add(requested, size);
+        if (size > 0 && size <= remaining) {
+            selected.push_back(index);
+            remaining -= size;
+        } else {
+            skipped = saturating_add(skipped, size);
+        }
+    }
+    if (requested_bytes != nullptr) {
+        *requested_bytes = requested;
+    }
+    if (skipped_bytes != nullptr) {
+        *skipped_bytes = skipped;
+    }
+    return selected;
 }
 
 prefetch_scheduler * get_global_prefetch_scheduler() { return g_scheduler; }
@@ -119,7 +159,7 @@ prefetch_scheduler::~prefetch_scheduler() {
     }
 }
 
-void prefetch_scheduler::register_tensor(const char * name, void * addr, size_t size, int layer) {
+void prefetch_scheduler::register_tensor(const char *, void * addr, size_t size, int layer) {
     if (layer < 0 || addr == nullptr || size == 0) return;
     if ((size_t)layer >= tensors_by_layer_.size()) {
         tensors_by_layer_.resize(layer + 1);
@@ -137,52 +177,14 @@ void prefetch_scheduler::notify_layer_compute(int current_layer) {
     cv_.notify_one();
 }
 
-void prefetch_scheduler::register_expert_tensor(const char * name, void * addr, size_t size,
-                                                int layer, int n_experts) {
-    (void) name;  // name kept for interface symmetry with register_tensor
-    if (layer < 0 || addr == nullptr || size == 0 || n_experts <= 1) return;
-    if ((size_t)layer >= expert_tensors_by_layer_.size()) {
-        expert_tensors_by_layer_.resize(layer + 1);
-    }
-    expert_tensors_by_layer_[layer].push_back({addr, size / (size_t)n_experts, n_experts});
-}
-
-void prefetch_scheduler::cache_router_experts(int layer, const int * experts, int n) {
-    if (layer < 0 || experts == nullptr || n <= 0) return;
-    std::lock_guard<std::mutex> lk(mtx_);
-    if ((size_t)layer >= cached_experts_by_layer_.size()) {
-        cached_experts_by_layer_.resize(layer + 1);
-    }
-    cached_experts_by_layer_[layer].assign(experts, experts + n);
-}
-
-const int * prefetch_scheduler::get_cached_experts(int layer, int * n) const {
-    if (n) *n = 0;
-    if (layer < 0 || (size_t)layer >= cached_experts_by_layer_.size()) return nullptr;
-    const auto & v = cached_experts_by_layer_[layer];
-    if (v.empty()) return nullptr;
-    if (n) *n = (int) v.size();
-    return v.data();
-}
-
-void prefetch_scheduler::prefetch_experts(int layer, const int * experts, int n) {
-    if (!enabled_.load()) return;
-    if (layer < 0 || experts == nullptr || n <= 0) return;
-    if ((size_t)layer >= expert_tensors_by_layer_.size()) return;
-    size_t bytes_this_round = 0;
-    std::lock_guard<std::mutex> lk(mtx_);
-    for (const auto & et : expert_tensors_by_layer_[layer]) {
-        if (et.base_addr == nullptr || et.per_expert_size == 0) continue;
-        for (int i = 0; i < n; ++i) {
-            int eid = experts[i];
-            if (eid < 0 || eid >= et.n_experts) continue;
-            void * eaddr = (uint8_t *) et.base_addr + (size_t) eid * et.per_expert_size;
-            (void) posix_madvise(eaddr, et.per_expert_size, POSIX_MADV_WILLNEED);
-            bytes_this_round += et.per_expert_size;
-        }
-    }
-    total_bytes_.fetch_add(bytes_this_round);
-    total_calls_.fetch_add(1);
+prefetch_budget_stats prefetch_scheduler::budget_stats() const {
+    return {
+        budget_requested_bytes_.load(),
+        budget_issued_bytes_.load(),
+        budget_skipped_bytes_.load(),
+        budget_rounds_throttled_.load(),
+        budget_madvise_failures_.load(),
+    };
 }
 
 void prefetch_scheduler::worker_loop() {
@@ -201,26 +203,47 @@ void prefetch_scheduler::worker_loop() {
 
         current_layer_.store(target_layer);
 
-        // Prefetch layers [target+1, target+window]
-        size_t bytes_this_round = 0;
+        std::vector<const tensor_prefetch_info *> items;
+        std::vector<size_t> item_sizes;
         for (int w = 1; w <= window_; ++w) {
             int layer = target_layer + w;
             if (layer < 0 || (size_t)layer >= tensors_by_layer_.size()) continue;
             for (const auto & t : tensors_by_layer_[layer]) {
                 if (t.addr == nullptr || t.size == 0) continue;
-                // posix_madvise is thread-safe and idempotent
-                (void) posix_madvise(t.addr, t.size, POSIX_MADV_WILLNEED);
-                bytes_this_round += t.size;
+                items.push_back(&t);
+                item_sizes.push_back(t.size);
             }
         }
 
-        total_bytes_.fetch_add(bytes_this_round);
+        uint64_t requested{0};
+        uint64_t skipped{0};
+        const uint64_t budget = memory_budget_.load();
+        const auto selected = select_prefetch_items(item_sizes, budget, &requested, &skipped);
+        uint64_t issued{0};
+        uint64_t failures{0};
+        for (const size_t index : selected) {
+            const tensor_prefetch_info & tensor = *items[index];
+            if (posix_madvise(tensor.addr, tensor.size, POSIX_MADV_WILLNEED) == 0) {
+                issued = saturating_add(issued, tensor.size);
+            } else {
+                ++failures;
+            }
+        }
+
+        atomic_saturating_add(budget_requested_bytes_, requested);
+        atomic_saturating_add(budget_issued_bytes_, issued);
+        atomic_saturating_add(budget_skipped_bytes_, skipped);
+        atomic_saturating_add(budget_madvise_failures_, failures);
+        if (skipped > 0) {
+            atomic_saturating_add(budget_rounds_throttled_, 1);
+        }
+        total_bytes_.fetch_add(static_cast<size_t>(issued));
         total_calls_.fetch_add(1);
     }
 }
 
 // ---- SLIM-ARC FIX 2026-08-05: Phase 2a MoE expert prefetch ----
-void prefetch_scheduler::register_expert_tensor(const char * name, void * addr, size_t size, int layer, int n_experts) {
+void prefetch_scheduler::register_expert_tensor(const char *, void * addr, size_t size, int layer, int n_experts) {
     if (addr == nullptr || size == 0 || n_experts < 1 || layer < 0) return;
     if ((size_t)layer >= experts_by_layer_.size()) {
         experts_by_layer_.resize(layer + 1);

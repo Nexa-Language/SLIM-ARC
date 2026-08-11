@@ -24,6 +24,10 @@ case "$target" in
             "$source_root/slim-arc-pressure-budget.cpp"
         )
         ;;
+    test-slim-arc-prefetch-budget)
+        readonly test_source="$test_root/test-slim-arc-prefetch-budget.cpp"
+        readonly module_sources=("$source_root/slim-arc-prefetch.cpp")
+        ;;
     *)
         echo "Unsupported C++ test target: $target" >&2
         exit 2

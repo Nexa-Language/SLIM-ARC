@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-08-11 pressure admission Task 3：weight prefetch 预算闭环完成
+
+### 变更描述
+- 将 `prefetch_scheduler::memory_budget_` 改为 atomic per-round snapshot，并按现有 layer/window 顺序只选择能完整落入预算的 tensor。
+- 新增饱和计数的 requested、issued、skipped、throttled round 与 madvise failure 指标；只有成功的 `posix_madvise(WILLNEED)` 才计入 issued bytes。
+- 移除 `slim-arc-prefetch.h` 未使用的 `ggml.h` 耦合，使调度器可以在 llama.cpp 外独立编译测试。
+- 纯选择测试覆盖 300-byte 非连续装箱、零/精确预算与 `UINT64_MAX`；真实 worker 测试覆盖完整 tensor 跳过、成功 advice 和失败 advice。normal 与 ASan/UBSan 均通过。
+
+### 涉及文件
+- `patches/llama-upstream/slim-arc-prefetch.h`
+- `patches/llama-upstream/slim-arc-prefetch.cpp`
+- `tests/cpp/test-slim-arc-prefetch-budget.cpp`
+- `tests/run-cpp-unit.sh`
+- `plan/23-v1-pressure-aware-prefetch.md`
+
+### 决策原因
+- 原实现由 unified scheduler 写入 weight budget，但 worker 对 lookahead 内所有 tensor 无条件发出 WILLNEED；这使 admission 配置没有实际约束力。
+- 不对 tensor 做任意字节切片可以保持映射语义简单；单个 tensor 放不下时跳过预取并依赖 mmap 按需缺页，不中断模型计算。
+
+---
+
 ## 2026-08-11 pressure admission Task 2：纯预算策略完成
 
 ### 变更描述
