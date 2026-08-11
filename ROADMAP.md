@@ -2,6 +2,386 @@
 
 ---
 
+## 2026-08-12 pressure admission Task 5：80B A/B 决策为 kept_opt_in
+
+### 变更描述
+- 在修复 variant linkage 后，以 2 GiB、4 vCPU、no-swap、Qwen3-Next-80B-A3B Q4_K_M、`pp64 + tg16` 重跑 corrected A/B。
+- pressure-off 的 cold 为 63.32s，warm 为 52.12/58.39s（median 55.255s）；expert prefetch 每次 issued 3759.6 MiB，hit rate 42.67%，waste 2407.4 MiB。
+- reserve 512 MiB 的 cold 为 62.41s，warm median 60.77s；reserve 1024 MiB 的 cold 为 65.37s，warm median 57.47s。两者均为 17/17 pressure samples throttled、effective/issued=0，策略等价。
+- 所有有效 row 的 `memory.peak` 均为 2 GiB，OOM/swap 均为零；512/1024 相对 off 的 warm regression 分别为 9.98%/4.01%，但内存下降为 0%，未达到 10% promotion threshold。
+- promotion decision 为 `kept_opt_in`：保留实现、测试和指标，但不在最终 demo/default 配置启用 pressure admission。
+
+### 涉及文件
+- `docs/macos_test_notes/2026-08-11/runs/pressure-valid-*/`
+- `docs/macos_test_notes/2026-08-11/runs/pressure-reserve0-smoke/`
+- `docs/macos_test_notes/2026-08-11/pressure-admission-results.json`
+- `docs/macos_test_notes/2026-08-11/pressure-admission-summary.md`
+- `ROADMAP.md`
+
+### 决策原因
+- admission 确实消除了约 3.76 GiB expert 预取和 6.13–12.27 GB weight advice，但在 2 GiB cgroup 下页缓存仍持续触顶，未降低 `memory.peak`。
+- 512 与 1024 的 warm 差异发生在相同 effective budget/counters 下，只能视为 cache/I/O 噪声；不能据此挑选 reserve。
+- reserve=0 的 pp4/tg1 smoke 仍得到 effective=0，说明当前 2 GiB 档没有可利用 headroom；继续做完整 reserve sweep 不会产生新的策略行为。
+
+---
+
+## 2026-08-11 macOS benchmark：修复 variant 动态库串用
+
+### 变更描述
+- 移除镜像中 baseline-first 的全局 `LD_LIBRARY_PATH`，container wrapper 按 `VARIANT` 将动态库路径严格设置为对应的单一 build 目录。
+- 新增真实镜像 `ldd` gate，分别验证 baseline/patched `llama-bench` 解析到自身 `libllama`，并由 `verify-build.sh` 强制执行。
+- `run_manifest.py` 补记 `SLIM_ARC_PRESSURE_ADMISSION` 与 `SLIM_ARC_PRESSURE_RESERVE_MB`，确保 controller 和 container 两侧环境冻结一致。
+- 修复后 pressure smoke 出现 `[SLIM-ARC-PRESSURE]` 与 expert metrics，证明 patched library 已实际执行；2 GiB、pp4/tg1 成功且 swap/OOM 均为零。
+
+### 涉及文件
+- `scripts/macos/Dockerfile.llama`
+- `scripts/macos/container/run-benchmark.sh`
+- `scripts/macos/container/run_manifest.py`
+- `scripts/macos/verify-build.sh`
+- `tests/macos/test-variant-linkage.sh`
+- `tests/macos/test_run_manifest.py`
+- `docs/macos_test_notes/2026-08-11/build/`
+- `docs/macos_test_notes/2026-08-11/runs/pressure-linkage-smoke/`
+- `docs/macos_test_notes/2026-08-11/summary.md`
+- `plan/23-v3-pressure-aware-prefetch.md`
+
+### 决策原因
+- 原镜像把 `/opt/llama-baseline/build/bin` 放在 patched 之前；ELF `LD_LIBRARY_PATH` 优先于 patched executable 的 RUNPATH，导致名为 patched 的进程加载 baseline `libllama.so`。
+- 原因分类为“技术盲区”：构建验证只比较二进制文件/hash，没有检查运行时依赖解析。预防措施是把 variant linkage 作为真实镜像强制门禁，并要求 patched smoke 必须出现补丁专属指标。
+- plan 22 的内存档位、cgroup/no-swap 和 baseline 数据仍有效；所有旧 patched 性能/消融行以及修复前的 `pressure-off-*`、`pressure-on-cold` 行不得再用于结论，需由 v3 重跑替代。
+
+---
+
+## 2026-08-11 pressure admission Task 4：cgroup headroom 已接入统一调度
+
+### 变更描述
+- pressure admission 以 `SLIM_ARC_PRESSURE_ADMISSION=1` 显式启用，每个 tick 读取 cgroup v2 `memory.current/max`，按 headroom/reserve 计算 effective total，并同时约束 weight 与 expert prefetch。
+- 新增 bounded shutdown 指标，汇总 samples、throttled/fallback、static/effective budget 以及 weight requested/issued/skipped/failure；无效配置明确报错并保持现有 static 路径。
+- 补丁脚本复制并注入 cgroup/pressure 模块，fixture 验证二次应用 byte-identical；host controller 与 container wrapper 仅放行两个新增环境变量。
+- pinned llama.cpp ARM64 baseline/patched 构建成功，manifest 为 `PATCH_IDEMPOTENT=1`；Dockerfile 将 baseline 编译放在补丁 COPY 前，后续仅改补丁时可复用 baseline 层。
+
+### 涉及文件
+- `patches/llama-upstream/slim-arc-prefetch.h/.cpp`
+- `patches/llama-upstream/slim-arc-unified-scheduler.h/.cpp`
+- `scripts/apply-slim-arc.py`
+- `scripts/macos/Dockerfile.llama`
+- `scripts/macos/run_constrained.py`
+- `scripts/macos/container/run-benchmark.sh`
+- `tests/test_apply_pressure_admission.py`
+- `tests/cpp/test-slim-arc-unified-pressure.cpp`
+- `tests/cpp/test-slim-arc-prefetch-budget.cpp`
+- `tests/macos/test_run_constrained.py`
+- `docs/macos_test_notes/2026-08-11/build/`
+- `plan/23-v1-pressure-aware-prefetch.md`
+- `plan/23-v2-pressure-aware-prefetch.md`
+
+### 决策原因
+- plan 22 显示 2 GiB 下 prefetch 的 cold/warm 收益相反且 memory peak 触顶，适合用运行时 headroom admission 替代静态全开/全关。
+- 实际 upstream 首次构建暴露 `dump_metrics()` 缺少 `<cstdio>`；原因分类为“技术盲区”，单元测试翻译单元间接带入了声明。已补头文件并以真实 upstream 全量重建作为预防门禁。
+- 原计划给构建脚本传入其不支持的 `--rebuild-patched`；原因分类为“误解仓库接口”。v2 改为仓库真实无参数接口，并通过 Docker layer 排序满足 baseline 不因补丁变化重编的原意。
+- 最新 `origin/main` 出现两套 expert 方法重复定义，当前阶段先提交干净本地实现，再用 rebase 做语义冲突解决；不在未提交工作树上冒险同步。
+
+---
+
+## 2026-08-11 pressure admission Task 3：weight prefetch 预算闭环完成
+
+### 变更描述
+- 将 `prefetch_scheduler::memory_budget_` 改为 atomic per-round snapshot，并按现有 layer/window 顺序只选择能完整落入预算的 tensor。
+- 新增饱和计数的 requested、issued、skipped、throttled round 与 madvise failure 指标；只有成功的 `posix_madvise(WILLNEED)` 才计入 issued bytes。
+- 移除 `slim-arc-prefetch.h` 未使用的 `ggml.h` 耦合，使调度器可以在 llama.cpp 外独立编译测试。
+- 纯选择测试覆盖 300-byte 非连续装箱、零/精确预算与 `UINT64_MAX`；真实 worker 测试覆盖完整 tensor 跳过、成功 advice 和失败 advice。normal 与 ASan/UBSan 均通过。
+
+### 涉及文件
+- `patches/llama-upstream/slim-arc-prefetch.h`
+- `patches/llama-upstream/slim-arc-prefetch.cpp`
+- `tests/cpp/test-slim-arc-prefetch-budget.cpp`
+- `tests/run-cpp-unit.sh`
+- `plan/23-v1-pressure-aware-prefetch.md`
+
+### 决策原因
+- 原实现由 unified scheduler 写入 weight budget，但 worker 对 lookahead 内所有 tensor 无条件发出 WILLNEED；这使 admission 配置没有实际约束力。
+- 不对 tensor 做任意字节切片可以保持映射语义简单；单个 tensor 放不下时跳过预取并依赖 mmap 按需缺页，不中断模型计算。
+
+---
+
+## 2026-08-11 pressure admission Task 2：纯预算策略完成
+
+### 变更描述
+- 新增无浮点、无异常的纯函数压力预算策略，计算 cgroup headroom、最低/百分比 reserve、effective budget 与 throttled 状态。
+- 对 invalid、unlimited、I/O error 和内部不一致 snapshot 保持现有 static budget；有效 snapshot 才执行 pressure throttling。
+- 百分比计算通过商/余数拆分和饱和乘加避免 `UINT64_MAX` 溢出；normal 与 ASan/UBSan 测试覆盖零 static budget、reserve 超限和乘法极值。
+
+### 涉及文件
+- `patches/llama-upstream/slim-arc-pressure-budget.h`
+- `patches/llama-upstream/slim-arc-pressure-budget.cpp`
+- `tests/cpp/test-slim-arc-pressure-budget.cpp`
+- `tests/run-cpp-unit.sh`
+- `plan/23-v1-pressure-aware-prefetch.md`
+
+### 决策原因
+- 将预算计算与 cgroup I/O、调度线程分离，可对所有算术边界做确定性验证，并确保读取失败不会被误判成“禁止预取”。
+- reserve 大于 headroom 时 effective budget 明确为零，但只影响预取 admission，不改变模型按需计算路径。
+
+---
+
+## 2026-08-11 pressure admission Task 1：cgroup 内存快照完成
+
+### 变更描述
+- 新增 cgroups v2 `memory.current`/`memory.max` 严格读取器，以显式状态区分可用、缺失、无限额、非法值与 I/O 错误。
+- 每个控制文件最多读取 128 bytes，ASCII whitespace 裁剪后使用 `std::from_chars` 完整解析；负数、单位后缀、溢出、尾随文本及 `current > max` 均拒绝。
+- 新增 allowlist C++17 测试 runner，编译产物只进入经边界验证的 `mktemp -d`，normal 与 ASan/UBSan 测试均通过。
+
+### 涉及文件
+- `patches/llama-upstream/slim-arc-cgroup-memory.h`
+- `patches/llama-upstream/slim-arc-cgroup-memory.cpp`
+- `tests/cpp/test-slim-arc-cgroup-memory.cpp`
+- `tests/run-cpp-unit.sh`
+- `plan/23-v1-pressure-aware-prefetch.md`
+
+### 决策原因
+- `memory.max=max` 与读取失败都必须回退现有 static budget，不能被误解释成零预算；显式状态使后续纯预算策略无需依赖 errno 或异常文本。
+- 解析器独立于 llama.cpp 与调度线程，先用纯文件 fixture 覆盖所有边界可降低后续 scheduler 集成风险。
+
+---
+
+## 2026-08-11 macOS 80B 无 swap 基线与现有功能消融完成
+
+### 变更描述
+- 在 Qwen3-Next-80B-A3B-Instruct Q4_K_M（SHA-256 `d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a`）和 llama.cpp `360e134` 上完成 cgroups v2 无 swap 实验。
+- 12/8/6/4/3/2 GiB 生存档均双轮成功；2 GiB 下 cold/warm `pp64 + tg16` 均成功，因此最低观测生存档和最低稳定档均为 2 GiB。2 GiB 是控制器安全下限，本轮未观测到更低 OOM 边界。
+- 在 2 GiB、4 vCPU 下完成 baseline 与 7 个现有 patched 配置的 cold/warm 共 16 组消融，全部成功且 `memory.swap.max=0`。
+- warm 最佳为 `ablation-patched-no-prefetch-warm-20260811t144607z-c7c87f` 的 52.55s，相对 patched default `ablation-patched-default-warm-20260811t144357z-383272` 的 55.08s 快 4.59%，相对 baseline `ablation-baseline-warm-20260811t144146z-b4ee53` 的 55.33s 快 5.02%；每个消融 cache row 只有一次 repetition，不能直接晋级默认配置。
+- cold 最佳为 upstream `ablation-baseline-cold-20260811t144037z-0949a9` 的 68.29s；固定关闭预取的 cold 为 72.52s，说明全开与全关均不能同时覆盖 cold/warm，需要进入 plan 23 的动态压力 admission A/B。
+- CPU 扫描两次 repetition 的平均墙钟为：2/4/6/8 vCPU 分别 75.06/68.56/66.28/66.72s；6 核后收益饱和，最终展示仍需结合设备资源选择。
+
+### 涉及文件
+- `docs/macos_test_notes/2026-08-11/runs/`
+- `docs/macos_test_notes/2026-08-11/matrix-state.json`
+- `docs/macos_test_notes/2026-08-11/ablation-state.json`
+- `docs/macos_test_notes/2026-08-11/results.json`
+- `docs/macos_test_notes/2026-08-11/summary.md`
+- `scripts/macos/summarize_results.py`
+- `tests/macos/test_summarize_results.py`
+- `plan/22-v1-macos-80b-constrained-benchmark.md`
+
+### 决策原因
+- 所有 primary row 都由 controller 与 wrapper 双重记录模型、commit、memory/cpu limit、swap、OOM、日志和 GNU time 指标；汇总把 prefill 与 decode t/s 分列，避免对不同阶段做无意义的算术平均。
+- 2 GiB 下所有成功行的 `memory.peak` 都碰到 cgroup 上限，并产生大量 `memory.max` 回收与 major fault；warm 关闭预取有小幅收益而 cold 无收益，满足 plan 23“预取存在压力/浪费信号”的启动门，但不满足任何默认晋级结论。
+- 本轮没有 no-swap 失败档，因此按计划不运行 exploratory swap sensitivity，避免把 swap 结果混入主表。
+
+---
+
+## 2026-08-11 官方 80B 模型下载与完整性验证完成
+
+### 变更描述
+- 固定 Qwen 官方 GGUF revision `4c8630cf7af926a9c5095cb4bbbbc65d36e20f77`，下载单文件 Q4_K_M 模型并验证最终大小 `48410988384` bytes。
+- 完整文件两次计算 SHA-256 均为 `d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a`，与官方 LFS 元数据一致。
+- 新增严格 Hugging Face 元数据解析、默认可续传下载和可选 8 路 Range 下载；分片 worker 使用 HTTP/1.1 与 256 MiB 原子小块，将一次断流的最大重传量限制在当前小块。
+- 模型保留在 Colima 专用数据盘 `/var/lib/slim-arc/models`，Git 只记录不含宿主绝对路径的完整性 manifest；下载完成后无 partial、metadata、segment 或 curl 进程残留。
+- 8 个元数据单测、Range 边界测试、Ruff、ty、Shell syntax 与 `git diff --check` 全部通过。
+
+### 涉及文件
+- `scripts/macos/query_hf_model.py`
+- `scripts/macos/download-model.sh`
+- `scripts/macos/download-model-guest.sh`
+- `scripts/macos/download-model-segmented-guest.sh`
+- `tests/macos/test_query_hf_model.py`
+- `tests/macos/test-segment-ranges.sh`
+- `docs/macos_test_notes/2026-08-11/model-manifest.json`
+- `plan/22-v1-macos-80b-constrained-benchmark.md`
+- `plan/22-v2-macos-80b-constrained-benchmark.md`
+
+### 决策原因
+- 单连接实测仅约 2–4 MB/s，无法合理利用固定 12 小时实验窗口；官方 CDN 已验证支持 HTTP 206 Range。
+- 完整分片直接重试会在 HTTP/2 断流时丢失数 GB 有效进度，小块原子提交在保持最终全文件 SHA-256 口径不变的同时限制重传放大。
+- 模型文件约 48.4 GB，必须留在 VM 数据盘而不能进入主仓库；manifest 足以将后续运行绑定到 revision、大小和内容哈希。
+
+### 错误复盘
+- 日期：2026-08-11。
+- 描述：初始单连接下载吞吐过低；第一版约 5 GB 分片在 CDN HTTP/2 `INTERNAL_ERROR` 后由 curl 截断 work 文件并整段重试，浪费约 8 GB 下载量。通过 `bash -s` 远端执行时还触发了 `BASH_SOURCE[0]` guard 误判；失败启动曾遗留空 manifest 临时文件；终止旧控制器后远端 curl 未随 PTY 退出，TERM 超时后才以精确解析的 PID 执行 KILL。另一次尝试组合 `--continue-at -` 与绝对 Range 的语义不够可靠，未进入正式实现。
+- 原因分类：技术盲区、规则违反。
+- 预防措施：大文件下载在正式等待前先做 Range、断流和断点语义测试；并发 worker 固定 HTTP/1.1 与 256 MiB 原子块；source guard 同时覆盖直接执行和 stdin source；host 临时文件使用边界受限 trap；远端后台进程以精确 URL 解析 PID 并验证完全退出，拒绝采用语义不确定的 curl 参数组合。
+
+---
+
+## 2026-08-11 受限实验控制面与结果归一化完成
+
+### 变更描述
+- 新增 immutable `RunConfig` 和无 shell 插值的 Docker argv 构造，严格限制 2–16 GiB、1–8 vCPU、timeout、variant 与可用 `SLIM_ARC_*` 环境变量。
+- 新增 stopped-container OOM inspect、timeout 优先级、冷缓存控制、runner-owned 容器边界和原子 controller result。
+- 新增可恢复的 survival/stable/CPU 矩阵状态机，以及固定八组既有功能消融顺序。
+- 新增严格结果归一化，拒绝重复 run ID、模型/commit 混用和 controller/cgroup 限额不一致；缺失指标保持 unsupported。
+- macOS 测试累计 39 项通过，Ruff、ty、Shell syntax、JSON 语法与 `git diff --check` 均通过；真实 80B smoke/matrix 仍等待模型完整下载，不在本条中声明完成。
+
+### 涉及文件
+- `scripts/macos/run_constrained.py`
+- `scripts/macos/run_matrix.py`
+- `scripts/macos/run_ablation.py`
+- `scripts/macos/summarize_results.py`
+- `scripts/macos/configs/current-ablation.json`
+- `tests/macos/`
+- `tests/README.md`
+
+### 决策原因
+- 48.4 GB 模型下载耗时较长，先完成纯控制逻辑与失败分类可避免下载完成后临时拼装高风险命令。
+- 2 GiB 下限与计划中的 4 → 3 → 2 GiB 条件探测一致；最初设为 4 GiB 会使最低内存探索不可达。
+- controller result 固定携带已验证模型 SHA-256、llama commit 和预期限额，使 OOM 导致 wrapper manifest 缺失时仍能保留身份与资源证据。
+
+---
+
+## 2026-08-11 cgroup 运行证据层完成
+
+### 变更描述
+- 在固定 ARM64 镜像中加入 baseline/patched 严格二选一的 benchmark wrapper，拒绝非只读模型挂载、缺失结果挂载、非法正整数参数和未知 `SLIM_ARC_*` 环境变量。
+- 每次运行记录 cgroup v2 的 memory、swap、CPU、I/O、pressure 指标以及 `/usr/bin/time -v`、进程状态、逐次 stdout/stderr 和退出码。
+- 增加纯 Python manifest 生成与校验模块，强制有限 `memory.max`、`memory.swap.max=0` 和有限 CPU quota。
+- 增加 test-only 镜像 target；以 64 MiB、1 CPU、2 次 deterministic fake benchmark 完成端到端验证，峰值内存约 8.5 MiB，OOM 计数为 0。
+
+### 涉及文件
+- `scripts/macos/container/`
+- `scripts/macos/Dockerfile.llama`
+- `scripts/macos/build-llama-image.sh`
+- `tests/macos/test_run_manifest.py`
+- `docs/macos_test_notes/2026-08-11/wrapper-fixture/`
+- `plan/22-v1-macos-80b-constrained-benchmark.md`
+
+### 决策原因
+- 运行数据必须来自容器自身的 cgroup，而不是以宿主 RSS 代替 page cache 计费后的物理内存峰值。
+- production 镜像不包含 fake binary；仅显式 test target 带固定 override marker，避免测试入口进入正式实验路径。
+- 每次 repetition 独立保存日志但留在同一 cgroup 中，使 warm page cache 和累计 `memory.peak` 可审计。
+
+### 错误复盘
+- 日期：2026-08-11。
+- 描述：远端拒绝演练最初使用了 zsh 只读变量名 `status`，并错误假设 Colima CLI 会保留远端 exit 2；清理两个临时文件时又误以为 macOS `unlink` 接受多个参数。
+- 原因分类：技术盲区、规则违反。
+- 预防措施：跨 shell 临时变量使用任务前缀或无保留字名称；只断言 Colima 非零与错误文本，不依赖被 wrapper 归一化的具体退出码；macOS 临时文件逐个按已解析的绝对路径清理。
+
+---
+
+## 2026-08-11 固定版本 llama.cpp 双变体镜像完成
+
+### 变更描述
+- 将 llama.cpp 固定到完整提交 `360e1349f0009c5ad99d21e3c4546b707addc68a`，在同一 Linux ARM64 镜像中构建 baseline 与 SLIM-ARC patched 两套 `llama-cli`、`llama-bench`。
+- 构建时关闭 Metal 与 CPU repack，保留 mmap 路径，并通过补丁二次应用前后源码树哈希验证 idempotence。
+- 构建上下文只包含 Dockerfile、补丁应用脚本和 patch 文件，临时目录由带边界校验的 trap 清理。
+- 保存镜像架构、构建参数、二进制版本与 SHA-256、补丁日志作为实验 provenance；manifest 验证、Shell syntax 与 `git diff --check` 均通过。
+
+### 涉及文件
+- `scripts/macos/Dockerfile.llama`
+- `scripts/macos/build-llama-image.sh`
+- `scripts/macos/verify-build.sh`
+- `tests/macos/test-build-manifest.sh`
+- `docs/macos_test_notes/2026-08-11/build/`
+- `plan/22-v1-macos-80b-constrained-benchmark.md`
+
+### 决策原因
+- baseline 与 patched 必须共享同一 upstream SHA、编译器和 CMake 配置，后续 A/B 才能把差异归因于 SLIM-ARC 补丁。
+- 同时记录请求的短 SHA 和解析后的完整 SHA，避免 Git 可变短哈希长度导致错误拒绝合法提交。
+- 产物保留在 Colima 专用镜像中，避免污染 macOS 宿主依赖，并直接适配后续 cgroups v2 实验。
+
+### 错误复盘
+- 日期：2026-08-11。
+- 描述：首次构建假设 Docker buildx 可用并传入 legacy builder 不支持的 `--progress`；随后又假设 `git rev-parse --short` 固定返回 7 位，而当前仓库为避免歧义返回 9 位；验证测试首次手工调用遗漏 manifest 参数。
+- 原因分类：技术盲区、规则违反。
+- 预防措施：以本机 Docker CLI capability 和实际 `--help` 为准；固定提交使用完整 SHA 的前缀匹配并保存完整解析值；所有带参数的测试按 usage 契约调用，并在提交前重跑完整验证命令。
+
+---
+
+## 2026-08-11 Colima 受限资源 VM 与 cgroups probe 完成
+
+### 变更描述
+- 通过 Homebrew 安装 Colima 0.10.3、Lima 2.2.0 和 Docker CLI 29.7.2。
+- 创建独立 `slim-arc` ARM64 profile：8 vCPU、16 GiB RAM、100 GiB sparse data disk。
+- 将 `/var/lib/slim-arc` 指向 profile 独立数据盘，获得约 97.9 GiB 可用文件系统，避免把 48.4 GB 模型写入 20 GiB root filesystem。
+- 使用真实 64 MiB Docker 容器验证 cgroups v2、memory controller、`memory.max=67108864` 和 `memory.swap.max=0`。
+- setup 重复运行后保持主机 Docker context 为原来的 `default`，不影响其他 Docker 环境。
+
+### 涉及文件
+- `scripts/macos/setup-colima.sh`
+- `scripts/macos/probe-guest.sh`
+- `tests/macos/test-probe-output.sh`
+- `docs/macos_test_notes/README.md`
+- `docs/macos_test_notes/2026-08-11/campaign.json`
+- `docs/macos_test_notes/2026-08-11/preflight/`
+- `plan/22-v1-macos-80b-constrained-benchmark.md`
+
+### 决策原因
+- Colima 0.10 将 20 GiB 系统根盘与 `--disk 100` 的容器数据盘分离；模型必须进入后者才能满足容量和 page-cache 计费要求。
+- guest 根 cgroup 不一定暴露 `memory.swap.max`，只有带 `--memory` 与同值 `--memory-swap` 的真实容器能验证正式 no-swap 语义。
+- `--activate=false` 与退出 trap 双重保证不会永久改变用户当前 Docker context。
+
+### 错误复盘
+- 日期：2026-08-11。
+- 描述：首次启动时未预见 Colima 会自动激活 Docker context；最初 probe 误查 guest 根 cgroup 的 swap 文件，并把 20 GiB root filesystem 当成模型盘；结果目录 guard 也只接受绝对路径，与计划命令中的相对路径不一致。
+- 原因分类：技术盲区、误解需求。
+- 预防措施：所有 profile 启动显式设置 `--activate=false` 并保存/恢复原 context；probe 使用真实受限容器验证 swap；模型目录绑定到独立 data disk；安全路径 helper 同时测试绝对与仓库相对路径，并拒绝相对逃逸。
+
+---
+
+## 2026-08-11 macOS benchmark host preflight 完成
+
+### 变更描述
+- 新增 Apple Silicon/macOS、逻辑核数、物理内存与至少 120 GiB 空闲磁盘的只读 preflight。
+- 新增严格结果目录边界检查，拒绝 `/`、仓库根目录、`$HOME` 和未解析的 `..` 路径。
+- 新增不可延长的 12 小时 campaign 状态与进程组超时终止逻辑，重新运行不会重置 deadline。
+- 新增 5 个 Python 单元测试和 Shell 路径保护测试，Ruff、ty、pytest 与 shell syntax 均通过。
+
+### 涉及文件
+- `scripts/macos/common.sh`
+- `scripts/macos/preflight.sh`
+- `scripts/macos/campaign.py`
+- `tests/macos/test-common.sh`
+- `tests/macos/test_campaign.py`
+- `tests/README.md`
+- `plan/22-v1-macos-80b-constrained-benchmark.md`
+
+### 决策原因
+- 正式实验会安装 VM 工具并下载约 48.4 GB 模型，必须在任何外部写入前验证平台和磁盘安全余量。
+- 12 小时口径覆盖 provisioning、构建、下载和测试，deadline 必须持久化，不能通过重启脚本延长。
+- 终止范围限定为 controller 自己创建的进程组，避免影响 macOS 其他应用。
+
+---
+
+## 2026-08-11 macOS 80B 实验与决赛优化计划完成
+
+### 变更描述
+- 将已批准设计拆分为三份可独立验收的执行计划：受限资源基线、压力感知预取和错误 expert 页回收。
+- 将模型来源固定为 Qwen 官方 GGUF 仓库的单文件 Q4_K_M，并以远端 LFS 元数据和下载后 SHA-256 为完整性口径。
+- 为环境、构建、下载、cgroup 运行器、矩阵状态机、C++ 调度策略和回收边界设计 TDD 步骤与五段式提交点。
+
+### 涉及文件
+- `plan/22-v1-macos-80b-constrained-benchmark.md`
+- `plan/23-v1-pressure-aware-prefetch.md`
+- `plan/24-v1-expert-waste-reclamation.md`
+- `docs/superpowers/specs/2026-08-11-macos-constrained-80b-design.md`
+- `ROADMAP.md`
+
+### 决策原因
+- 环境与基线、scheduler admission、expert 回收是三个可独立评审的子系统；后两项必须由前一阶段的真实证据触发。
+- 官方 Q4_K_M 当前页面标注约 48.4 GB，替代早期约 45.1 GB 的历史文件口径，避免模型来源和大小不可复现。
+- 先补齐普通权重 prefetch 未执行预算的闭环，再尝试只回收错误预取页，可降低侵入性和反复缺页风险。
+
+---
+
+## 2026-08-11 macOS 受限资源 80B 实验设计定稿
+
+### 变更描述
+- 设计 Colima ARM64 Linux VM + cgroups v2 的 macOS 受限资源测试架构。
+- 固定 Qwen3-Next-80B-A3B Q4_K_M、llama.cpp `360e134` 与 baseline/patched 双构建口径。
+- 确定无 swap 内存阶梯、最低稳定档、CPU 缩放、受控 swap 补充实验与 12 小时停止策略。
+- 从初赛遗留项中确定“现有配置消融 → 压力感知 admission control → 错误 expert 页回收”的优化顺序。
+
+### 涉及文件
+- `docs/superpowers/specs/2026-08-11-macos-constrained-80b-design.md`
+- `ROADMAP.md`
+
+### 决策原因
+- macOS 原生缺少 cgroups，`ulimit -v` 无法表达 GGUF 大虚拟映射下的物理内存限制；专用 Linux VM 能隔离 OOM 并提供可复现的内存与 CPU 配额。
+- 当前 unified scheduler 的普通权重预取预算尚未真正生效，且 RK3588 日志显示 expert prefetch 存在较高浪费，适合作为决赛阶段的数据驱动优化入口。
+- KV 深度 offload 与 Tile pipeline 对短上下文 80B 阶梯的收益证据不足，本阶段后置以控制风险。
+
+---
+
 ## 2026-08-11 团队分支主线集成完成
 
 ### 变更描述

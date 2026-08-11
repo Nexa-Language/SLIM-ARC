@@ -1,0 +1,98 @@
+CGROUP_RELATIVE=/
+=== memory.current ===
+1894846464
+=== memory.max ===
+2147483648
+=== memory.peak ===
+2147483648
+=== memory.events ===
+low 0
+high 0
+max 257748
+oom 0
+oom_kill 0
+oom_group_kill 0
+=== memory.stat ===
+anon 1052672
+file 1848639488
+kernel 45023232
+kernel_stack 32768
+pagetables 98304
+sec_pagetables 0
+percpu 0
+sock 0
+vmalloc 8192
+shmem 0
+zswap 0
+zswapped 0
+file_mapped 2322432
+file_dirty 0
+file_writeback 0
+swapcached 0
+anon_thp 0
+file_thp 0
+shmem_thp 0
+inactive_anon 4096
+active_anon 1024000
+inactive_file 589479936
+active_file 1259094016
+unevictable 0
+slab_reclaimable 44155232
+slab_unreclaimable 228336
+slab 44383568
+workingset_refault_anon 0
+workingset_refault_file 10753554
+workingset_activate_anon 0
+workingset_activate_file 404
+workingset_restore_anon 0
+workingset_restore_file 404
+workingset_nodereclaim 222781
+pgscan 48216415
+pgsteal 28169128
+pgscan_kswapd 0
+pgscan_direct 48216415
+pgscan_khugepaged 0
+pgsteal_kswapd 0
+pgsteal_direct 28169128
+pgsteal_khugepaged 0
+pgfault 2641190
+pgmajfault 248947
+pgrefill 1061
+pgactivate 4393819
+pgdeactivate 0
+pglazyfree 0
+pglazyfreed 0
+zswpin 0
+zswpout 0
+zswpwb 0
+thp_fault_alloc 0
+thp_collapse_alloc 0
+thp_swpout 0
+thp_swpout_fallback 0
+=== memory.swap.current ===
+0
+=== memory.swap.max ===
+0
+=== memory.pressure ===
+some avg10=11.73 avg60=7.42 avg300=2.39 total=8390334
+full avg10=11.73 avg60=7.42 avg300=2.39 total=8390334
+=== cpu.max ===
+400000 100000
+=== cpu.stat ===
+usage_usec 78909351
+user_usec 10888620
+system_usec 68020730
+core_sched.force_idle_usec 0
+nr_periods 736
+nr_throttled 0
+throttled_usec 0
+nr_bursts 0
+burst_usec 0
+=== cpu.pressure ===
+some avg10=0.38 avg60=0.10 avg300=0.02 total=538111
+full avg10=0.38 avg60=0.10 avg300=0.02 total=538072
+=== io.stat ===
+253:16 rbytes=117229346816 wbytes=0 rios=1228282 wios=0 dbytes=0 dios=0
+=== io.pressure ===
+some avg10=39.07 avg60=25.78 avg300=7.57 total=24966523
+full avg10=39.07 avg60=25.78 avg300=7.57 total=24965467

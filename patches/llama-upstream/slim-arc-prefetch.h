@@ -7,8 +7,6 @@
 // posix_madvise(WILLNEED) for tensors in layers N+1..N+window, allowing the
 // kernel to overlap I/O with computation.
 
-#include "ggml.h"
-
 #include <atomic>
 #include <climits>  // SLIM-ARC FIX 2026-08-05: 防护 INT_MAX 级联错误
 #include <condition_variable>
@@ -17,8 +15,8 @@
 #include <functional>
 #include <mutex>
 #include <thread>
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace slim_arc {
 
@@ -50,6 +48,20 @@ struct expert_tensor_info {
     int    n_experts;   // number of experts (ne[2])
 };
 
+struct prefetch_budget_stats {
+    uint64_t requested_bytes{0};
+    uint64_t issued_bytes{0};
+    uint64_t skipped_bytes{0};
+    uint64_t rounds_throttled{0};
+    uint64_t madvise_failures{0};
+};
+
+std::vector<size_t> select_prefetch_items(
+    const std::vector<size_t> & item_sizes,
+    uint64_t budget_bytes,
+    uint64_t * requested_bytes,
+    uint64_t * skipped_bytes);
+
 class prefetch_scheduler {
   public:
     explicit prefetch_scheduler(int n_threads = 2, int window = 3);
@@ -80,7 +92,8 @@ class prefetch_scheduler {
     // 当前预取窗口大小（供 graph_compute 计算待预取层范围）
     int  effective_window() const { return window_; }
     // 内存预算（供 unified_io_scheduler 分配权重预取额度）
-    void set_memory_budget(size_t bytes) { memory_budget_ = bytes; }
+    void set_memory_budget(size_t bytes) { memory_budget_.store(bytes); }
+    prefetch_budget_stats budget_stats() const;
 
     // Phase 2a: 注册 MoE 专家张量（3D 合并张量 *_exps）
     void register_expert_tensor(const char * name, void * addr, size_t size, int layer, int n_experts);
@@ -98,7 +111,10 @@ class prefetch_scheduler {
     size_t expert_hit_bytes()     const { return expert_hit_bytes_.load(); }
     size_t expert_waste_bytes()   const { return expert_waste_bytes_.load(); }
     // 统一 I/O 预算下发与每步重置（改进 3，供 unified_io_scheduler::tick 调用）
-    void set_expert_budget(size_t bytes) { expert_budget_.store(bytes); }
+    void set_expert_budget(size_t bytes) {
+        expert_budget_.store(bytes);
+        expert_budget_enabled_.store(true);
+    }
     void reset_expert_budget_usage() { expert_budget_used_.store(0); }
 
   private:
@@ -108,13 +124,18 @@ class prefetch_scheduler {
     int n_threads_;
     int window_;
     std::atomic<compute_phase> phase_{compute_phase::DECODE};
-    size_t memory_budget_ = 0;
+    std::atomic<size_t> memory_budget_{0};
     std::atomic<bool>       enabled_{true};
     std::atomic<bool>       stop_{false};
     std::atomic<int>        current_layer_{-1};
     std::atomic<uint64_t>   signature_{0};
     std::atomic<size_t>     total_bytes_{0};
     std::atomic<int>        total_calls_{0};
+    std::atomic<uint64_t>   budget_requested_bytes_{0};
+    std::atomic<uint64_t>   budget_issued_bytes_{0};
+    std::atomic<uint64_t>   budget_skipped_bytes_{0};
+    std::atomic<uint64_t>   budget_rounds_throttled_{0};
+    std::atomic<uint64_t>   budget_madvise_failures_{0};
 
     // ---- SLIM-ARC FIX 2026-08-09: 专家预取可观测性指标（改进 1）----
     std::atomic<size_t>     expert_prefetch_bytes_{0};  // 实际 WILLNEED 下发字节
@@ -143,8 +164,9 @@ class prefetch_scheduler {
     bool                                           conf_gating_ = false;
 
     // ---- SLIM-ARC FIX 2026-08-09: 统一 I/O 预算限制（改进 3，文献 admission control）----
-    // 0 = 不限；>0 时每 graph_compute step 专家 WILLNEED 累计字节不超过该预算
+    // set_expert_budget() 被调用后严格执行预算；0 表示禁用本 step 的专家预取。
     std::atomic<size_t>                            expert_budget_{0};
+    std::atomic<bool>                              expert_budget_enabled_{false};
     // 本 step 已用专家预算（每 graph_compute 由 unified tick 重置）
     std::atomic<size_t>                            expert_budget_used_{0};
 

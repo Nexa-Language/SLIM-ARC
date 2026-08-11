@@ -1,0 +1,11 @@
+BASELINE_VERSION
+version: 10288 (360e1349f)
+built with GNU 13.3.0 for Linux aarch64
+PATCHED_VERSION
+version: 10288 (360e1349f)
+built with GNU 13.3.0 for Linux aarch64
+BINARY_HASHES
+ebf65e4790adc3015bc339a3829a2403f3e6cbdc464e3a2720c038b2bf4eec3c  /opt/llama-baseline/build/bin/llama-cli
+f2f1af6cd4c4e37e62cbfb08b902958c85857050b1c2a4684239ac05edadc1aa  /opt/llama-baseline/build/bin/llama-bench
+1fcd637f4596ce38aa8863ec136b3e924aea168d82fd61f72e018a07238d7c07  /opt/llama-patched/build/bin/llama-cli
+448ea02002ef1540f4865c994d13f16e0cad55352f0018dfd95c8c4f69d0c0c1  /opt/llama-patched/build/bin/llama-bench

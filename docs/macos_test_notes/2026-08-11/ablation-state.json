@@ -1,0 +1,103 @@
+{
+  "attempts": [
+    {
+      "cache": "cold",
+      "configuration": "baseline",
+      "outcome": "success",
+      "run_id": "ablation-baseline-cold-20260811t144037z-0949a9"
+    },
+    {
+      "cache": "warm",
+      "configuration": "baseline",
+      "outcome": "success",
+      "run_id": "ablation-baseline-warm-20260811t144146z-b4ee53"
+    },
+    {
+      "cache": "cold",
+      "configuration": "patched-default",
+      "outcome": "success",
+      "run_id": "ablation-patched-default-cold-20260811t144242z-5b785d"
+    },
+    {
+      "cache": "warm",
+      "configuration": "patched-default",
+      "outcome": "success",
+      "run_id": "ablation-patched-default-warm-20260811t144357z-383272"
+    },
+    {
+      "cache": "cold",
+      "configuration": "patched-no-prefetch",
+      "outcome": "success",
+      "run_id": "ablation-patched-no-prefetch-cold-20260811t144453z-3413a3"
+    },
+    {
+      "cache": "warm",
+      "configuration": "patched-no-prefetch",
+      "outcome": "success",
+      "run_id": "ablation-patched-no-prefetch-warm-20260811t144607z-c7c87f"
+    },
+    {
+      "cache": "cold",
+      "configuration": "patched-decode-sequential",
+      "outcome": "success",
+      "run_id": "ablation-patched-decode-sequential-cold-20260811t144701z-bf3d1a"
+    },
+    {
+      "cache": "warm",
+      "configuration": "patched-decode-sequential",
+      "outcome": "success",
+      "run_id": "ablation-patched-decode-sequential-warm-20260811t144814z-41a952"
+    },
+    {
+      "cache": "cold",
+      "configuration": "patched-decode-normal",
+      "outcome": "success",
+      "run_id": "ablation-patched-decode-normal-cold-20260811t144911z-18e14c"
+    },
+    {
+      "cache": "warm",
+      "configuration": "patched-decode-normal",
+      "outcome": "success",
+      "run_id": "ablation-patched-decode-normal-warm-20260811t145025z-7e3990"
+    },
+    {
+      "cache": "cold",
+      "configuration": "patched-decode-random",
+      "outcome": "success",
+      "run_id": "ablation-patched-decode-random-cold-20260811t145120z-ba9179"
+    },
+    {
+      "cache": "warm",
+      "configuration": "patched-decode-random",
+      "outcome": "success",
+      "run_id": "ablation-patched-decode-random-warm-20260811t145238z-bb51a2"
+    },
+    {
+      "cache": "cold",
+      "configuration": "patched-expert-confidence",
+      "outcome": "success",
+      "run_id": "ablation-patched-expert-confidence-cold-20260811t145334z-b78d50"
+    },
+    {
+      "cache": "warm",
+      "configuration": "patched-expert-confidence",
+      "outcome": "success",
+      "run_id": "ablation-patched-expert-confidence-warm-20260811t145448z-854206"
+    },
+    {
+      "cache": "cold",
+      "configuration": "patched-expert-budget-confidence",
+      "outcome": "success",
+      "run_id": "ablation-patched-expert-budget-confidence-cold-20260811t145545z-4b6735"
+    },
+    {
+      "cache": "warm",
+      "configuration": "patched-expert-budget-confidence",
+      "outcome": "success",
+      "run_id": "ablation-patched-expert-budget-confidence-warm-20260811t145657z-c6e4ae"
+    }
+  ],
+  "schema_version": 1,
+  "stop_reason": "ablation_complete",
+  "updated_at": "2026-08-11T14:57:53.244395+00:00"
+}

@@ -8,8 +8,10 @@
 
 #pragma once
 
-#include "slim-arc-prefetch.h"
+#include "slim-arc-cgroup-memory.h"
 #include "slim-arc-kv-eviction.h"
+#include "slim-arc-prefetch.h"
+#include "slim-arc-pressure-budget.h"
 
 #include <atomic>
 #include <chrono>
@@ -42,6 +44,14 @@ struct io_stats {
     int    kv_page_faults;       // KV cache page faults
 };
 
+struct pressure_admission_stats {
+    uint64_t samples{0};
+    uint64_t throttled_samples{0};
+    uint64_t fallback_samples{0};
+    uint64_t static_bytes{0};
+    uint64_t effective_bytes{0};
+};
+
 class unified_io_scheduler {
   public:
     explicit unified_io_scheduler(size_t total_budget_bytes,
@@ -66,6 +76,7 @@ class unified_io_scheduler {
 
     // Get current effective budget allocation
     io_budget current_budget() const { return current_budget_; }
+    pressure_admission_stats pressure_stats() const;
 
     // Get adaptation history (for debugging/visualization)
     struct adaptation_record {
@@ -85,9 +96,15 @@ class unified_io_scheduler {
     io_budget current_budget_{};
     io_stats current_stats_{};
 
-    std::mutex history_mtx_;
+    mutable std::mutex history_mtx_;
     std::vector<adaptation_record> history_;
     int tick_count_ = 0;
+    bool pressure_admission_enabled_{false};
+    uint64_t pressure_minimum_reserve_bytes_{512ULL << 20};
+    std::atomic<uint64_t> pressure_samples_{0};
+    std::atomic<uint64_t> pressure_throttled_samples_{0};
+    std::atomic<uint64_t> pressure_fallback_samples_{0};
+    std::atomic<uint64_t> pressure_effective_bytes_{0};
 
     // Weight allocation table: [phase] -> (weight%, kv%, expert%)
     static constexpr double WEIGHT_RATIOS[5][3] = {
@@ -100,6 +117,7 @@ class unified_io_scheduler {
     };
 
     void adapt_allocation();
+    io_budget allocate_budget_for_total(size_t total_budget_bytes);
     runtime_phase detect_phase(bool is_prefill, bool is_moe, size_t context_len);
 };
 

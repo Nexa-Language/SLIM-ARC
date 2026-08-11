@@ -3,13 +3,42 @@
 #include "slim-arc-unified-scheduler.h"
 
 #include <algorithm>
+#include <charconv>
 #include <cmath>
-#include <cstdlib>  // SLIM-ARC FIX 2026-08-09: getenv（改进 3 预算开关）
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <limits>
+#include <system_error>
+#include <string_view>
 
 namespace slim_arc {
 
 namespace {
 unified_io_scheduler * g_unified_scheduler = nullptr;
+
+constexpr uint32_t default_reserve_basis_points{1000};
+
+bool parse_mebibytes(const char * raw, uint64_t & bytes) noexcept {
+    if (raw == nullptr) {
+        return false;
+    }
+    const std::string_view value{raw};
+    if (value.empty()) {
+        return false;
+    }
+    uint64_t mebibytes{0};
+    const auto result = std::from_chars(value.data(), value.data() + value.size(), mebibytes);
+    if (result.ec != std::errc{} || result.ptr != value.data() + value.size()) {
+        return false;
+    }
+    constexpr uint64_t multiplier{1ULL << 20};
+    if (mebibytes > std::numeric_limits<uint64_t>::max() / multiplier) {
+        return false;
+    }
+    bytes = mebibytes * multiplier;
+    return true;
+}
 }
 
 unified_io_scheduler * get_global_unified_scheduler() { return g_unified_scheduler; }
@@ -25,23 +54,56 @@ unified_io_scheduler::unified_io_scheduler(size_t total_budget_bytes,
     , weight_prefetcher_(weight_prefetcher)
     , kv_manager_(kv_manager) {
     current_budget_.total_bytes = total_budget_bytes;
+    pressure_effective_bytes_.store(total_budget_bytes);
+    const char * const enabled = std::getenv("SLIM_ARC_PRESSURE_ADMISSION");
+    if (enabled == nullptr) {
+        return;
+    }
+    if (std::strcmp(enabled, "1") != 0) {
+        std::fprintf(stderr, "SLIM-ARC pressure admission disabled: SLIM_ARC_PRESSURE_ADMISSION must equal 1\n");
+        return;
+    }
+    pressure_admission_enabled_ = true;
+    const char * const reserve = std::getenv("SLIM_ARC_PRESSURE_RESERVE_MB");
+    if (reserve != nullptr && !parse_mebibytes(reserve, pressure_minimum_reserve_bytes_)) {
+        std::fprintf(stderr, "SLIM-ARC pressure admission disabled: invalid SLIM_ARC_PRESSURE_RESERVE_MB\n");
+        pressure_admission_enabled_ = false;
+    }
 }
 
-unified_io_scheduler::~unified_io_scheduler() = default;
+unified_io_scheduler::~unified_io_scheduler() {
+    if (!pressure_admission_enabled_) {
+        return;
+    }
+    const pressure_admission_stats pressure = pressure_stats();
+    const prefetch_budget_stats prefetch = weight_prefetcher_ == nullptr ? prefetch_budget_stats{} : weight_prefetcher_->budget_stats();
+    std::fprintf(
+        stderr,
+        "[SLIM-ARC-PRESSURE] samples=%llu throttled=%llu fallback=%llu static=%llu effective=%llu requested=%llu issued=%llu skipped=%llu failures=%llu\n",
+        static_cast<unsigned long long>(pressure.samples),
+        static_cast<unsigned long long>(pressure.throttled_samples),
+        static_cast<unsigned long long>(pressure.fallback_samples),
+        static_cast<unsigned long long>(pressure.static_bytes),
+        static_cast<unsigned long long>(pressure.effective_bytes),
+        static_cast<unsigned long long>(prefetch.requested_bytes),
+        static_cast<unsigned long long>(prefetch.issued_bytes),
+        static_cast<unsigned long long>(prefetch.skipped_bytes),
+        static_cast<unsigned long long>(prefetch.madvise_failures));
+}
 
 void unified_io_scheduler::update_stats(const io_stats & stats) {
     current_stats_ = stats;
 }
 
-io_budget unified_io_scheduler::allocate_budget() {
+io_budget unified_io_scheduler::allocate_budget_for_total(size_t total_budget_bytes) {
     int phase_idx = static_cast<int>(phase_.load());
     const double * ratios = WEIGHT_RATIOS[phase_idx];
 
     io_budget budget;
-    budget.total_bytes  = total_budget_bytes_;
-    budget.weight_bytes = (size_t)(total_budget_bytes_ * ratios[0]);
-    budget.kv_bytes     = (size_t)(total_budget_bytes_ * ratios[1]);
-    budget.expert_bytes = (size_t)(total_budget_bytes_ * ratios[2]);
+    budget.total_bytes  = total_budget_bytes;
+    budget.weight_bytes = static_cast<size_t>(total_budget_bytes * ratios[0]);
+    budget.kv_bytes     = static_cast<size_t>(total_budget_bytes * ratios[1]);
+    budget.expert_bytes = static_cast<size_t>(total_budget_bytes * ratios[2]);
 
     // Dynamic adaptation: adjust based on runtime statistics
     if (current_stats_.weight_stalls > 0) {
@@ -72,9 +134,27 @@ io_budget unified_io_scheduler::allocate_budget() {
     return budget;
 }
 
+io_budget unified_io_scheduler::allocate_budget() {
+    return allocate_budget_for_total(total_budget_bytes_);
+}
+
 void unified_io_scheduler::tick(int current_layer, int lookahead) {
-    // 1. Allocate budget
-    auto budget = allocate_budget();
+    size_t effective_total = total_budget_bytes_;
+    if (pressure_admission_enabled_) {
+        const cgroup_memory_snapshot snapshot = read_cgroup_memory("/sys/fs/cgroup");
+        const pressure_budget_result pressure = compute_pressure_budget(
+            total_budget_bytes_, snapshot, pressure_minimum_reserve_bytes_, default_reserve_basis_points);
+        effective_total = static_cast<size_t>(pressure.effective_budget_bytes);
+        pressure_samples_.fetch_add(1);
+        pressure_effective_bytes_.store(pressure.effective_budget_bytes);
+        if (!pressure.pressure_data_valid) {
+            pressure_fallback_samples_.fetch_add(1);
+        }
+        if (pressure.throttled) {
+            pressure_throttled_samples_.fetch_add(1);
+        }
+    }
+    auto budget = allocate_budget_for_total(effective_total);
 
     // 2. Issue prefetch requests within budget
     if (weight_prefetcher_) {
@@ -82,8 +162,8 @@ void unified_io_scheduler::tick(int current_layer, int lookahead) {
         // SLIM-ARC FIX 2026-08-09: 改进 3——把统一 I/O 预算的专家额度下发到 prefetch
         // scheduler（文献 admission control：按 expert budget 限流，防止 ~959MB 全层
         // 突发抢占 I/O）。SLIM_ARC_EXPERT_BUDGET=1 时启用（MOE_DECODE 专家占比 60%）。
-        static bool expert_budget_on = getenv("SLIM_ARC_EXPERT_BUDGET") != nullptr;
-        if (expert_budget_on) {
+        static const bool expert_budget_on = getenv("SLIM_ARC_EXPERT_BUDGET") != nullptr;
+        if (pressure_admission_enabled_ || expert_budget_on) {
             weight_prefetcher_->set_expert_budget(budget.expert_bytes);
             weight_prefetcher_->reset_expert_budget_usage();  // 每 step 重置累计用量
         }
@@ -125,8 +205,18 @@ void unified_io_scheduler::adapt_allocation() {
 }
 
 std::vector<unified_io_scheduler::adaptation_record> unified_io_scheduler::adaptation_history() const {
-    std::lock_guard<std::mutex> lk(const_cast<std::mutex &>(history_mtx_));
+    std::lock_guard<std::mutex> lk(history_mtx_);
     return history_;
+}
+
+pressure_admission_stats unified_io_scheduler::pressure_stats() const {
+    return {
+        pressure_samples_.load(),
+        pressure_throttled_samples_.load(),
+        pressure_fallback_samples_.load(),
+        total_budget_bytes_,
+        pressure_effective_bytes_.load(),
+    };
 }
 
 } // namespace slim_arc

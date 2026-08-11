@@ -1,0 +1,98 @@
+CGROUP_RELATIVE=/
+=== memory.current ===
+1887965184
+=== memory.max ===
+2147483648
+=== memory.peak ===
+2147483648
+=== memory.events ===
+low 0
+high 0
+max 318603
+oom 0
+oom_kill 0
+oom_group_kill 0
+=== memory.stat ===
+anon 1105920
+file 1847291904
+kernel 39591936
+kernel_stack 32768
+pagetables 106496
+sec_pagetables 0
+percpu 0
+sock 0
+vmalloc 8192
+shmem 0
+zswap 0
+zswapped 0
+file_mapped 0
+file_dirty 0
+file_writeback 0
+swapcached 0
+anon_thp 0
+file_thp 0
+shmem_thp 0
+inactive_anon 901120
+active_anon 176128
+inactive_file 935194624
+active_file 912097280
+unevictable 0
+slab_reclaimable 38387120
+slab_unreclaimable 244424
+slab 38631544
+workingset_refault_anon 0
+workingset_refault_file 25800916
+workingset_activate_anon 0
+workingset_activate_file 11896385
+workingset_restore_anon 0
+workingset_restore_file 106182
+workingset_nodereclaim 174009
+pgscan 63344783
+pgsteal 41256841
+pgscan_kswapd 0
+pgscan_direct 63344783
+pgscan_khugepaged 0
+pgsteal_kswapd 0
+pgsteal_direct 41256841
+pgsteal_khugepaged 0
+pgfault 4375558
+pgmajfault 594943
+pgrefill 106185
+pgactivate 439024
+pgdeactivate 0
+pglazyfree 0
+pglazyfreed 0
+zswpin 0
+zswpout 0
+zswpwb 0
+thp_fault_alloc 0
+thp_collapse_alloc 0
+thp_swpout 0
+thp_swpout_fallback 0
+=== memory.swap.current ===
+0
+=== memory.swap.max ===
+0
+=== memory.pressure ===
+some avg10=9.42 avg60=7.77 avg300=3.13 total=11835100
+full avg10=9.42 avg60=7.77 avg300=3.13 total=11835100
+=== cpu.max ===
+400000 100000
+=== cpu.stat ===
+usage_usec 120291897
+user_usec 22823932
+system_usec 97467965
+core_sched.force_idle_usec 0
+nr_periods 1163
+nr_throttled 0
+throttled_usec 0
+nr_bursts 0
+burst_usec 0
+=== cpu.pressure ===
+some avg10=0.46 avg60=0.21 avg300=0.07 total=858808
+full avg10=0.43 avg60=0.19 avg300=0.06 total=858336
+=== io.stat ===
+253:16 rbytes=170835259392 wbytes=0 rios=2378872 wios=0 dbytes=0 dios=0
+=== io.pressure ===
+some avg10=39.76 avg60=30.45 avg300=10.78 total=38085696
+full avg10=39.76 avg60=30.45 avg300=10.78 total=38085063
