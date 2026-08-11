@@ -2,6 +2,35 @@
 
 ---
 
+## 2026-08-11 固定版本 llama.cpp 双变体镜像完成
+
+### 变更描述
+- 将 llama.cpp 固定到完整提交 `360e1349f0009c5ad99d21e3c4546b707addc68a`，在同一 Linux ARM64 镜像中构建 baseline 与 SLIM-ARC patched 两套 `llama-cli`、`llama-bench`。
+- 构建时关闭 Metal 与 CPU repack，保留 mmap 路径，并通过补丁二次应用前后源码树哈希验证 idempotence。
+- 构建上下文只包含 Dockerfile、补丁应用脚本和 patch 文件，临时目录由带边界校验的 trap 清理。
+- 保存镜像架构、构建参数、二进制版本与 SHA-256、补丁日志作为实验 provenance；manifest 验证、Shell syntax 与 `git diff --check` 均通过。
+
+### 涉及文件
+- `scripts/macos/Dockerfile.llama`
+- `scripts/macos/build-llama-image.sh`
+- `scripts/macos/verify-build.sh`
+- `tests/macos/test-build-manifest.sh`
+- `docs/macos_test_notes/2026-08-11/build/`
+- `plan/22-v1-macos-80b-constrained-benchmark.md`
+
+### 决策原因
+- baseline 与 patched 必须共享同一 upstream SHA、编译器和 CMake 配置，后续 A/B 才能把差异归因于 SLIM-ARC 补丁。
+- 同时记录请求的短 SHA 和解析后的完整 SHA，避免 Git 可变短哈希长度导致错误拒绝合法提交。
+- 产物保留在 Colima 专用镜像中，避免污染 macOS 宿主依赖，并直接适配后续 cgroups v2 实验。
+
+### 错误复盘
+- 日期：2026-08-11。
+- 描述：首次构建假设 Docker buildx 可用并传入 legacy builder 不支持的 `--progress`；随后又假设 `git rev-parse --short` 固定返回 7 位，而当前仓库为避免歧义返回 9 位；验证测试首次手工调用遗漏 manifest 参数。
+- 原因分类：技术盲区、规则违反。
+- 预防措施：以本机 Docker CLI capability 和实际 `--help` 为准；固定提交使用完整 SHA 的前缀匹配并保存完整解析值；所有带参数的测试按 usage 契约调用，并在提交前重跑完整验证命令。
+
+---
+
 ## 2026-08-11 Colima 受限资源 VM 与 cgroups probe 完成
 
 ### 变更描述

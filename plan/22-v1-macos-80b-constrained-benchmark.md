@@ -211,7 +211,7 @@ Links: docs/superpowers/specs/2026-08-11-macos-constrained-80b-design.md
 - Consumes: `patches/llama-upstream/*`, `scripts/apply-slim-arc.py`, Docker context from Task 2.
 - Produces: image `slim-arc-llama:360e134`; `/opt/llama-baseline/build/bin/{llama-cli,llama-bench}`; `/opt/llama-patched/build/bin/{llama-cli,llama-bench}`; `/opt/build-manifest.env`.
 
-- [ ] **Step 1: Write a build-manifest validation test**
+- [x] **Step 1: Write a build-manifest validation test**
 
 ```bash
 #!/usr/bin/env bash
@@ -224,7 +224,7 @@ grep -qx 'BASELINE_PATCHED=0' "$manifest"
 grep -qx 'SLIM_ARC_PATCHED=1' "$manifest"
 ```
 
-- [ ] **Step 2: Implement the multi-stage Dockerfile**
+- [x] **Step 2: Implement the multi-stage Dockerfile**
 
 The Dockerfile must clone `https://github.com/ggml-org/llama.cpp.git`, fetch exactly `360e134`, verify `git rev-parse --short HEAD`, and create two source copies. Build both with:
 
@@ -239,23 +239,23 @@ cmake --build build --parallel 8 --target llama-cli llama-bench
 
 Only the patched copy runs `/opt/slim-arc/scripts/apply-slim-arc.py`. The final image retains the two binaries, their dynamic libraries, source commit, patch application log and compiler/CMake versions.
 
-- [ ] **Step 3: Implement a bounded temporary build context**
+- [x] **Step 3: Implement a bounded temporary build context**
 
 `build-llama-image.sh` must create a `mktemp -d` context, copy only the Dockerfile, `scripts/apply-slim-arc.py` and `patches/llama-upstream/`, build the fixed tag, and remove only that validated temporary directory via a trap. It must not send PDFs, model files, `.git`, build output or `node_modules` to Docker.
 
-- [ ] **Step 4: Build and validate both variants**
+- [x] **Step 4: Build and validate both variants**
 
 Run: `uv run python scripts/macos/campaign.py run --state docs/macos_test_notes/2026-08-11/campaign.json -- bash scripts/macos/build-llama-image.sh && bash scripts/macos/verify-build.sh docs/macos_test_notes/2026-08-11/build`
 
 Expected: both `llama-cli --version` commands succeed; patched build log contains `SLIM-ARC integration complete`; manifest test passes.
 
-- [ ] **Step 5: Verify patch idempotence in the pinned source**
+- [x] **Step 5: Verify patch idempotence in the pinned source**
 
 Run the apply script a second time in a disposable image layer, rebuild `llama-cli`, and compare the patched source tree hash before and after the second application.
 
 Expected: no source diff after the second application and rebuild succeeds.
 
-- [ ] **Step 6: Commit the reproducible build unit**
+- [x] **Step 6: Commit the reproducible build unit**
 
 ```text
 [feat] Build pinned llama variants

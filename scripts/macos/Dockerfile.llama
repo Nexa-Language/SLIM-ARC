@@ -1,0 +1,67 @@
+FROM ubuntu:24.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG LLAMA_COMMIT=360e134
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        cmake \
+        git \
+        libgomp1 \
+        ninja-build \
+        python3 \
+        time \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt
+RUN git clone --filter=blob:none https://github.com/ggml-org/llama.cpp.git llama-upstream \
+    && cd llama-upstream \
+    && git checkout "${LLAMA_COMMIT}" \
+    && resolved_commit="$(git rev-parse HEAD)" \
+    && case "${resolved_commit}" in "${LLAMA_COMMIT}"*) ;; *) exit 1 ;; esac \
+    && printf '%s\n' "${resolved_commit}" > /opt/llama-resolved-commit \
+    && cd /opt \
+    && cp -a llama-upstream llama-baseline \
+    && cp -a llama-upstream llama-patched
+
+COPY scripts/apply-slim-arc.py /opt/slim-arc/scripts/apply-slim-arc.py
+COPY patches/llama-upstream/ /opt/slim-arc/patches/llama-upstream/
+
+RUN python3 /opt/slim-arc/scripts/apply-slim-arc.py /opt/llama-patched > /opt/patch-apply-first.log \
+    && before_hash="$(find /opt/llama-patched/src -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}')" \
+    && python3 /opt/slim-arc/scripts/apply-slim-arc.py /opt/llama-patched > /opt/patch-apply-second.log \
+    && after_hash="$(find /opt/llama-patched/src -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}')" \
+    && test "${before_hash}" = "${after_hash}" \
+    && printf 'PATCH_IDEMPOTENT=1\n' > /opt/patch-idempotent.env
+
+RUN cmake -S /opt/llama-baseline -B /opt/llama-baseline/build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DGGML_CPU_REPACK=OFF \
+        -DGGML_METAL=OFF \
+        -DLLAMA_CURL=OFF \
+    && cmake --build /opt/llama-baseline/build --parallel 8 --target llama-cli llama-bench
+
+RUN cmake -S /opt/llama-patched -B /opt/llama-patched/build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DGGML_CPU_REPACK=OFF \
+        -DGGML_METAL=OFF \
+        -DLLAMA_CURL=OFF \
+    && cmake --build /opt/llama-patched/build --parallel 8 --target llama-cli llama-bench
+
+RUN { \
+        printf 'LLAMA_COMMIT=%s\n' "${LLAMA_COMMIT}"; \
+        printf 'LLAMA_RESOLVED_COMMIT=%s\n' "$(cat /opt/llama-resolved-commit)"; \
+        printf 'GGML_CPU_REPACK=OFF\n'; \
+        printf 'GGML_METAL=OFF\n'; \
+        printf 'BASELINE_PATCHED=0\n'; \
+        printf 'SLIM_ARC_PATCHED=1\n'; \
+        cat /opt/patch-idempotent.env; \
+        printf 'COMPILER=%s\n' "$(c++ --version | head -n 1)"; \
+        printf 'CMAKE=%s\n' "$(cmake --version | head -n 1)"; \
+    } > /opt/build-manifest.env
+
+ENV LD_LIBRARY_PATH=/opt/llama-baseline/build/bin:/opt/llama-patched/build/bin
+WORKDIR /workspace
+CMD ["/bin/bash"]
