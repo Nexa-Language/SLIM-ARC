@@ -10,8 +10,8 @@ Usage: python3 scripts/apply-slim-arc.py [src/llama-upstream]
 """
 import os
 import re
-import sys
 import shutil
+import sys
 
 def main():
     root = sys.argv[1] if len(sys.argv) > 1 else "src/llama-upstream"
@@ -35,6 +35,8 @@ def main():
         "slim-arc-unified-scheduler.h", "slim-arc-unified-scheduler.cpp",
         "slim-arc-kv-eviction.h", "slim-arc-kv-eviction.cpp",
         "slim-arc-on-demand.h", "slim-arc-on-demand.cpp",
+        "slim-arc-cgroup-memory.h", "slim-arc-cgroup-memory.cpp",
+        "slim-arc-pressure-budget.h", "slim-arc-pressure-budget.cpp",
     ]
     for f in slim_arc_files:
         src = os.path.join(patches_dir, f)
@@ -426,7 +428,14 @@ def patch_cmakelists(filepath):
     with open(filepath, 'r') as f:
         content = f.read()
 
-    if 'slim-arc-prefetch.cpp' in content:
+    required_sources = (
+        "slim-arc-prefetch.cpp",
+        "slim-arc-kv-eviction.cpp",
+        "slim-arc-unified-scheduler.cpp",
+        "slim-arc-cgroup-memory.cpp",
+        "slim-arc-pressure-budget.cpp",
+    )
+    if all(source in content for source in required_sources):
         print("  already patched")
         return
 
@@ -436,9 +445,19 @@ def patch_cmakelists(filepath):
             slim-arc-prefetch.cpp
             # slim-arc-on-demand.cpp  # disabled in favor of mmap+MADV_RANDOM
             slim-arc-kv-eviction.cpp
-            slim-arc-unified-scheduler.cpp"""
-    content = content.replace(marker, slim_files, 1)
-    print("  added slim-arc source files")
+            slim-arc-unified-scheduler.cpp
+            slim-arc-cgroup-memory.cpp
+            slim-arc-pressure-budget.cpp"""
+    if "slim-arc-prefetch.cpp" not in content:
+        content = content.replace(marker, slim_files, 1)
+        print("  added slim-arc source files")
+    else:
+        anchor = "slim-arc-unified-scheduler.cpp"
+        for source in ("slim-arc-cgroup-memory.cpp", "slim-arc-pressure-budget.cpp"):
+            if source not in content:
+                content = content.replace(anchor, f"{anchor}\n            {source}", 1)
+                anchor = source
+                print(f"  added {source}")
 
     with open(filepath, 'w') as f:
         f.write(content)

@@ -6,6 +6,7 @@
 #include "slim-arc-prefetch.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 #include <limits>
 #include <sys/mman.h>
@@ -376,18 +377,26 @@ void prefetch_scheduler::issue_expert_willneed(int layer, const int * expert_ids
     // SLIM-ARC FIX 2026-08-09: 改进 3——每 step 统一 I/O 预算截断（文献 admission control）。
     // expert_budget_ > 0 时，本 graph_compute step 内专家 WILLNEED 累计不超过预算；
     // 预算耗尽则本层跳过（依赖按需分页）。unified tick 每 step 重置累计用量。
-    size_t budget = expert_budget_.load();
-    if (budget > 0) {
+    if (expert_budget_enabled_.load()) {
+        const size_t budget = expert_budget_.load();
+        size_t per_expert_total = 0;
+        for (const auto & expert : exps) {
+            const size_t item_size = expert.size / static_cast<size_t>(expert.n_experts);
+            const size_t maximum = std::numeric_limits<size_t>::max();
+            per_expert_total = item_size > maximum - per_expert_total ? maximum : per_expert_total + item_size;
+        }
+        if (budget == 0 || per_expert_total == 0) return;
+
         size_t used = expert_budget_used_.load();
-        if (used >= budget) return;
-        size_t per_exp = 0;
-        for (const auto & e : exps) per_exp += e.size / (size_t) e.n_experts;
-        if (per_exp > 0) {
-            size_t room = budget - used;
-            size_t cap = room / per_exp;
-            if (cap < target.size()) target.resize(cap);
-            if (!target.empty()) {
-                expert_budget_used_.fetch_add(target.size() * per_exp);
+        while (true) {
+            if (used >= budget) return;
+            const size_t capacity = (budget - used) / per_expert_total;
+            if (capacity == 0) return;
+            if (capacity < target.size()) target.resize(capacity);
+            if (target.empty()) return;
+            const size_t reservation = target.size() * per_expert_total;
+            if (expert_budget_used_.compare_exchange_weak(used, used + reservation)) {
+                break;
             }
         }
     }

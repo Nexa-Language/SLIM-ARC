@@ -26,6 +26,13 @@ RUN git clone --filter=blob:none https://github.com/ggml-org/llama.cpp.git llama
     && cp -a llama-upstream llama-baseline \
     && cp -a llama-upstream llama-patched
 
+RUN cmake -S /opt/llama-baseline -B /opt/llama-baseline/build -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DGGML_CPU_REPACK=OFF \
+        -DGGML_METAL=OFF \
+        -DLLAMA_CURL=OFF \
+    && cmake --build /opt/llama-baseline/build --parallel 8 --target llama-cli llama-bench
+
 COPY scripts/apply-slim-arc.py /opt/slim-arc/scripts/apply-slim-arc.py
 COPY patches/llama-upstream/ /opt/slim-arc/patches/llama-upstream/
 
@@ -35,13 +42,6 @@ RUN python3 /opt/slim-arc/scripts/apply-slim-arc.py /opt/llama-patched > /opt/pa
     && after_hash="$(find /opt/llama-patched/src -type f -print0 | sort -z | xargs -0 sha256sum | sha256sum | awk '{print $1}')" \
     && test "${before_hash}" = "${after_hash}" \
     && printf 'PATCH_IDEMPOTENT=1\n' > /opt/patch-idempotent.env
-
-RUN cmake -S /opt/llama-baseline -B /opt/llama-baseline/build -G Ninja \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DGGML_CPU_REPACK=OFF \
-        -DGGML_METAL=OFF \
-        -DLLAMA_CURL=OFF \
-    && cmake --build /opt/llama-baseline/build --parallel 8 --target llama-cli llama-bench
 
 RUN cmake -S /opt/llama-patched -B /opt/llama-patched/build -G Ninja \
         -DCMAKE_BUILD_TYPE=Release \

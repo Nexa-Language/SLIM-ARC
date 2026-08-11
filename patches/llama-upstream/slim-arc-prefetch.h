@@ -15,8 +15,8 @@
 #include <functional>
 #include <mutex>
 #include <thread>
-#include <vector>
 #include <utility>
+#include <vector>
 
 namespace slim_arc {
 
@@ -111,7 +111,10 @@ class prefetch_scheduler {
     size_t expert_hit_bytes()     const { return expert_hit_bytes_.load(); }
     size_t expert_waste_bytes()   const { return expert_waste_bytes_.load(); }
     // 统一 I/O 预算下发与每步重置（改进 3，供 unified_io_scheduler::tick 调用）
-    void set_expert_budget(size_t bytes) { expert_budget_.store(bytes); }
+    void set_expert_budget(size_t bytes) {
+        expert_budget_.store(bytes);
+        expert_budget_enabled_.store(true);
+    }
     void reset_expert_budget_usage() { expert_budget_used_.store(0); }
 
   private:
@@ -161,8 +164,9 @@ class prefetch_scheduler {
     bool                                           conf_gating_ = false;
 
     // ---- SLIM-ARC FIX 2026-08-09: 统一 I/O 预算限制（改进 3，文献 admission control）----
-    // 0 = 不限；>0 时每 graph_compute step 专家 WILLNEED 累计字节不超过该预算
+    // set_expert_budget() 被调用后严格执行预算；0 表示禁用本 step 的专家预取。
     std::atomic<size_t>                            expert_budget_{0};
+    std::atomic<bool>                              expert_budget_enabled_{false};
     // 本 step 已用专家预算（每 graph_compute 由 unified tick 重置）
     std::atomic<size_t>                            expert_budget_used_{0};
 

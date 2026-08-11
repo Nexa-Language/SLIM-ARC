@@ -92,6 +92,23 @@ void test_scheduler_counts_madvise_failure_without_issuing_bytes() {
     assert(stats.madvise_failures == 1);
 }
 
+void test_zero_expert_budget_disables_expert_prefetch() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const mapping = mmap(nullptr, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1};
+        scheduler.register_expert_tensor("blk.1.exps", mapping, page_size, 1, 1);
+        scheduler.set_expert_budget(0);
+        const int expert_id{0};
+        scheduler.prefetch_experts(1, &expert_id, 1);
+        assert(scheduler.expert_prefetch_bytes() == 0);
+    }
+    assert(munmap(mapping, page_size) == 0);
+}
+
 } // namespace
 
 int main() {
@@ -100,5 +117,6 @@ int main() {
     test_totals_saturate_near_uint64_max();
     test_scheduler_enforces_budget_and_counts_success();
     test_scheduler_counts_madvise_failure_without_issuing_bytes();
+    test_zero_expert_budget_disables_expert_prefetch();
     return 0;
 }

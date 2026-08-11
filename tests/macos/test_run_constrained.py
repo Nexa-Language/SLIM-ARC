@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -16,7 +17,7 @@ sys.modules[SPEC.name] = run_constrained
 SPEC.loader.exec_module(run_constrained)
 
 
-def config(**overrides: object) -> object:
+def config(**overrides: object) -> Any:
     values: dict[str, object] = {
         "memory_gib": 8,
         "cpus": 4,
@@ -64,7 +65,7 @@ def test_no_swap_docker_limits_are_exact(tmp_path: Path) -> None:
         config(variant="baseline", env={"SLIM_ARC_DISABLE": "1"}),
     ],
 )
-def test_rejects_unsafe_configuration(cfg: object) -> None:
+def test_rejects_unsafe_configuration(cfg: Any) -> None:
     with pytest.raises(ValueError):
         cfg.validate()
 
@@ -120,3 +121,14 @@ def test_controller_result_serializes_frozen_environment(tmp_path: Path) -> None
     )
 
     assert '"SLIM_ARC_DYNAMIC_MADV": "1"' in output.read_text(encoding="utf-8")
+
+
+def test_pressure_environment_is_allowlisted() -> None:
+    cfg = config(
+        env={
+            "SLIM_ARC_PRESSURE_ADMISSION": "1",
+            "SLIM_ARC_PRESSURE_RESERVE_MB": "512",
+        }
+    )
+
+    cfg.validate()

@@ -7,6 +7,10 @@
   copied slim-arc-kv-eviction.cpp
   copied slim-arc-on-demand.h
   copied slim-arc-on-demand.cpp
+  copied slim-arc-cgroup-memory.h
+  copied slim-arc-cgroup-memory.cpp
+  copied slim-arc-pressure-budget.h
+  copied slim-arc-pressure-budget.cpp
 
 === Step 2: Patch llama-model-loader.cpp ===
   added slim-arc includes

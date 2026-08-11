@@ -2,6 +2,37 @@
 
 ---
 
+## 2026-08-11 pressure admission Task 4：cgroup headroom 已接入统一调度
+
+### 变更描述
+- pressure admission 以 `SLIM_ARC_PRESSURE_ADMISSION=1` 显式启用，每个 tick 读取 cgroup v2 `memory.current/max`，按 headroom/reserve 计算 effective total，并同时约束 weight 与 expert prefetch。
+- 新增 bounded shutdown 指标，汇总 samples、throttled/fallback、static/effective budget 以及 weight requested/issued/skipped/failure；无效配置明确报错并保持现有 static 路径。
+- 补丁脚本复制并注入 cgroup/pressure 模块，fixture 验证二次应用 byte-identical；host controller 与 container wrapper 仅放行两个新增环境变量。
+- pinned llama.cpp ARM64 baseline/patched 构建成功，manifest 为 `PATCH_IDEMPOTENT=1`；Dockerfile 将 baseline 编译放在补丁 COPY 前，后续仅改补丁时可复用 baseline 层。
+
+### 涉及文件
+- `patches/llama-upstream/slim-arc-prefetch.h/.cpp`
+- `patches/llama-upstream/slim-arc-unified-scheduler.h/.cpp`
+- `scripts/apply-slim-arc.py`
+- `scripts/macos/Dockerfile.llama`
+- `scripts/macos/run_constrained.py`
+- `scripts/macos/container/run-benchmark.sh`
+- `tests/test_apply_pressure_admission.py`
+- `tests/cpp/test-slim-arc-unified-pressure.cpp`
+- `tests/cpp/test-slim-arc-prefetch-budget.cpp`
+- `tests/macos/test_run_constrained.py`
+- `docs/macos_test_notes/2026-08-11/build/`
+- `plan/23-v1-pressure-aware-prefetch.md`
+- `plan/23-v2-pressure-aware-prefetch.md`
+
+### 决策原因
+- plan 22 显示 2 GiB 下 prefetch 的 cold/warm 收益相反且 memory peak 触顶，适合用运行时 headroom admission 替代静态全开/全关。
+- 实际 upstream 首次构建暴露 `dump_metrics()` 缺少 `<cstdio>`；原因分类为“技术盲区”，单元测试翻译单元间接带入了声明。已补头文件并以真实 upstream 全量重建作为预防门禁。
+- 原计划给构建脚本传入其不支持的 `--rebuild-patched`；原因分类为“误解仓库接口”。v2 改为仓库真实无参数接口，并通过 Docker layer 排序满足 baseline 不因补丁变化重编的原意。
+- 最新 `origin/main` 出现两套 expert 方法重复定义，当前阶段先提交干净本地实现，再用 rebase 做语义冲突解决；不在未提交工作树上冒险同步。
+
+---
+
 ## 2026-08-11 pressure admission Task 3：weight prefetch 预算闭环完成
 
 ### 变更描述

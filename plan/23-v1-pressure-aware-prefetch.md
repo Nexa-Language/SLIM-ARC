@@ -256,45 +256,45 @@ Links: plan/23-v1-pressure-aware-prefetch.md
 - Consumes: Tasks 1–3 modules and metrics.
 - Produces: `pressure_admission_stats { samples, throttled_samples, fallback_samples, static_bytes, effective_bytes }`; environment variables `SLIM_ARC_PRESSURE_ADMISSION` and `SLIM_ARC_PRESSURE_RESERVE_MB`.
 
-- [ ] **Step 1: Write patch-integration tests**
+- [x] **Step 1: Write patch-integration tests**
 
 Create a minimal temporary llama source fixture with the exact CMake and model-loader anchors used by `apply-slim-arc.py`. Assert the script copies both new modules once, adds both `.cpp` files once, and remains byte-identical on a second application.
 
-- [ ] **Step 2: Run the Python test and verify it fails**
+- [x] **Step 2: Run the Python test and verify it fails**
 
 Run: `uv run --with pytest pytest -q tests/test_apply_pressure_admission.py`
 
 Expected: FAIL because the integration script does not know the new files.
 
-- [ ] **Step 3: Add opt-in pressure configuration**
+- [x] **Step 3: Add opt-in pressure configuration**
 
 At scheduler construction, parse `SLIM_ARC_PRESSURE_ADMISSION` once. Parse `SLIM_ARC_PRESSURE_RESERVE_MB` with full end/range checks into bytes; invalid explicit configuration prints one error and disables pressure admission instead of silently using zero.
 
-- [ ] **Step 4: Apply effective budget once per tick**
+- [x] **Step 4: Apply effective budget once per tick**
 
 When enabled, read `/sys/fs/cgroup`, compute effective total budget, allocate weight/KV/expert shares from that effective value, and set both weight and expert budgets every tick. When effective budget is zero, set both prefetch budgets to zero; do not disable or fail model computation.
 
-- [ ] **Step 5: Emit bounded observability output**
+- [x] **Step 5: Emit bounded observability output**
 
 At shutdown, emit one summary line with pressure samples, throttled/fallback samples and current prefetch requested/issued/skipped/failure counts. Do not log every tick or print full cgroup paths.
 
-- [ ] **Step 6: Update patch copying and CMake injection**
+- [x] **Step 6: Update patch copying and CMake injection**
 
 Add the two new `.h/.cpp` pairs to the copy allowlist and the `.cpp` files to the patched llama CMake source list. Preserve idempotence.
 
-- [ ] **Step 7: Run all focused verification**
+- [x] **Step 7: Run all focused verification**
 
 Run: `uv run --with pytest pytest -q tests/test_apply_pressure_admission.py && bash tests/run-cpp-unit.sh test-slim-arc-cgroup-memory && bash tests/run-cpp-unit.sh test-slim-arc-pressure-budget && bash tests/run-cpp-unit.sh test-slim-arc-prefetch-budget && python3 -m py_compile scripts/apply-slim-arc.py && git diff --check`
 
 Expected: all tests pass.
 
-- [ ] **Step 8: Rebuild pinned patched image**
+- [x] **Step 8: Rebuild pinned patched image**
 
-Run: `bash scripts/macos/build-llama-image.sh --rebuild-patched`
+Run: `bash scripts/macos/build-llama-image.sh`
 
 Expected: llama.cpp `360e134` patched build succeeds, a second patch application produces no diff, and baseline image layer is unchanged.
 
-- [ ] **Step 9: Commit integration**
+- [x] **Step 9: Commit integration**
 
 ```text
 [feat][Scheduler][4/4] Limit pressure prefetch
