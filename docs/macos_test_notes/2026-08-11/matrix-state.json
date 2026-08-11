@@ -1,0 +1,105 @@
+{
+  "attempts": [
+    {
+      "memory_gib": 12,
+      "outcome": "success",
+      "run_id": "survival-12g-20260811t142148z-e6d577"
+    },
+    {
+      "memory_gib": 12,
+      "outcome": "success",
+      "run_id": "survival-12g-20260811t142230z-4539c9"
+    },
+    {
+      "memory_gib": 8,
+      "outcome": "success",
+      "run_id": "survival-8g-20260811t142309z-4691d3"
+    },
+    {
+      "memory_gib": 8,
+      "outcome": "success",
+      "run_id": "survival-8g-20260811t142348z-98a99f"
+    },
+    {
+      "memory_gib": 6,
+      "outcome": "success",
+      "run_id": "survival-6g-20260811t142429z-d4ab83"
+    },
+    {
+      "memory_gib": 6,
+      "outcome": "success",
+      "run_id": "survival-6g-20260811t142504z-151b37"
+    },
+    {
+      "memory_gib": 4,
+      "outcome": "success",
+      "run_id": "survival-4g-20260811t142538z-b845c5"
+    },
+    {
+      "memory_gib": 4,
+      "outcome": "success",
+      "run_id": "survival-4g-20260811t142606z-747a42"
+    },
+    {
+      "memory_gib": 3,
+      "outcome": "success",
+      "run_id": "survival-3g-20260811t142634z-421400"
+    },
+    {
+      "memory_gib": 3,
+      "outcome": "success",
+      "run_id": "survival-3g-20260811t142703z-f08a09"
+    },
+    {
+      "memory_gib": 2,
+      "outcome": "success",
+      "run_id": "survival-2g-20260811t142733z-15ee2e"
+    },
+    {
+      "memory_gib": 2,
+      "outcome": "success",
+      "run_id": "survival-2g-20260811t142803z-0b3d75"
+    }
+  ],
+  "cpu_attempts": [
+    {
+      "cpus": 2,
+      "outcome": "success",
+      "run_id": "cpu-2c-20260811t143036z-65a51a"
+    },
+    {
+      "cpus": 4,
+      "outcome": "success",
+      "run_id": "cpu-4c-20260811t143308z-2ca815"
+    },
+    {
+      "cpus": 6,
+      "outcome": "success",
+      "run_id": "cpu-6c-20260811t143527z-7d5545"
+    },
+    {
+      "cpus": 8,
+      "outcome": "success",
+      "run_id": "cpu-8c-20260811t143741z-81c163"
+    }
+  ],
+  "lowest_stable_gib": 2,
+  "lowest_survival_gib": 2,
+  "schema_version": 1,
+  "stable_attempts": [
+    {
+      "cache": "cold",
+      "memory_gib": 2,
+      "outcome": "success",
+      "run_id": "stable-2g-cold-20260811t142833z-fac323"
+    },
+    {
+      "cache": "warm",
+      "memory_gib": 2,
+      "outcome": "success",
+      "run_id": "stable-2g-warm-20260811t142943z-75ae5c"
+    }
+  ],
+  "stop_reason": "matrix_complete",
+  "updated_at": "2026-08-11T14:39:55.940271+00:00"
+}

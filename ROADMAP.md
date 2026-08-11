@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-08-11 macOS 80B 无 swap 基线与现有功能消融完成
+
+### 变更描述
+- 在 Qwen3-Next-80B-A3B-Instruct Q4_K_M（SHA-256 `d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a`）和 llama.cpp `360e134` 上完成 cgroups v2 无 swap 实验。
+- 12/8/6/4/3/2 GiB 生存档均双轮成功；2 GiB 下 cold/warm `pp64 + tg16` 均成功，因此最低观测生存档和最低稳定档均为 2 GiB。2 GiB 是控制器安全下限，本轮未观测到更低 OOM 边界。
+- 在 2 GiB、4 vCPU 下完成 baseline 与 7 个现有 patched 配置的 cold/warm 共 16 组消融，全部成功且 `memory.swap.max=0`。
+- warm 最佳为 `ablation-patched-no-prefetch-warm-20260811t144607z-c7c87f` 的 52.55s，相对 patched default `ablation-patched-default-warm-20260811t144357z-383272` 的 55.08s 快 4.59%，相对 baseline `ablation-baseline-warm-20260811t144146z-b4ee53` 的 55.33s 快 5.02%；每个消融 cache row 只有一次 repetition，不能直接晋级默认配置。
+- cold 最佳为 upstream `ablation-baseline-cold-20260811t144037z-0949a9` 的 68.29s；固定关闭预取的 cold 为 72.52s，说明全开与全关均不能同时覆盖 cold/warm，需要进入 plan 23 的动态压力 admission A/B。
+- CPU 扫描两次 repetition 的平均墙钟为：2/4/6/8 vCPU 分别 75.06/68.56/66.28/66.72s；6 核后收益饱和，最终展示仍需结合设备资源选择。
+
+### 涉及文件
+- `docs/macos_test_notes/2026-08-11/runs/`
+- `docs/macos_test_notes/2026-08-11/matrix-state.json`
+- `docs/macos_test_notes/2026-08-11/ablation-state.json`
+- `docs/macos_test_notes/2026-08-11/results.json`
+- `docs/macos_test_notes/2026-08-11/summary.md`
+- `scripts/macos/summarize_results.py`
+- `tests/macos/test_summarize_results.py`
+- `plan/22-v1-macos-80b-constrained-benchmark.md`
+
+### 决策原因
+- 所有 primary row 都由 controller 与 wrapper 双重记录模型、commit、memory/cpu limit、swap、OOM、日志和 GNU time 指标；汇总把 prefill 与 decode t/s 分列，避免对不同阶段做无意义的算术平均。
+- 2 GiB 下所有成功行的 `memory.peak` 都碰到 cgroup 上限，并产生大量 `memory.max` 回收与 major fault；warm 关闭预取有小幅收益而 cold 无收益，满足 plan 23“预取存在压力/浪费信号”的启动门，但不满足任何默认晋级结论。
+- 本轮没有 no-swap 失败档，因此按计划不运行 exploratory swap sensitivity，避免把 swap 结果混入主表。
+
+---
+
 ## 2026-08-11 官方 80B 模型下载与完整性验证完成
 
 ### 变更描述

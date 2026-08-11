@@ -555,7 +555,7 @@ def test_never_promotes_swap_row_to_no_swap_result(rows: list[RunRow]) -> None:
 
 Reject duplicate run IDs, model hashes, llama commits or resource limits that disagree within an A/B group. Preserve unsupported metrics as null; do not convert them to zero.
 
-- [ ] **Step 3: Run the existing-feature ablation at the lowest stable tier**
+- [x] **Step 3: Run the existing-feature ablation at the lowest stable tier**
 
 Execute, in this order:
 
@@ -570,21 +570,21 @@ Execute, in this order:
 
 Every row uses the same model hash, stable memory, 4 vCPU, `pp64 + tg16`, one cold run and one warm run. If the 12-hour deadline prevents all rows, stop after item 4 and record the remaining rows as `not_run_due_to_deadline`, not zero.
 
-- [ ] **Step 4: Generate summary and validate claims against raw rows**
+- [x] **Step 4: Generate summary and validate claims against raw rows**
 
 The report must state lowest survival/stable memory, no-swap status, CPU curve, best existing config, OOM boundaries and whether prefetch waste/pressure justifies plan 23. Every percentage must name numerator and denominator run IDs.
 
-- [ ] **Step 5: Run tests and repository checks**
+- [x] **Step 5: Run tests and repository checks**
 
 Run: `uv run --with pytest pytest -q tests/macos && bash -n scripts/macos/*.sh scripts/macos/container/*.sh && git diff --check`
 
 Expected: all tests pass; summary contains no absolute home path, token or hardware identifier.
 
-- [ ] **Step 6: Record the executed result in ROADMAP**
+- [x] **Step 6: Record the executed result in ROADMAP**
 
 Add a newest-first entry with the tested model hash, lowest stable tier, completed configurations, failed tiers, links to raw evidence and the decision to start or skip plan 23.
 
-- [ ] **Step 7: Commit the benchmark evidence and summary**
+- [x] **Step 7: Commit the benchmark evidence and summary**
 
 ```text
 [milestone] Record constrained 80B results

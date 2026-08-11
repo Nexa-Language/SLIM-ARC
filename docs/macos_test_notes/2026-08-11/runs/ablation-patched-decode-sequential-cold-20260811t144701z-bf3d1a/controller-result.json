@@ -1,0 +1,47 @@
+{
+  "cold_cache": true,
+  "config": {
+    "cpus": 4,
+    "env": {
+      "SLIM_ARC_DECODE_MADV": "SEQUENTIAL"
+    },
+    "memory_gib": 2,
+    "pp": 64,
+    "repetitions": 1,
+    "tg": 16,
+    "timeout_seconds": 5400,
+    "variant": "patched"
+  },
+  "container_name": "slim-arc-run-20260811t144702z-8c27e186",
+  "container_state": {
+    "Dead": false,
+    "Error": "",
+    "ExitCode": 0,
+    "FinishedAt": "2026-08-11T14:48:14.447161126Z",
+    "OOMKilled": false,
+    "Paused": false,
+    "Pid": 0,
+    "Restarting": false,
+    "Running": false,
+    "StartedAt": "2026-08-11T14:47:02.270212832Z",
+    "Status": "exited"
+  },
+  "created_at": "2026-08-11T14:48:14.483271+00:00",
+  "llama_commit": "360e134",
+  "memory_limit_bytes": 2147483648,
+  "memory_swap_limit_bytes": 0,
+  "model": {
+    "actual_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+    "expected_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+    "filename": "Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf",
+    "repo_id": "Qwen/Qwen3-Next-80B-A3B-Instruct-GGUF",
+    "revision": "4c8630cf7af926a9c5095cb4bbbbc65d36e20f77",
+    "size": 48410988384,
+    "verified_at": "2026-08-11T14:17:16.915666+00:00"
+  },
+  "outcome": "success",
+  "return_code": 0,
+  "schema_version": 1,
+  "stderr_summary": "",
+  "timed_out": false
+}
