@@ -318,7 +318,7 @@ Links: plan/23-v1-pressure-aware-prefetch.md
 - Consumes: lowest stable/boundary tiers from plan 22 and patched image from Task 4.
 - Produces: promotion decision `enabled_for_final_demo`, `kept_opt_in`, or `removed_no_benefit` with referenced run IDs.
 
-- [ ] **Step 1: Define exact A/B rows**
+- [x] **Step 1: Define exact A/B rows**
 
 At the plan 22 lowest stable memory and first failed lower tier, 4 vCPU, no swap, same model hash and `pp64 + tg16`, run:
 
@@ -329,27 +329,27 @@ At the plan 22 lowest stable memory and first failed lower tier, 4 vCPU, no swap
 
 Each stable-tier row receives one cold and two warm repetitions. The failed lower tier receives up to two attempts per configuration.
 
-- [ ] **Step 2: Verify functional output before comparing metrics**
+- [x] **Step 2: Verify functional output before comparing metrics**
 
 Reject any row with empty output, different prompt/token counts, cgroup swap use, commit/hash mismatch, OOM at the stable tier, or malformed pressure metrics.
 
-- [ ] **Step 3: Compute promotion criteria from raw manifests**
+- [x] **Step 3: Compute promotion criteria from raw manifests**
 
 Promote when pressure admission either makes the lower tier stable, or decreases stable-tier `memory.peak` by at least 10% while total `pp64 + tg16` wall time regresses by no more than 15%. Use median warm wall time; report cold separately.
 
-- [ ] **Step 4: Apply the decision**
+- [x] **Step 4: Apply the decision**
 
 - `enabled_for_final_demo`: update demo/test configuration to set the flag explicitly; do not make global library behavior implicit.
 - `kept_opt_in`: retain implementation and tests but leave demo/default configuration unchanged.
 - `removed_no_benefit`: revert only Task 3/4 production integration while retaining benchmark evidence and negative-result documentation; keep reusable pure tests only if they still test shipped code.
 
-- [ ] **Step 5: Run regression and repository verification**
+- [x] **Step 5: Run regression and repository verification**
 
 Run: `uv run --with pytest pytest -q tests/test_apply_pressure_admission.py tests/macos && bash tests/run-cpp-unit.sh test-slim-arc-cgroup-memory && bash tests/run-cpp-unit.sh test-slim-arc-pressure-budget && bash tests/run-cpp-unit.sh test-slim-arc-prefetch-budget && git diff --check`
 
 Expected: PASS and no untracked model/build artifact.
 
-- [ ] **Step 6: Record ROADMAP evidence and commit**
+- [x] **Step 6: Record ROADMAP evidence and commit**
 
 ```text
 [milestone] Evaluate pressure admission

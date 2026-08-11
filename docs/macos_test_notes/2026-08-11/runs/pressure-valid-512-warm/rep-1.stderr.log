@@ -1,0 +1,2 @@
+[SLIM-ARC-PRESSURE] samples=17 throttled=17 fallback=0 static=1073741824 effective=0 requested=9339394560 issued=0 skipped=9339394560 failures=0
+[SLIM-ARC-METRICS] expert prefetch: samples=816 issued=0.0MB hit=0.0MB waste=0.0MB hit_rate=0.00% (accounted 0.0MB)

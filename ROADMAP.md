@@ -2,6 +2,29 @@
 
 ---
 
+## 2026-08-12 pressure admission Task 5：80B A/B 决策为 kept_opt_in
+
+### 变更描述
+- 在修复 variant linkage 后，以 2 GiB、4 vCPU、no-swap、Qwen3-Next-80B-A3B Q4_K_M、`pp64 + tg16` 重跑 corrected A/B。
+- pressure-off 的 cold 为 63.32s，warm 为 52.12/58.39s（median 55.255s）；expert prefetch 每次 issued 3759.6 MiB，hit rate 42.67%，waste 2407.4 MiB。
+- reserve 512 MiB 的 cold 为 62.41s，warm median 60.77s；reserve 1024 MiB 的 cold 为 65.37s，warm median 57.47s。两者均为 17/17 pressure samples throttled、effective/issued=0，策略等价。
+- 所有有效 row 的 `memory.peak` 均为 2 GiB，OOM/swap 均为零；512/1024 相对 off 的 warm regression 分别为 9.98%/4.01%，但内存下降为 0%，未达到 10% promotion threshold。
+- promotion decision 为 `kept_opt_in`：保留实现、测试和指标，但不在最终 demo/default 配置启用 pressure admission。
+
+### 涉及文件
+- `docs/macos_test_notes/2026-08-11/runs/pressure-valid-*/`
+- `docs/macos_test_notes/2026-08-11/runs/pressure-reserve0-smoke/`
+- `docs/macos_test_notes/2026-08-11/pressure-admission-results.json`
+- `docs/macos_test_notes/2026-08-11/pressure-admission-summary.md`
+- `ROADMAP.md`
+
+### 决策原因
+- admission 确实消除了约 3.76 GiB expert 预取和 6.13–12.27 GB weight advice，但在 2 GiB cgroup 下页缓存仍持续触顶，未降低 `memory.peak`。
+- 512 与 1024 的 warm 差异发生在相同 effective budget/counters 下，只能视为 cache/I/O 噪声；不能据此挑选 reserve。
+- reserve=0 的 pp4/tg1 smoke 仍得到 effective=0，说明当前 2 GiB 档没有可利用 headroom；继续做完整 reserve sweep 不会产生新的策略行为。
+
+---
+
 ## 2026-08-11 macOS benchmark：修复 variant 动态库串用
 
 ### 变更描述
