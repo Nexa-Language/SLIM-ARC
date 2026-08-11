@@ -1,0 +1,48 @@
+
+
+Loading model... |-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/- 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b1-360e134
+model      : /home/orangepi/ssd/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+
+> The history of artificial intelligence spans several decades. The history of artificial intelligence spans several decades. The history of artificial intelligence spans several decades. The history of artificial intelligence spans several decades. The history of artificial intelligence spans several decades. The history of artificial intelligence spans several decades. The history of artificial intelligence spans several decades. The history of artificial intelligence spans several decades. The  ... (truncated)
+It seems you've repeated the same sentence many times:  
+**"The history of artificial intelligence spans several decades."**
+
+While this statement is true — AI’s roots go back to the 1950s, with key milestones like the Turing Test (1950), the Dartmouth Conference (1956), expert systems in the 1980s, machine learning advances in the 2000s, and the deep learning revolution in the 2010s — repeating it doesn’t add new information.
+
+If you’d like to learn more about the **actual history of AI**, here’s a concise timeline:
+
+---
+
+### 🕰️ **A Brief History of Artificial Intelligence**
+
+- **1943**: Warren McCulloch & Walter Pitts propose the first mathematical model of a neural network.
+- **1950**: Alan Turing publishes *“Computing Machinery and Intelligence”*, introducing the Turing Test.
+- **1956**: The term “Artificial Intelligence” is coined at the Dartmouth Conference — considered the birth of AI as a field.
+- **1960s–70s**: Early optimism; development of ELIZA (chatbot) and SHRDLU (
+
+[ Prompt: 2.5 t/s | Generation: 0.3 t/s ]
+
+
+Exiting...
+LC26 EXIT=0

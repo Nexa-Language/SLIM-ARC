@@ -9,7 +9,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+# SLIM-ARC FIX 2026-08-10: llama-upstream 是独立 git clone，实际位于仓库外
+# (PROJECT_ROOT/../src/llama-upstream)，此处自动探测两种布局，避免路径不存在
 LLAMA_DIR="$PROJECT_ROOT/src/llama-upstream"
+if [ ! -x "$LLAMA_DIR/build/bin/llama-server" ] && [ -x "$(dirname "$PROJECT_ROOT")/src/llama-upstream/build/bin/llama-server" ]; then
+    LLAMA_DIR="$(dirname "$PROJECT_ROOT")/src/llama-upstream"
+fi
 DEMO_DIR="$PROJECT_ROOT/scripts/demo"
 
 MODEL_CHOICE="${1:-4b}"

@@ -1,0 +1,25 @@
+===== 健康检查验证记录 2026-08-10 19:30:40 =====
+
+[1] llama-server /health (8080):
+{"status":"ok"}
+HTTP_CODE:200
+
+[2] monitor /api/health (8001):
+{"status":"ok","config":{"model":"Qwen3-4B-Q4_K_M","model_size":"2.4 GB","experts_total":0,"experts_active":0,"madv":"ON","kv_type":"q4_0","fa":"ON","repack":"OFF","tier":"32GB warm"}}
+HTTP_CODE:200
+
+[3] 前端 index.html (8090):
+HTTP_CODE:200 SIZE:21767
+
+[4] 端口/PID:
+LISTEN 0      2048         0.0.0.0:8001       0.0.0.0:*    users:(("python3",pid=69204,fd=6))        
+LISTEN 0      512          0.0.0.0:8080       0.0.0.0:*    users:(("llama-server",pid=69203,fd=3))   
+LISTEN 0      5            0.0.0.0:8090       0.0.0.0:*    users:(("python3",pid=69205,fd=3))        
+
+[5] 推理验证:
+{"choices":[{"finish_reason":"length","index":0,"message":{"role":"assistant","content":"","reasoning_content":"嗯，用户可能只是想测试一下我的反应，或者想开始一段对话。我"}}],"created":1786361444,"model":"/home/orangepi/SLIM-ARC/data/models/Qwen3-4B-Q4_K_M.gguf","system_fingerprint":"b1-360e134","object":"chat.completion","usage":{"completion_tokens":20,"prompt_tokens":9,"total_tokens":29,"prompt_tokens_details":{"cached_tokens":4}},"id":"chatcmpl-Vef3F8BVVNDXXQ5KqYx600pKbORMqA97","timings":{"cache_n":4,"prompt_n":5,"prompt_ms":760.008,"prompt_per_token_ms":152.0016,"prompt_per_second":6.578878117072452,"predicted_n":20,"predicted_ms":3101.68,"predicted_per_token_ms":155.084,"predicted_per_second":6.448118439039488}}
+HTTP_CODE:200
+
+[6] /api/monitor metrics:
+{"n_decoded": 20, "n_prompt_tokens": 28, "active": true, "slots": 4}
+tps点数: 1

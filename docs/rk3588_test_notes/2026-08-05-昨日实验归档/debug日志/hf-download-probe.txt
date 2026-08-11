@@ -1,0 +1,4 @@
+===== HF 模型 HEAD 探测 (走代理) =====
+hf_proxy_exit=0
+===== HF 直连 HEAD 探测 =====
+hf_direct_exit=0

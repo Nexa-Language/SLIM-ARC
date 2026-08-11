@@ -1,0 +1,14 @@
+[  0%] Built target llama-common-base
+[  0%] Built target cpp-httplib
+[  4%] Built target ggml-base
+[ 10%] Built target ggml-cpu
+[ 10%] Built target ggml
+Consolidate compiler generated dependencies of target llama
+[ 82%] Built target llama
+[ 97%] Built target llama-common
+Consolidate compiler generated dependencies of target llama-bench-impl
+[ 97%] Linking CXX shared library ../../bin/libllama-bench-impl.so
+[ 97%] Built target llama-bench-impl
+Consolidate compiler generated dependencies of target llama-bench
+[100%] Linking CXX executable ../../bin/llama-bench
+[100%] Built target llama-bench

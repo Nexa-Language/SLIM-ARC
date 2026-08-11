@@ -1,0 +1,8 @@
+===== OLMoE GGUF magic 验证 =====
+000000 47 47 55 46
+(期望 47 47 55 46 = GGUF)
+===== 磁盘 =====
+/dev/mmcblk0p2   28G   11G   17G  40% /
+===== 内存 =====
+Mem:           7.8Gi       1.6Gi        45Mi        16Mi       6.1Gi       6.0Gi
+Swap:          3.9Gi       0.0Ki       3.9Gi

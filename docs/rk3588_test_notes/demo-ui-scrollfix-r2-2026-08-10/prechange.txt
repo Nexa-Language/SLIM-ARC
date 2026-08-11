@@ -1,0 +1,76 @@
+================================================================================
+SLIM-ARC 监视 UI 滚动修复（第二轮 r2-2026-08-10）— 修复前分析确认（prechange）
+日期: 2026-08-10
+目标文件: scripts/demo/index.html
+基线: md5=5aa63cbab2c9d81315752505dc48c208，539 行；备份 index.html.bak（一致）
+================================================================================
+
+------------------------------------------------------------------------------
+1. 左侧聊天真实滚动容器确认
+------------------------------------------------------------------------------
+- 左栏外层容器: .chat（HTML 行 250-264，CSS 行 64-67）
+- 左栏消息列表滚动容器: .chat-messages（id="messages"）
+    * HTML 行 254: <div class="chat-messages" id="messages">
+    * CSS 行 73-76: .chat-messages { flex:1; overflow-y:auto; padding:24px; min-height:0; }
+  => 左侧聊天窗口若要上下滚动，滚动条应出现在 .chat-messages#messages 上。
+
+------------------------------------------------------------------------------
+2. ".chat-messages" 真实归属（纠正上次/用户误判）
+------------------------------------------------------------------------------
+- 全文件搜索 .chat-messages 仅命中 2 处: 行 73（CSS 规则）、行 254（HTML div#messages）。
+- 该 div 位于 <div class="chat">（行 250）之内，而 .chat 是 .main（grid）的第一列
+  (grid-template-columns: 1fr 380px, 行 58) 的子项。
+- 结论: .chat-messages 唯一且明确属于【左侧聊天区】，与右侧 .monitor 无关。
+- 用户反馈"上一次修复只影响到了右侧栏": 实为现象误读——右栏 .monitor（行 136-140）
+  从一开始就带 overflow-y:auto（行 138），右栏本就可独立滚动；左栏仍不可滚是真实问题。
+  上次修复把 min-height:0 加在 .chat-messages（行 75，位置正确、可保留），但仅修 flex
+  子项不足以解决滚动失效，外层 grid 约束缺失才是未被触及的主因（见下）。
+
+------------------------------------------------------------------------------
+3. 左侧聊天窗口滚动失效的真实根因（带行号证据）
+------------------------------------------------------------------------------
+【布局链】
+  body(100vh, overflow:hidden, 行 25-26)
+    └ .main(grid, height:calc(100vh-56px), 行 56-62)  ← grid-template-rows 默认 auto
+        ├ .chat(grid item, flex column, 行 64-67)     ← overflow:visible、无 min-height
+        │    ├ .chat-header（行 68-72, 固定高）
+        │    ├ .chat-messages#messages(flex:1, overflow-y:auto, min-height:0, 行 73-76)
+        │    └ .chat-input（行 109-113, 固定高）
+        └ .monitor(grid item, overflow-y:auto, 行 136-140)
+
+【根因】
+  a) .main 的 grid-template-rows 未定义 => 默认 auto（由内容决定行高）。
+     行高一旦被内容撑大，grid 容器(高度固定 calc(100vh-56px))不会把行压回容器高度，
+     内容溢出 .main，再被 body 的 overflow:hidden（行 26）直接裁剪。
+  b) .chat 是 grid item 且 overflow:visible、未设 min-height => 自动最小尺寸为
+     min-content（CSS Grid §6.6: overflow:visible 的 item 自动最小尺寸=内容最小尺寸）。
+     当聊天消息累积变长时，.chat 的 min-content 高度被 .chat-messages 内容撑高，
+     导致 .chat 不会被压缩到 grid 行高（容器高度），整栏随之增高。
+  c) 后果: 一旦消息高度超过可视区，.chat 高度 > .main 高度，.chat-messages 的
+     flex:1 分配到的高度 = .chat 高度 - header - input（足够容纳全部消息），
+     于是 .chat-messages 内部从不溢出 => overflow-y:auto 永不触发滚动条；
+     超出部分被 body 裁剪，左栏无法上下滚动、输入框可能被挤出。
+  d) 上次修复只给 flex 子项 .chat-messages 加了 min-height:0（行 75），这只允许
+     ".chat-messages 自身"在 flex 中收缩，并未处理外层 grid item .chat 的
+     min-height:auto 与 grid 行高 auto 问题 => 因此左栏仍不可滚。
+     （这正是"改一处未验证到点上"的缺口：问题层级在 .chat/.main，不在 .chat-messages。）
+
+------------------------------------------------------------------------------
+4. 修复方案（最小、逐处）
+------------------------------------------------------------------------------
+  FIX-A: .chat 增加 min-height:0  → 覆盖 grid item 默认自动最小尺寸，允许 .chat
+         收缩到 grid 行高，使内部 .chat-messages 的 overflow-y:auto 可激活。
+  FIX-B: .main 增加
+         grid-template-rows: minmax(0, 1fr);  → 明确行高=容器高度(且允许内容溢出不撑行)，
+         消除 auto 行被 .chat 内容撑大的路径。
+  保留: .chat-messages 的 min-height:0（上次正确部分）与 auto-scroll 容差逻辑（行 510-513）。
+  严禁: 不触碰 MoE 可视化（updateExperts/initExperts/pollMonitor 专家段、Math.random 等）。
+
+------------------------------------------------------------------------------
+5. 验证策略（环境无无头浏览器）
+------------------------------------------------------------------------------
+- 环境: 无 chromium/chrome/node/npx；python3 无 playwright 模块 => 无法做真实渲染验证。
+- 命令级验证: 逐处 diff/grep/md5 确认改动落盘；curl http://127.0.0.1:8090/index.html
+  确认前端服务读取到新内容（HTTP 200）。
+- 渲染验证: 提供明确人工浏览器步骤（见 final-report），不伪造自动化验证结果。
+================================================================================

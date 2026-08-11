@@ -1,0 +1,14 @@
+# SSD 带宽测试 - Phase 0
+# 日期: 2026-08-06
+# 设备: /dev/nvme0n1p7 (ext4), 挂载点 /home/orangepi/ssd
+
+## 顺序写带宽 (dd, oflag=direct, 4GB)
+# 4294967296 bytes (4.3 GB) copied, 17.7209 s, 242 MB/s
+
+## 顺序读带宽 (dd, iflag=direct, 2GB)
+# 2147483648 bytes (2.1 GB) copied, 1.02646 s, 2.1 GB/s
+
+## 结论
+# 顺序读: ~2100 MB/s (远超计划 200MB/s "可用" 标准)
+# 顺序写: ~242 MB/s
+# 与昨日 microSD (68.6 MB/s 裸读) 相比: 读提升 ~30 倍, 写提升 ~3.5 倍

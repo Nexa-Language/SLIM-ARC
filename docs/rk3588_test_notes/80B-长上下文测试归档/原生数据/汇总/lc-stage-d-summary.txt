@@ -1,0 +1,15 @@
+# 阶段 D 结果汇总（KV eviction 专项, -c 8192, 长prompt~1360 tokens, n256）
+# 日期: 2026-08-07
+
+## 结果
+# LC24 KV_EVICT WINDOW=256: ENABLED(sink=4,window=256) | evicted[4,1104) 首轮批量 | 105条驱逐日志 | RSS 6.34GiB | EXIT=0
+# LC25 KV_EVICT WINDOW=1024: ENABLED(sink=4,window=1024) | evicted[4,336) 首轮批量 | 255条驱逐日志 | RSS 6.44GiB | EXIT=0
+# LC26 无eviction基线: 无驱逐日志 | RSS 6.49GiB | Gen 0.3t/s | EXIT=0
+
+## 关键结论
+# 1. KV eviction 机制在大上下文长prompt下确认触发 (Q2 验证通过)
+# 2. 驱逐有效降低 RSS: 窄窗口 6.34 < 宽窗口 6.44 < 无驱逐 6.49 GiB
+# 3. 窄窗口(256)首轮大块驱逐1100 tokens, 宽窗口(1024)首轮驱逐336 tokens
+# 4. 窄窗口驱逐日志少(105)因为首轮大块驱逐后 seq_len 回落至260, 后续只需小量驱逐
+# 5. 这是长上下文测试中 SLIM-ARC 唯一体现正收益的机制
+# 6. 输出文本在驱逐后仍连贯 (evicted 后继续生成 seems/you/'ve 等)

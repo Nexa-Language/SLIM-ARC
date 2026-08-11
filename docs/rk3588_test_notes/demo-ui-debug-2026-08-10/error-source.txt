@@ -1,0 +1,50 @@
+# 错误文案来源定位结果
+# 日期: 2026-08-10
+# 排查者: Zoo (debug mode)
+
+## 用户报告的错误文案
+"可能内存不足或模型加载问题，建议检查设备内存和模型兼容性。"
+
+## 搜索范围
+- scripts/demo/index.html (全文)
+- scripts/demo/llama_cli_server.py (全文)
+- scripts/demo/monitor.py (全文)
+- scripts/demo/start-demo.sh (全文)
+- scripts/demo/README.md (全文)
+- 整个 SLIM-ARC 项目 (grep "内存不足|模型加载问题|模型兼容性")
+
+## 搜索结果
+该错误文案在整个 SLIM-ARC 项目代码库中 **不存在**。
+
+唯一相关的匹配是 reports/Competition_Report/figures/figure_prompts.md 中的"内存不足"一词，
+但那是报告文档中的描述文字，与 UI 错误处理无关。
+
+## index.html 中的实际错误处理分支
+
+### 分支1: fetch 异常 (line 505-507)
+```javascript
+} catch (e) {
+    bubble.innerHTML = '⚠️ 连接 llama-server 失败: ' + e.message + '<br><br>请先启动: <code>bash scripts/demo/start-demo.sh 4b</code>';
+}
+```
+触发条件: fetch 请求本身失败（网络错误、连接拒绝等）
+
+### 分支2: 空输出 (line 504)
+```javascript
+bubble.innerHTML = escapeHtml(text) || '<span style="color:#8892b0">(无输出)</span>';
+```
+触发条件: 流式读取完成但 text 为空（模型未生成任何内容）
+
+### 分支3: SSE 解析中的 JSON 异常 (line 500)
+```javascript
+} catch (e) {}
+```
+触发条件: SSE data 行 JSON 解析失败，静默忽略
+
+## 结论
+用户报告的"可能内存不足或模型加载问题，建议检查设备内存和模型兼容性"这段文案
+**不是来自前端代码或后端代码**，而是 **模型自身生成的文本**。
+
+原因: 当系统提示包含"控制在 80 字以内"时，用户要求"强制生成固定字数"，
+模型因系统提示限制无法满足请求，会生成类似"我无法生成..."或"可能内存不足..."的拒绝性回复。
+这是模型的自然语言输出，不是程序错误处理分支的产物。

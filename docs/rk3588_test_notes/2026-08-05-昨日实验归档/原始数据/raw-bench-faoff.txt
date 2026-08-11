@@ -1,0 +1,14 @@
+===== llama-bench -fa off -p 64 -n 32 =====
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| qwen3 4B Q4_K - Medium         |   2.32 GiB |     4.02 B | CPU        |       4 |   0 |            pp64 |          7.63 ± 0.04 |
+| qwen3 4B Q4_K - Medium         |   2.32 GiB |     4.02 B | CPU        |       4 |   0 |            tg32 |          3.49 ± 0.69 |
+
+build: 360e134 (1)
+===== llama-bench -fa off -p 128 -n 64 =====
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
+| qwen3 4B Q4_K - Medium         |   2.32 GiB |     4.02 B | CPU        |       4 |   0 |           pp128 |          7.57 ± 0.01 |
+| qwen3 4B Q4_K - Medium         |   2.32 GiB |     4.02 B | CPU        |       4 |   0 |            tg64 |          2.66 ± 0.31 |
+
+build: 360e134 (1)

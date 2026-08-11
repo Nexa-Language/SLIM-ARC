@@ -1,0 +1,39 @@
+Script started on 2026-08-06 01:03:30+08:00 [<not executed on terminal>]
+
+
+Loading model... |-\|/-\|/-\|/-\|/-\|/-\|/ 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b1-360e134
+model      : /home/orangepi/SLIM-ARC/data/models/Qwen3-4B-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+
+> The capital of China is
+
+[Start thinking]
+
+Okay, the user is asking, "The capital of China is..." and they probably want the answer to be Beijing. But wait, I need to
+
+[ Prompt: 8.4 t/s | Generation: 7.2 t/s ]
+
+
+Exiting...
+
+Script done on 2026-08-06 01:03:39+08:00 [COMMAND_EXIT_CODE="0"]

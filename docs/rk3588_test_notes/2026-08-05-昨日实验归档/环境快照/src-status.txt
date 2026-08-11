@@ -1,0 +1,16 @@
+===== src/llama-upstream 存在性 =====
+ls: cannot access 'src/': No such file or directory
+===== git 状态 (llama-upstream) =====
+bash: cd: src/llama-upstream: No such file or directory
+无法进入或读取
+===== 根目录是否被 .gitignore 忽略 =====
+225:src/flexinfer/host/
+226:src/flexinfer/build-host/
+227:src/flexinfer/build-android/
+228:src/flexinfer/android/
+229:src/flexinfer/bench-results/
+230:src/flexinfer/hf-models/
+231:src/flexinfer/outputs/
+259:# llama.cpp source: https://github.com/ggml-org/llama.cpp (MIT)
+263:docs/papers/llama.cpp/
+264:src/flexinfer/

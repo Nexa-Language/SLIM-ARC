@@ -1,0 +1,61 @@
+================================================================================
+第 2 处修改验证记录（step2-verify.txt）
+日期: 2026-08-10
+修改点: scripts/demo/index.html send() 流式 token 处理处（修改前行 509）
+SLIM-ARC FIX 标注: // SLIM-ARC FIX 2026-08-10: 仅当用户已在底部附近时才自动滚动，避免阻止回看历史
+================================================================================
+
+【1. 新逻辑存在确认】
+命令: grep -n "scrollTop" scripts/demo/index.html
+输出:
+  460:            messages.scrollTop = messages.scrollHeight;                     <-- 发送消息时，原样保留（无条件滚动）
+  511:                                    if (messages.scrollTop + messages.clientHeight >= messages.scrollHeight - 50) {
+  512:                                        messages.scrollTop = messages.scrollHeight;
+结果: 流式处已改为条件触发（50px 容差），发送时滚动（行 460）未被改动 ✓
+
+命令: grep -n "scrollTop + messages.clientHeight" scripts/demo/index.html
+输出: 511: if (messages.scrollTop + messages.clientHeight >= messages.scrollHeight - 50) {
+结果: 新逻辑存在 ✓
+
+【2. SLIM-ARC FIX 标注确认】
+命令: grep -n "SLIM-ARC FIX 2026-08-10" scripts/demo/index.html
+输出（本次新增两处，其余为历史标注未改动）:
+  75:   /* SLIM-ARC FIX 2026-08-10: flexbox 子项默认 min-height:auto 阻止 overflow-y 生效 */   <-- 本次第 1 处
+  510:  // SLIM-ARC FIX 2026-08-10: 仅当用户已在底部附近时才自动滚动，避免阻止回看历史        <-- 本次第 2 处
+  469/475/481/529: 历史已有标注（本次未触碰，内容未变）
+
+【3. 文件哈希变化确认】
+命令: md5sum scripts/demo/index.html
+第 1 处修复后: 250eac5e85a5ccb66bd12823bc5972c0
+第 2 处修复后: 5aa63cbab2c9d81315752505dc48c208
+结果: md5 再次变化，第 2 处已实际写入文件 ✓
+
+【4. 前端 http 服务可达性与内容确认】
+命令: curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:8090/index.html → 200
+命令: curl -s http://127.0.0.1:8090/index.html | grep -n "clientHeight" → 命中行 511 新逻辑
+结果: 服务返回 200 且已包含新逻辑 ✓（http.server 无需重启）
+
+【5. 无头浏览器工具可用性检查】
+与 step1 一致: 环境中无 playwright/node/puppeteer/selenium/chromium。
+结论: 无法命令行验证"生成期间用户上翻不被强制拉回"，按要求不伪造验证结果。
+
+--------------------------------------------------------------------------------
+【原理说明】为何该改动让用户可在生成期间回看:
+- 流式输出时每个 token 回调都执行旧逻辑 `messages.scrollTop = messages.scrollHeight;`
+  → 无条件把滚动位置钉死在底部，用户一旦向上翻看，下一个 token 到达即被拉回底部。
+- 新逻辑先判断 `messages.scrollTop + messages.clientHeight >= messages.scrollHeight - 50`
+  （即当前可视区底部距内容底部在 50px 内，等价于"用户仍在底部附近"），仅在此时才滚动到底。
+- 用户向上翻看时该条件为假，不再强制滚动，可自由回看历史；回到底部附近后又自动跟随输出。
+- 行 460（发送新消息时）保留无条件滚动：发送时定位到底部是合理 UX，符合分析报告建议。
+
+--------------------------------------------------------------------------------
+【人工浏览器验证步骤】（因无头浏览器不可用，需人工确认）
+前置: 先完成 step1 的人工验证（确认滚动条已生效）。
+1. 刷新页面 http://127.0.0.1:8090/index.html（Ctrl+Shift+R）。
+2. 发送一条会生成较长回复的消息（max_tokens=512，输出较长更易观察）。
+3. 在模型流式生成过程中，立即用鼠标滚轮/键盘 PageUp 向上翻看历史消息:
+   a) 若未向上翻动: 页面应持续自动滚动跟随新 token（与之前行为一致）；
+   b) 一旦向上翻看: 页面应保持停留在用户所选位置，不再被后续 token 强制拉回底部；
+   c) 翻回底部附近后: 自动滚动跟随恢复。
+4. 发送新消息瞬间: 页面仍会立即滚到底部（行 460 逻辑保留），属预期行为。
+================================================================================

@@ -1,0 +1,44 @@
+================================================================================
+STEP-2 验证记录 — FIX-B（.main 加 grid-template-rows: minmax(0, 1fr)）
+日期: 2026-08-10  时间: ~14:38
+================================================================================
+
+改动内容（FIX-B）:
+  scripts/demo/index.html
+  修改前（行 56-62）:
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            height: calc(100vh - 56px);
+            gap: 1px;
+            background: var(--border);
+        }
+  修改后（行 56-63）:
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            grid-template-rows: minmax(0, 1fr); /* SLIM-ARC FIX 2026-08-10: ... */
+            height: calc(100vh - 56px);
+            gap: 1px;
+            background: var(--border);
+        }
+  说明: 仅新增 1 行（行 59），其余原样。
+
+验证结果（命令级，全部通过）:
+  1) diff index.html.bak index.html => 累计仅 2 处新增: 行 59（FIX-B）、行 68（FIX-A）。
+  2) md5: 修改前(两次叠加后基线) 4d6142487db5825bc35d9ad4ed9aa825
+          修改后 177cfb5a58e45ce87cf8729c82987ee6（变化确认）
+  3) 行数: 540 -> 541
+  4) grep .main 规则块(56-62) 命中行 59 的 grid-template-rows: minmax(0, 1fr)
+  5) curl -s http://127.0.0.1:8090/index.html => HTTP 200
+  6) curl 输出命中行 59 => 前端静态服务已读到 FIX-B 新内容
+
+两处修复（FIX-A + FIX-B）组合后的布局逻辑:
+  - .main: grid 单行高度固定 = calc(100vh - 56px)（minmax(0,1fr) 防止行被内容撑大）
+  - .chat: 作为 grid item 可收缩（min-height:0，覆盖默认自动最小尺寸）
+  - .chat-messages: flex:1 + overflow-y:auto + min-height:0 => 在剩余高度内溢出即可滚动
+  => 左栏消息超出可视高度时，滚动条出现在 .chat-messages#messages 上。
+
+渲染效果（滚动条出现、可上下滚动）需人工浏览器验证，本环境无无头浏览器，
+不伪造自动化渲染结果。人工验证步骤见 final-report-scrollfix-r2-2026-08-10.md。
+================================================================================

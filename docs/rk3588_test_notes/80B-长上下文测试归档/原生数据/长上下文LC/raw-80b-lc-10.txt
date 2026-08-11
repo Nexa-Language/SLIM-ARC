@@ -1,0 +1,7 @@
+| model                          |       size |     params | backend    | threads |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --------------: | -------------------: |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       8 |           pp512 |          6.72 ± 0.00 |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       8 |           tg128 |          1.37 ± 0.00 |
+
+build: 360e134 (1)
+LC10 EXIT=0

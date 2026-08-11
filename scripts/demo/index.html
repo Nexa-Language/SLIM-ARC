@@ -56,6 +56,7 @@
         .main {
             display: grid;
             grid-template-columns: 1fr 380px;
+            grid-template-rows: minmax(0, 1fr); /* SLIM-ARC FIX 2026-08-10: 默认 auto 行会被 .chat 内容撑高(配合 .chat 的 min-height:auto)，导致左栏 .chat-messages 的 overflow-y:auto 不触发；显式 1fr 使行高固定为容器高度且允许内容溢出不撑行 */
             height: calc(100vh - 56px);
             gap: 1px;
             background: var(--border);
@@ -64,6 +65,7 @@
         .chat {
             background: var(--bg);
             display: flex; flex-direction: column;
+            min-height: 0; /* SLIM-ARC FIX 2026-08-10: grid item(.chat) 默认自动最小尺寸 min-height:auto 会把 grid 行撑高，导致内部 .chat-messages 的 overflow-y:auto 永不触发；允许 .chat 收缩到 grid 行高，使左栏滚动条可激活 */
         }
         .chat-header {
             padding: 16px 24px;
@@ -72,6 +74,7 @@
         }
         .chat-messages {
             flex: 1; overflow-y: auto; padding: 24px;
+            min-height: 0; /* SLIM-ARC FIX 2026-08-10: flexbox 子项默认 min-height:auto 阻止 overflow-y 生效 */
         }
         .msg { margin-bottom: 24px; }
         .msg.user .msg-bubble {
@@ -465,16 +468,27 @@
                     body: JSON.stringify({
                         model: 'slim-arc',
                         messages: [
-                            { role: 'system', content: '你是 SLIM-ARC 优化后的端侧 AI 助手。SLIM-ARC 利用操作系统虚拟内存机制（mmap+MADV_RANDOM）让 80B MoE 大模型在 8GB 内存设备上流畅运行。请简洁友好地回答用户问题，控制在 80 字以内。' },
+                            // SLIM-ARC FIX 2026-08-10: 移除"控制在 80 字以内"限制，该提示导致模型拒绝长输出
+                            { role: 'system', content: '你是 SLIM-ARC 优化后的端侧 AI 助手。SLIM-ARC 利用操作系统虚拟内存机制（mmap+MADV_RANDOM）让 80B MoE 大模型在 8GB 内存设备上流畅运行。请友好地回答用户问题。' },
                             { role: 'user', content: msg }
                         ],
                         temperature: 0.7,
                         top_p: 0.9,
-                        max_tokens: 200,
+                        // SLIM-ARC FIX 2026-08-10: max_tokens 从 200 提升到 512，200 太低导致输出被截断
+                        max_tokens: 512,
                         stream: true,
                         chat_template_kwargs: { enable_thinking: false },
                     })
                 });
+                // SLIM-ARC FIX 2026-08-10: 添加 HTTP 状态检查，非 200 时显示错误而非静默失败
+                if (!r.ok) {
+                    const errText = await r.text();
+                    bubble.innerHTML = '⚠️ llama-server 返回错误 (HTTP ' + r.status + '): ' + escapeHtml(errText.substring(0, 200));
+                    sending = false;
+                    document.getElementById('send').disabled = false;
+                    input.focus();
+                    return;
+                }
                 const reader = r.body.getReader();
                 const decoder = new TextDecoder();
                 let text = '';
@@ -495,7 +509,10 @@
                                 if (delta && delta.content) {
                                     text += delta.content;
                                     bubble.innerHTML = escapeHtml(text) + '<span class="cursor"></span>';
-                                    messages.scrollTop = messages.scrollHeight;
+                                    // SLIM-ARC FIX 2026-08-10: 仅当用户已在底部附近时才自动滚动，避免阻止回看历史
+                                    if (messages.scrollTop + messages.clientHeight >= messages.scrollHeight - 50) {
+                                        messages.scrollTop = messages.scrollHeight;
+                                    }
                                 }
                             } catch (e) {}
                         }
@@ -511,7 +528,8 @@
         }
 
         function escapeHtml(s) {
-            return s.replace(/&/g,'&').replace(/</g,'<').replace(/>/g,'>').replace(/\n/g,'<br>');
+            // SLIM-ARC FIX 2026-08-10: 修复 HTML 转义，原代码替换值为空操作（&→& 等），导致 < > 被当作 HTML 标签解析
+            return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
         }
 
         document.getElementById('input').addEventListener('keydown', e => {

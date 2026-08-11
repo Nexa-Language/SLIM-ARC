@@ -1,0 +1,36 @@
+
+
+Loading model... |-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\|/-\| 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b1-360e134
+model      : /home/orangepi/ssd/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+
+> Please write a detailed essay about the history of computing, covering the key milestones from the invention of the transistor to modern AI. Include at least three major eras and discuss their impact on society.
+**The History of Computing: From the Transistor to Modern AI — Three Eras That Transformed Society**
+
+The history of computing is a remarkable saga of human ingenuity, marked by revolutionary breakthroughs that have fundamentally reshaped the way we live, work, communicate, and think. While the roots of computation stretch back to ancient abacuses and mechanical calculators, the true transformation of computing began with the invention of the transistor in 1947. From that pivotal moment, computing evolved through three major eras: the **Transistor and Mainframe Era (1947–1970s)**, the
+
+[ Prompt: 2.3 t/s | Generation: 1.9 t/s ]
+
+
+Exiting...
+LC13 EXIT=0

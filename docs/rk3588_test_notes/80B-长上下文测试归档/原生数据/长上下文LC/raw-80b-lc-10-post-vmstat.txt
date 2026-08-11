@@ -1,0 +1,4 @@
+pgfault 248084111
+pgmajfault 96965514
+speculative_pgfault 23785590
+speculative_pgfault_file 0

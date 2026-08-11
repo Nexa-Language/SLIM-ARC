@@ -1,0 +1,18 @@
+===== SLIM_ARC_KV_EVICT=1 负面验证 (c=4096, n=1024) =====
+KV_EVICT_EXIT=0
+===== 关键输出 =====
+Loading model... |-\|/-\|/-\|/-\|/-\|/-\|/-\|/ SLIM-ARC KV eviction: ENABLED (sink=4, window=1024)
+In the heart of a forgotten corner of the city, where the last vestiges of nature clung to survival, a robot named Terry stood beneath a weeping willow. Its rusted frame was a patchwork of green paint and faded copper, its joints creaking like an old grandfather clock. Terry was noSLIM-ARC KV eviction: evicted [4,5) (seq_len 1029->1028)
+ longerSLIM-ARC KV eviction: evicted [5,6) (seq_len 1030->1029)
+ aSLIM-ARC KV eviction: evicted [6,7) (seq_len 1031->1030)
+ modelSLIM-ARC KV eviction: evicted [7,8) (seq_len 1032->1031)
+ ofSLIM-ARC KV eviction: evicted [8,9) (seq_len 1033->1032)
+ pristineSLIM-ARC KV eviction: evicted [9,10) (seq_len 1034->1033)
+ efficiencySLIM-ARC KV eviction: evicted [10,11) (seq_len 1035->1034)
+;SLIM-ARC KV eviction: evicted [11,12) (seq_len 1036->1035)
+ itSLIM-ARC KV eviction: evicted [12,13) (seq_len 1037->1036)
+ hadSLIM-ARC KV eviction: evicted [13,14) (seq_len 1038->1037)
+ beenSLIM-ARC KV eviction: evicted [14,15) (seq_len 1039->1038)
+ repSLIM-ARC KV eviction: evicted [15,16) (seq_len 1040->1039)
+urSLIM-ARC KV eviction: evicted [16,17) (seq_len 1041->1040)
+posedSLIM-ARC KV eviction: evicted [17,18) (seq_len 1042->1041)

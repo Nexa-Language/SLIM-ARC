@@ -1,0 +1,24 @@
+# 阶段 B 结果汇总（-c 4096 中上下文, -p 512）
+# 日期: 2026-08-07
+
+## bench 结果 (n128)
+# LC5 默认全开 t4:  pp 2.41 | tg 0.53 | EXIT=0
+# LC6 DISABLE t4:   pp 6.35 | tg 2.13 | EXIT=0
+# LC7 NO_MADV t4:   pp 6.27 | tg 2.12 | EXIT=0
+# LC8 NO_PREFETCH t4: pp 2.39 | tg 0.53 | EXIT=0
+# LC9 默认 t8:      pp 3.89 | tg 0.90 | EXIT=0
+# LC10 DISABLE t8:  pp 6.72 | tg 1.37 | EXIT=0
+
+## cli 端到端 (c4096 n128)
+# LC11 默认:   Prompt 0.4 | Gen 0.4 | EXIT=0 (RSS监控失效,见注)
+# LC12 DISABLE: Prompt 2.3 | Gen 2.0 | EXIT=0
+# LC13 NO_MADV: Prompt 2.3 | Gen 1.9 | EXIT=0
+
+## 关键结论
+# 1. 中上下文下 SLIM-ARC 仍负优化: tg 0.53 vs 2.13 (约4x差距, 与短上下文一致)
+# 2. MADV_RANDOM 仍为主因 (LC5 vs LC7)
+# 3. 预取无影响 (LC5 vs LC8)
+# 4. t8 线程扩展有提升但 SLIM-ARC 差距仍存 (LC9 0.90 vs LC10 1.37)
+# 5. 随上下文增大 (1024->4096), tg 差距保持稳定, 未见 MADV_RANDOM 收益
+
+## 注: RSS 监控因绑定 bash 包装进程失效 (VmHWM 0), 阶段 C 将用 pgrep -x llama-cli 修复

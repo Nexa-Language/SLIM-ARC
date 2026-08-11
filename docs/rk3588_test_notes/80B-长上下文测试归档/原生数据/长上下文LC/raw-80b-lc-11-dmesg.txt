@@ -1,0 +1,20 @@
+[   16.811321] usb usb8: New USB device found, idVendor=1d6b, idProduct=0003, bcdDevice= 5.10
+[   16.811324] usb usb8: New USB device strings: Mfr=3, Product=2, SerialNumber=1
+[   16.811327] usb usb8: Product: xHCI Host Controller
+[   16.811329] usb usb8: Manufacturer: Linux 5.10.160-rockchip-rk3588 xhci-hcd
+[   16.811332] usb usb8: SerialNumber: xhci-hcd.15.auto
+[   16.811589] hub 8-0:1.0: USB hub found
+[   16.811601] hub 8-0:1.0: 1 port detected
+[   17.650729] enP3p49s0: 0xffffffc00cc50000, c0:74:2b:fb:b3:9f, IRQ 164
+[   17.709266] enP4p65s0: 0xffffffc00c7c0000, c0:74:2b:fb:b3:9e, IRQ 154
+[   19.175120] ttyFIQ ttyFIQ0: tty_port_close_start: tty->count = 1 port count = 2
+[   22.349881] r8125: enP4p65s0: link up
+[   22.349934] IPv6: ADDRCONF(NETDEV_CHANGE): enP4p65s0: link becomes ready
+[   29.185401] ttyFIQ ttyFIQ0: tty_port_close_start: tty->count = 1 port count = 2
+[   39.193762] vcc_mipicsi0: disabling
+[   39.193780] vcc_mipicsi1: disabling
+[   39.193788] vcc_mipicsi1: disabling
+[16813.393582] EXT4-fs (nvme0n1p7): mounted filesystem with ordered data mode. Opts: (null)
+[18024.478762] EXT4-fs (nvme0n1p7): mounted filesystem with ordered data mode. Opts: (null)
+[18454.719853] EXT4-fs (nvme0n1p7): mounted filesystem with ordered data mode. Opts: (null)
+[34059.783619] dwmmc_rockchip fe2c0000.mmc: Unexpected interrupt latency

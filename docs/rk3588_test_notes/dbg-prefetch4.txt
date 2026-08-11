@@ -1,0 +1,672 @@
+[SLIM-ARC-DBG] register_expert_tensor name=blk.0.ffn_down_exps.weight layer=0 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.0.ffn_gate_exps.weight layer=0 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.0.ffn_up_exps.weight layer=0 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.1.ffn_down_exps.weight layer=1 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.1.ffn_gate_exps.weight layer=1 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.1.ffn_up_exps.weight layer=1 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.2.ffn_down_exps.weight layer=2 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.2.ffn_gate_exps.weight layer=2 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.2.ffn_up_exps.weight layer=2 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.3.ffn_down_exps.weight layer=3 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.3.ffn_gate_exps.weight layer=3 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.3.ffn_up_exps.weight layer=3 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.4.ffn_down_exps.weight layer=4 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.4.ffn_gate_exps.weight layer=4 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.4.ffn_up_exps.weight layer=4 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.5.ffn_down_exps.weight layer=5 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.5.ffn_gate_exps.weight layer=5 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.5.ffn_up_exps.weight layer=5 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.6.ffn_down_exps.weight layer=6 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.6.ffn_gate_exps.weight layer=6 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.6.ffn_up_exps.weight layer=6 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.7.ffn_down_exps.weight layer=7 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.7.ffn_gate_exps.weight layer=7 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.7.ffn_up_exps.weight layer=7 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.8.ffn_down_exps.weight layer=8 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.8.ffn_gate_exps.weight layer=8 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.8.ffn_up_exps.weight layer=8 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.9.ffn_down_exps.weight layer=9 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.9.ffn_gate_exps.weight layer=9 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.9.ffn_up_exps.weight layer=9 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.10.ffn_down_exps.weight layer=10 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.10.ffn_gate_exps.weight layer=10 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.10.ffn_up_exps.weight layer=10 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.11.ffn_down_exps.weight layer=11 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.11.ffn_gate_exps.weight layer=11 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.11.ffn_up_exps.weight layer=11 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.12.ffn_down_exps.weight layer=12 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.12.ffn_gate_exps.weight layer=12 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.12.ffn_up_exps.weight layer=12 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.13.ffn_down_exps.weight layer=13 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.13.ffn_gate_exps.weight layer=13 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.13.ffn_up_exps.weight layer=13 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.14.ffn_down_exps.weight layer=14 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.14.ffn_gate_exps.weight layer=14 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.14.ffn_up_exps.weight layer=14 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.15.ffn_down_exps.weight layer=15 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.15.ffn_gate_exps.weight layer=15 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.15.ffn_up_exps.weight layer=15 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.16.ffn_down_exps.weight layer=16 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.16.ffn_gate_exps.weight layer=16 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.16.ffn_up_exps.weight layer=16 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.17.ffn_down_exps.weight layer=17 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.17.ffn_gate_exps.weight layer=17 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.17.ffn_up_exps.weight layer=17 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.18.ffn_down_exps.weight layer=18 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.18.ffn_gate_exps.weight layer=18 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.18.ffn_up_exps.weight layer=18 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.19.ffn_down_exps.weight layer=19 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.19.ffn_gate_exps.weight layer=19 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.19.ffn_up_exps.weight layer=19 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.20.ffn_down_exps.weight layer=20 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.20.ffn_gate_exps.weight layer=20 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.20.ffn_up_exps.weight layer=20 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.21.ffn_down_exps.weight layer=21 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.21.ffn_gate_exps.weight layer=21 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.21.ffn_up_exps.weight layer=21 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.22.ffn_down_exps.weight layer=22 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.22.ffn_gate_exps.weight layer=22 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.22.ffn_up_exps.weight layer=22 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.23.ffn_down_exps.weight layer=23 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.23.ffn_gate_exps.weight layer=23 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.23.ffn_up_exps.weight layer=23 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.24.ffn_down_exps.weight layer=24 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.24.ffn_gate_exps.weight layer=24 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.24.ffn_up_exps.weight layer=24 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.25.ffn_down_exps.weight layer=25 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.25.ffn_gate_exps.weight layer=25 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.25.ffn_up_exps.weight layer=25 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.26.ffn_down_exps.weight layer=26 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.26.ffn_gate_exps.weight layer=26 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.26.ffn_up_exps.weight layer=26 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.27.ffn_down_exps.weight layer=27 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.27.ffn_gate_exps.weight layer=27 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.27.ffn_up_exps.weight layer=27 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.28.ffn_down_exps.weight layer=28 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.28.ffn_gate_exps.weight layer=28 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.28.ffn_up_exps.weight layer=28 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.29.ffn_down_exps.weight layer=29 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.29.ffn_gate_exps.weight layer=29 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.29.ffn_up_exps.weight layer=29 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.30.ffn_down_exps.weight layer=30 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.30.ffn_gate_exps.weight layer=30 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.30.ffn_up_exps.weight layer=30 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.31.ffn_down_exps.weight layer=31 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.31.ffn_gate_exps.weight layer=31 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.31.ffn_up_exps.weight layer=31 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.32.ffn_down_exps.weight layer=32 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.32.ffn_gate_exps.weight layer=32 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.32.ffn_up_exps.weight layer=32 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.33.ffn_down_exps.weight layer=33 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.33.ffn_gate_exps.weight layer=33 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.33.ffn_up_exps.weight layer=33 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.34.ffn_down_exps.weight layer=34 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.34.ffn_gate_exps.weight layer=34 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.34.ffn_up_exps.weight layer=34 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.35.ffn_down_exps.weight layer=35 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.35.ffn_gate_exps.weight layer=35 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.35.ffn_up_exps.weight layer=35 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.36.ffn_down_exps.weight layer=36 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.36.ffn_gate_exps.weight layer=36 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.36.ffn_up_exps.weight layer=36 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.37.ffn_down_exps.weight layer=37 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.37.ffn_gate_exps.weight layer=37 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.37.ffn_up_exps.weight layer=37 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.38.ffn_down_exps.weight layer=38 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.38.ffn_gate_exps.weight layer=38 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.38.ffn_up_exps.weight layer=38 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.39.ffn_down_exps.weight layer=39 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.39.ffn_gate_exps.weight layer=39 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.39.ffn_up_exps.weight layer=39 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.40.ffn_down_exps.weight layer=40 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.40.ffn_gate_exps.weight layer=40 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.40.ffn_up_exps.weight layer=40 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.41.ffn_down_exps.weight layer=41 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.41.ffn_gate_exps.weight layer=41 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.41.ffn_up_exps.weight layer=41 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.42.ffn_down_exps.weight layer=42 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.42.ffn_gate_exps.weight layer=42 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.42.ffn_up_exps.weight layer=42 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.43.ffn_down_exps.weight layer=43 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.43.ffn_gate_exps.weight layer=43 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.43.ffn_up_exps.weight layer=43 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.44.ffn_down_exps.weight layer=44 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.44.ffn_gate_exps.weight layer=44 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.44.ffn_up_exps.weight layer=44 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.45.ffn_down_exps.weight layer=45 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.45.ffn_gate_exps.weight layer=45 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.45.ffn_up_exps.weight layer=45 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.46.ffn_down_exps.weight layer=46 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.46.ffn_gate_exps.weight layer=46 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.46.ffn_up_exps.weight layer=46 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.47.ffn_down_exps.weight layer=47 nexp=512 size=440401920
+[SLIM-ARC-DBG] register_expert_tensor name=blk.47.ffn_gate_exps.weight layer=47 nexp=512 size=301989888
+[SLIM-ARC-DBG] register_expert_tensor name=blk.47.ffn_up_exps.weight layer=47 nexp=512 size=301989888
+[SLIM-ARC-DBG] cache_router_experts layer=0 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=1 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=2 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=3 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=4 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=5 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=6 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=7 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=8 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=9 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=10 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=11 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=12 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=13 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=14 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=15 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=16 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=17 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=18 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=19 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=20 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=21 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=22 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=23 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=24 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=25 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=26 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=27 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=28 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=29 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=30 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=31 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=32 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=33 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=34 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=35 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=36 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=37 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=38 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=39 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=40 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=41 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=42 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=43 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=44 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=45 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=46 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=47 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=0 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=1 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=2 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=3 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=4 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=5 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=6 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=7 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=8 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=9 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=10 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=11 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=12 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=13 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=14 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=15 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=16 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=17 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=18 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=19 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=20 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=21 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=22 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=23 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=24 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=25 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=26 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=27 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=28 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=29 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=30 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=31 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=32 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=33 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=34 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=35 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=36 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=37 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=38 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=39 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=40 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=41 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=42 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=43 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=44 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=45 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=46 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=47 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=0 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=1 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=2 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=3 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=4 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=5 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=6 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=7 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=8 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=9 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=10 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=11 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=12 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=13 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=14 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=15 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=16 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=17 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=18 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=19 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=20 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=21 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=22 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=23 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=24 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=25 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=26 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=27 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=28 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=29 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=30 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=31 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=32 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=33 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=34 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=35 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=36 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=37 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=38 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=39 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=40 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=41 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=42 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=43 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=44 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=45 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=46 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=47 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=0 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=1 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=2 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=3 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=4 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=5 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=6 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=7 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=8 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=9 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=10 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=11 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=12 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=13 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=14 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=15 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=16 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=17 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=18 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=19 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=20 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=21 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=22 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=23 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=24 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=25 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=26 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=27 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=28 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=29 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=30 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=31 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=32 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=33 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=34 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=35 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=36 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=37 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=38 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=39 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=40 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=41 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=42 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=43 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=44 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=45 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=46 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=47 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=0 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=1 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=2 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=3 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=4 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=5 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=6 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=7 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=8 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=9 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=10 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=11 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=12 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=13 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=14 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=15 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=16 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=17 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=18 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=19 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=20 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=21 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=22 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=23 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=24 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=25 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=26 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=27 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=28 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=29 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=30 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=31 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=32 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=33 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=34 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=35 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=36 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=37 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=38 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=39 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=40 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=41 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=42 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=43 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=44 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=45 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=46 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=47 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=0 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=1 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=2 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=3 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=4 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=5 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=6 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=7 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=8 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=9 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=10 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=11 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=12 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=13 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=14 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=15 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=16 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=17 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=18 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=19 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=20 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=21 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=22 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=23 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=24 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=25 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=26 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=27 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=28 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=29 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=30 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=31 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=32 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=33 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=34 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=35 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=36 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=37 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=38 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=39 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=40 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=41 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=42 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=43 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=44 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=45 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=46 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=47 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=0 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=1 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=2 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=3 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=4 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=5 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=6 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=7 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=8 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=9 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=10 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=11 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=12 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=13 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=14 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=15 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=16 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=17 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=18 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=19 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=20 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=21 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=22 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=23 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=24 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=25 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=26 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=27 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=28 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=29 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=30 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=31 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=32 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=33 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=34 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=35 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=36 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=37 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=38 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=39 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=40 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=41 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=42 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=43 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=44 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=45 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=46 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=47 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=0 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=1 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=2 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=3 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=4 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=5 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=6 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=7 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=8 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=9 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=10 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=11 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=12 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=13 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=14 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=15 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=16 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=17 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=18 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=19 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=20 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=21 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=22 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=23 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=24 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=25 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=26 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=27 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=28 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=29 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=30 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=31 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=32 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=33 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=34 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=35 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=36 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=37 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=38 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=39 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=40 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=41 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=42 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=43 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=44 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=45 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=46 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=47 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=0 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=1 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=2 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=3 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=4 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=5 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=6 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=7 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=8 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=9 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=10 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=11 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=12 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=13 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=14 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=15 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=16 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=17 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=18 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=19 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=20 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=21 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=22 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=23 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=24 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=25 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=26 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=27 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=28 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=29 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=30 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=31 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=32 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=33 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=34 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=35 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=36 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=37 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=38 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=39 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=40 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=41 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=42 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=43 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=44 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=45 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=46 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=47 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=0 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=1 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=2 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=3 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=4 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=5 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=6 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=7 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=8 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=9 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=10 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=11 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=12 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=13 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=14 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=15 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=16 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=17 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=18 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=19 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=20 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=21 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=22 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=23 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=24 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=25 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=26 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=27 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=28 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=29 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=30 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=31 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=32 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=33 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=34 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=35 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=36 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=37 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=38 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=39 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=40 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=41 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=42 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=43 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=44 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=45 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=46 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=47 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=0 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=1 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=2 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=3 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=4 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=5 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=6 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=7 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=8 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=9 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=10 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=11 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=12 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=13 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=14 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=15 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=16 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=17 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=18 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=19 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=20 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=21 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=22 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=23 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=24 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=25 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=26 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=27 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=28 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=29 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=30 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=31 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=32 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=33 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=34 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=35 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=36 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=37 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=38 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=39 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=40 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=41 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=42 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=43 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=44 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=45 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=46 n=10
+[SLIM-ARC-DBG] cache_router_experts layer=47 n=10

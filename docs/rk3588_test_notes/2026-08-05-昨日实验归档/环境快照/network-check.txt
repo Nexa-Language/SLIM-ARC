@@ -1,0 +1,15 @@
+===== GitHub 连通性测试 (10s超时) =====
+HTTP/2 200 
+date: Wed, 05 Aug 2026 16:37:20 GMT
+content-type: text/html; charset=utf-8
+vary: X-PJAX, X-PJAX-Container, Turbo-Visit, Turbo-Frame, X-Requested-With, X-GitHub-Client-Version, Sec-Fetch-Site,Accept-Encoding, Accept, X-Requested-With
+etag: W/"5c7d43842cab632c2eba9331ef717bfe"
+curl_exit=0
+===== 代理测试 http://127.0.0.1:7897 =====
+proxy_curl_exit=0
+===== 已配置代理环境变量 =====
+===== data 目录 =====
+data
+data/benchmarks
+data/benchmarks/gsm8k
+===== 查找已有模型文件 =====

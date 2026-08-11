@@ -1,0 +1,25 @@
+# 阶段 2a：动态 MADV 阶段切换 - 结果记录（2026-08-08）
+
+## 改进内容
+- 实现动态 MADV：prefill 用 MADV_SEQUENTIAL（顺序预读），decode 用 MADV_RANDOM（按需分页）
+- 修改文件（patches + src 镜像同步）：
+  - slim-arc-prefetch.cpp: register_mmap_region 初始设 SEQUENTIAL + apply_dynamic_madv() + apply_madvice_to_regions()
+  - slim-arc-prefetch.h: set_phase() 触发 apply_dynamic_madv() + 前置声明
+  - apply-slim-arc.py: model-loader 去掉静态 RANDOM 改 dynamic；context unified 分支补 set_phase 调用
+- 新环境变量: SLIM_ARC_DYNAMIC_MADV（默认启用，=0 禁用动态切换）
+
+## LD_PRELOAD 验证（madvise 拦截）
+- prefill 阶段: apply_dynamic_madv phase=PREFILL -> SEQUENTIAL
+- decode 阶段: apply_dynamic_madv phase=DECODE -> RANDOM
+- 统计: SEQUENTIAL x5, RANDOM x15, WILLNEED x1, DONTNEED x3
+
+## 性能对比（llama-bench -p 32 -n 16 -t 4, Q4_K_M）
+# 配置                | pp(t/s) | tg(t/s)
+# 改进前 全开(静态RANDOM) | 0.44   | 0.26
+# 改进后 全开(动态MADV)   | 2.82   | 0.25   <- prefill +541%
+# 禁用(上游最优)          | 2.74   | 1.41
+
+## 结论
+- prefill 负优化完全消除：0.44 -> 2.82，甚至超过禁用基线（+3%）
+- decode 仍 0.25（45GB/8GB 工作集 + ARM 算力瓶颈，RANDOM 按需分页在此极端比例下收益有限）
+- 消融：SLIM_ARC_DYNAMIC_MADV=0 时不设任何建议（接近禁用），开关有效

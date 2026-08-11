@@ -1,0 +1,11 @@
+===== sudo 免密检查 =====
+sudo: a password is required
+sudo 需要密码或不可用
+===== 当前 cgroup 控制器 =====
+cpuset cpu io memory hugetlb pids rdma
+===== memory.max 根值 =====
+cat: /sys/fs/cgroup/memory.max: No such file or directory
+===== 是否已有 slim-arc cgroup =====
+ls: cannot access '/sys/fs/cgroup/slim-arc*': No such file or directory
+===== 当前用户 =====
+uid=1000(orangepi) gid=1000(orangepi) groups=1000(orangepi),5(tty),6(disk),20(dialout),27(sudo),29(audio),44(video),46(plugdev),60(games),100(users),101(systemd-journal),106(input),111(netdev)

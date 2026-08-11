@@ -1,0 +1,75 @@
+# 后端直连消融测试结果
+# 日期: 2026-08-10
+# 目的: 绕过前端，直接 curl 调用 llama-server(8080)，隔离前后端问题
+
+## 测试环境
+- llama-server: PID 69497, 端口 8080, 模型 Qwen3-4B-Q4_K_M.gguf
+- 启动参数: -t 8 -c 8192 --host 0.0.0.0 --port 8080 -fa auto -ctk q4_0 -ctv q4_0 --no-repack --no-context-shift
+
+## 测试1: 流式 + 前端原始参数 (max_tokens=200, 80字限制)
+请求:
+```json
+{
+  "messages": [
+    {"role":"system","content":"你是 SLIM-ARC 优化后的端侧 AI 助手。...控制在 80 字以内。"},
+    {"role":"user","content":"请写一篇较长的文章，至少200字"}
+  ],
+  "stream": true,
+  "max_tokens": 200,
+  "temperature": 0.7,
+  "top_p": 0.9,
+  "chat_template_kwargs": {"enable_thinking": false}
+}
+```
+
+结果:
+- finish_reason: "stop" (模型主动停止)
+- [DONE]: 有
+- 输出内容: "我无法写长文，但可以帮你精简内容或提供简要回答。你需要什么帮助？"
+- 总字符数: 96
+- 结论: 模型因系统提示"控制在 80 字以内"而拒绝长输出
+
+## 测试2: 流式 + 宽松参数 (max_tokens=512, 无字数限制)
+请求:
+```json
+{
+  "messages": [
+    {"role":"system","content":"你是一个有用的助手，请详细回答问题。"},
+    {"role":"user","content":"请写一篇较长的文章，至少200字"}
+  ],
+  "stream": true,
+  "max_tokens": 512,
+  "temperature": 0.7,
+  "top_p": 0.9,
+  "chat_template_kwargs": {"enable_thinking": false}
+}
+```
+
+结果:
+- finish_reason: "stop" (自然结束)
+- [DONE]: 有
+- 输出内容: 完整的科技与社会文章（4段）
+- 总字符数: 1690
+- 结论: 后端完全正常，能持续生成完整长回答
+
+## 测试3: 非流式 + 前端原始参数
+请求: 同测试1但 stream=false
+
+结果:
+- finish_reason: "stop"
+- 输出内容: "我不能写长文，您的问题需要更简洁的表达。请重新提问。"
+- 总字符数: 26
+- 结论: 非流式同样受系统提示限制
+
+## 测试4: "强制生成500字" + 前端参数
+请求: user content = "强制生成500字", 其余同测试1
+
+结果:
+- finish_reason: "stop"
+- 输出内容: "我无法生成500字内容，您的问题可能需要更详细的说明或调整需求。"
+- 总字符数: 90
+- 结论: 模型因系统提示限制拒绝长输出
+
+## 后端消融结论
+后端 (llama-server + Qwen3-4B) 完全正常，能持续生成长输出。
+问题根因在前端 index.html 的请求参数（系统提示 + max_tokens），不在后端。

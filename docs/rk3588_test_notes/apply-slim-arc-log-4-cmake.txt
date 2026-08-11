@@ -1,0 +1,19 @@
+CMAKE_BUILD_TYPE=Release
+-- Warning: ccache not found - consider installing it for faster compilation or disable this warning with GGML_CCACHE=OFF
+-- CMAKE_SYSTEM_PROCESSOR: aarch64
+-- GGML_SYSTEM_ARCH: ARM
+-- Including CPU backend
+-- ARM detected
+-- ARM detected flags: -mcpu=cortex-a76.cortex-a55+crypto
+-- Checking for ARM features using flags:
+--   -U__ARM_FEATURE_MATMUL_INT8
+--   -U__ARM_FEATURE_SVE
+--   -mcpu=cortex-a76.cortex-a55+crypto+dotprod+noi8mm+nosve
+-- Adding CPU backend variant ggml-cpu: -U__ARM_FEATURE_MATMUL_INT8;-U__ARM_FEATURE_SVE;-mcpu=cortex-a76.cortex-a55+crypto+dotprod+noi8mm+nosve 
+-- ggml version: 0.18.1
+-- ggml commit:  360e134
+-- OpenSSL found: 3.0.2
+-- Generating embedded license file for target: llama-app
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /home/orangepi/src/llama-upstream/build
