@@ -50,7 +50,7 @@ struct cgroup_memory_snapshot {
 };
 ```
 
-- [ ] **Step 1: Write failing reader tests**
+- [x] **Step 1: Write failing reader tests**
 
 ```cpp
 static void test_valid_snapshot(const std::filesystem::path & root) {
@@ -72,27 +72,27 @@ static void test_unlimited_is_not_zero_budget(const std::filesystem::path & root
 
 Also cover missing files, empty content, negative text, suffixes, overflow, trailing non-whitespace and `current > max`.
 
-- [ ] **Step 2: Run the focused C++ test and verify it fails**
+- [x] **Step 2: Run the focused C++ test and verify it fails**
 
 Run: `bash tests/run-cpp-unit.sh test-slim-arc-cgroup-memory`
 
 Expected: compile failure because the new header and implementation do not exist.
 
-- [ ] **Step 3: Implement strict, side-effect-free parsing**
+- [x] **Step 3: Implement strict, side-effect-free parsing**
 
 Use `std::from_chars` over trimmed ASCII decimal content; do not use `atoi`, `strtoull` without end checks, or exceptions. Read at most 128 bytes per file. `memory.max=max` returns `UNLIMITED`; any malformed value returns `INVALID_VALUE` and preserves zeroed numeric fields.
 
-- [ ] **Step 4: Implement the isolated C++ test runner**
+- [x] **Step 4: Implement the isolated C++ test runner**
 
 `tests/run-cpp-unit.sh` must compile into `mktemp -d`, use `c++ -std=c++17 -Wall -Wextra -Werror`, and remove only its validated temporary directory on exit. It accepts an allowlisted test target name instead of arbitrary compiler arguments.
 
-- [ ] **Step 5: Run focused and sanitizer tests**
+- [x] **Step 5: Run focused and sanitizer tests**
 
 Run: `bash tests/run-cpp-unit.sh test-slim-arc-cgroup-memory && SLIM_ARC_TEST_SANITIZE=1 bash tests/run-cpp-unit.sh test-slim-arc-cgroup-memory`
 
 Expected: all cases pass under normal and address/undefined sanitizers.
 
-- [ ] **Step 6: Commit the reader**
+- [x] **Step 6: Commit the reader**
 
 ```text
 [feat][Scheduler][1/4] Read cgroup memory

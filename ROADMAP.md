@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-08-11 pressure admission Task 1：cgroup 内存快照完成
+
+### 变更描述
+- 新增 cgroups v2 `memory.current`/`memory.max` 严格读取器，以显式状态区分可用、缺失、无限额、非法值与 I/O 错误。
+- 每个控制文件最多读取 128 bytes，ASCII whitespace 裁剪后使用 `std::from_chars` 完整解析；负数、单位后缀、溢出、尾随文本及 `current > max` 均拒绝。
+- 新增 allowlist C++17 测试 runner，编译产物只进入经边界验证的 `mktemp -d`，normal 与 ASan/UBSan 测试均通过。
+
+### 涉及文件
+- `patches/llama-upstream/slim-arc-cgroup-memory.h`
+- `patches/llama-upstream/slim-arc-cgroup-memory.cpp`
+- `tests/cpp/test-slim-arc-cgroup-memory.cpp`
+- `tests/run-cpp-unit.sh`
+- `plan/23-v1-pressure-aware-prefetch.md`
+
+### 决策原因
+- `memory.max=max` 与读取失败都必须回退现有 static budget，不能被误解释成零预算；显式状态使后续纯预算策略无需依赖 errno 或异常文本。
+- 解析器独立于 llama.cpp 与调度线程，先用纯文件 fixture 覆盖所有边界可降低后续 scheduler 集成风险。
+
+---
+
 ## 2026-08-11 macOS 80B 无 swap 基线与现有功能消融完成
 
 ### 变更描述
