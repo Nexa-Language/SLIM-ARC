@@ -2,6 +2,61 @@
 
 ---
 
+## 2026-08-11 团队分支主线集成完成
+
+### 变更描述
+- 将 `haoma` 的 6 个提交线性纳入 `main`。
+- 从归档分支选择性纳入 9 篇论文和 26 份计划/审计文档。
+- `main` 首次交付推送成功，本地与远端均指向 `19794efa7adc33b833d54c9c82e72ff3e2b153c1`。
+- 完成历史、文件边界、Python AST、Shell 语法、prefetch API、PDF 与 Git 对象检查。
+
+### 涉及文件
+- `ROADMAP.md`
+- `plan/21-v2-integrate-team-branches.md`
+- `docs/integration/team-branches-2026-08-11.md`
+
+### 决策原因
+- 按仓库所有者要求直接交付单一 `main`，不创建额外远端集成分支或 PR。
+- 保留队友实现与比赛资料，同时排除第三方源码镜像、构建输出和 `node_modules`。
+- `tests/test_env.sh` 仅适用于 Linux cgroups v2；macOS 无 `mountpoint` 和 `/sys/fs/cgroup`，因此记录为平台不适用，不替代 RK3588/80B 原始实验日志。
+
+---
+
+## 2026-08-11 主线交付方式调整（v2）
+
+### 变更描述
+根据仓库所有者的最新确认，不创建远端集成分支或 PR，改为在本地
+`main` 完成线性集成、验证后直接推送远端 `main`。
+
+### 涉及文件
+- `docs/integration/team-branches-2026-08-11.md`
+- `plan/21-v2-integrate-team-branches.md`
+- `ROADMAP.md`
+
+### 决策原因
+- 最终展示只保留一个主分支，额外远端分支不提供交付价值。
+- `haoma` 与归档分支均以原 `main` 为基线，可通过 rebase 和选择性导入保持线性历史。
+- 归档分支后 12 个提交主要是第三方源码镜像、构建输出和 `node_modules`，通过固定分支 SHA 保持可追溯，不进入主线工作树。
+
+---
+
+## 2026-08-11 团队分支主线集成启动
+
+### 变更描述
+按仓库所有者确认的推荐方案，将 `haoma` 全量实现成果与
+`agent/upload-local-sources-and-papers` 的有效归档资料集成到单一主线。
+
+### 涉及文件
+- `plan/21-v1-integrate-team-branches.md`
+- 后续集成的 RK3588、prefetch、demo UI、计划与论文资料
+
+### 决策原因
+- `haoma` 与 `main` 无分叉冲突，可直接作为实现基线。
+- 归档分支包含大量构建产物、依赖目录和第三方仓库镜像，整体进入主线会降低仓库可维护性，因此只保留比赛成果所需且可追溯的资料。
+- 采用 feature branch、PR 和 rebase merge，保持主线历史线性。
+
+---
+
 ## 2026-06-30 WSL2 网络栈 Bug（未修复）
 
 ### 变更描述
