@@ -2,6 +2,37 @@
 
 ---
 
+## 2026-08-11 Colima 受限资源 VM 与 cgroups probe 完成
+
+### 变更描述
+- 通过 Homebrew 安装 Colima 0.10.3、Lima 2.2.0 和 Docker CLI 29.7.2。
+- 创建独立 `slim-arc` ARM64 profile：8 vCPU、16 GiB RAM、100 GiB sparse data disk。
+- 将 `/var/lib/slim-arc` 指向 profile 独立数据盘，获得约 97.9 GiB 可用文件系统，避免把 48.4 GB 模型写入 20 GiB root filesystem。
+- 使用真实 64 MiB Docker 容器验证 cgroups v2、memory controller、`memory.max=67108864` 和 `memory.swap.max=0`。
+- setup 重复运行后保持主机 Docker context 为原来的 `default`，不影响其他 Docker 环境。
+
+### 涉及文件
+- `scripts/macos/setup-colima.sh`
+- `scripts/macos/probe-guest.sh`
+- `tests/macos/test-probe-output.sh`
+- `docs/macos_test_notes/README.md`
+- `docs/macos_test_notes/2026-08-11/campaign.json`
+- `docs/macos_test_notes/2026-08-11/preflight/`
+- `plan/22-v1-macos-80b-constrained-benchmark.md`
+
+### 决策原因
+- Colima 0.10 将 20 GiB 系统根盘与 `--disk 100` 的容器数据盘分离；模型必须进入后者才能满足容量和 page-cache 计费要求。
+- guest 根 cgroup 不一定暴露 `memory.swap.max`，只有带 `--memory` 与同值 `--memory-swap` 的真实容器能验证正式 no-swap 语义。
+- `--activate=false` 与退出 trap 双重保证不会永久改变用户当前 Docker context。
+
+### 错误复盘
+- 日期：2026-08-11。
+- 描述：首次启动时未预见 Colima 会自动激活 Docker context；最初 probe 误查 guest 根 cgroup 的 swap 文件，并把 20 GiB root filesystem 当成模型盘；结果目录 guard 也只接受绝对路径，与计划命令中的相对路径不一致。
+- 原因分类：技术盲区、误解需求。
+- 预防措施：所有 profile 启动显式设置 `--activate=false` 并保存/恢复原 context；probe 使用真实受限容器验证 swap；模型目录绑定到独立 data disk；安全路径 helper 同时测试绝对与仓库相对路径，并拒绝相对逃逸。
+
+---
+
 ## 2026-08-11 macOS benchmark host preflight 完成
 
 ### 变更描述

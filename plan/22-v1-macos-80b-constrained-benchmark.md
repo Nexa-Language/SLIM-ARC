@@ -130,7 +130,7 @@ Links: docs/superpowers/specs/2026-08-11-macos-constrained-80b-design.md
 - Consumes: fixed 12-hour `campaign.json` created immediately before provisioning.
 - Produces: Colima profile `slim-arc`; guest directories `/var/lib/slim-arc/models` and `/var/lib/slim-arc/cache`; machine-readable `guest-probe.env`.
 
-- [ ] **Step 1: Write a probe-output fixture test**
+- [x] **Step 1: Write a probe-output fixture test**
 
 ```bash
 #!/usr/bin/env bash
@@ -148,13 +148,13 @@ grep -qx 'SWAP_CONTROLLER=1' "$probe"
 grep -qx 'ARCH=aarch64' "$probe"
 ```
 
-- [ ] **Step 2: Run the fixture test**
+- [x] **Step 2: Run the fixture test**
 
 Run: `bash tests/macos/test-probe-output.sh`
 
 Expected: PASS.
 
-- [ ] **Step 3: Implement idempotent Colima setup**
+- [x] **Step 3: Implement idempotent Colima setup**
 
 `setup-colima.sh` must:
 
@@ -165,7 +165,7 @@ Expected: PASS.
 5. create only `/var/lib/slim-arc/{models,cache}` inside the dedicated guest;
 6. print the active Docker context and profile status.
 
-- [ ] **Step 4: Implement the guest probe**
+- [x] **Step 4: Implement the guest probe**
 
 `probe-guest.sh <result-dir>` must collect:
 
@@ -181,13 +181,13 @@ docker info --format '{{.CgroupVersion}} {{.Architecture}}'
 
 It must normalize these facts into `guest-probe.env` and fail if cgroups v2, memory controller, swap controller or `aarch64` is absent.
 
-- [ ] **Step 5: Start the campaign clock, provision, and verify the VM**
+- [x] **Step 5: Start the campaign clock, provision, and verify the VM**
 
 Run: `uv run python scripts/macos/campaign.py start --hours 12 --state docs/macos_test_notes/2026-08-11/campaign.json && uv run python scripts/macos/campaign.py run --state docs/macos_test_notes/2026-08-11/campaign.json -- bash scripts/macos/setup-colima.sh && bash scripts/macos/probe-guest.sh docs/macos_test_notes/2026-08-11/preflight`
 
 Expected: profile `slim-arc` is running; the probe records cgroups v2 and at least 100 GB guest disk capacity.
 
-- [ ] **Step 6: Commit the isolated VM unit**
+- [x] **Step 6: Commit the isolated VM unit**
 
 ```text
 [feat] Provision constrained Linux VM

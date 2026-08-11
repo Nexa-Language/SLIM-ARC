@@ -43,11 +43,17 @@ assert_safe_result_dir() {
     repo_root="$(slim_arc_repo_root)"
     result_root="${repo_root}/docs/macos_test_notes"
 
-    if [[ -z "${candidate}" || "${candidate}" == "/" || "${candidate}" == "${HOME:-}" || "${candidate}" == "${repo_root}" || "${candidate}" == "${result_root}" ]]; then
+    if [[ -z "${candidate}" ]]; then
         return 1
     fi
     case "${candidate}" in
         *"/../"*|*"/.."|"../"*|"..") return 1 ;;
     esac
+    if [[ "${candidate}" != /* ]]; then
+        candidate="${repo_root}/${candidate#./}"
+    fi
+    if [[ "${candidate}" == "/" || "${candidate}" == "${HOME:-}" || "${candidate}" == "${repo_root}" || "${candidate}" == "${result_root}" ]]; then
+        return 1
+    fi
     [[ "${candidate}" == "${result_root}/"* ]]
 }

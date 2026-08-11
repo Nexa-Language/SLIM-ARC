@@ -23,3 +23,9 @@ if assert_safe_result_dir "${repo_root}/docs/macos_test_notes/../papers"; then
 fi
 
 assert_safe_result_dir "${repo_root}/docs/macos_test_notes/2026-08-11"
+assert_safe_result_dir "docs/macos_test_notes/2026-08-11"
+
+if assert_safe_result_dir "docs/macos_test_notes/../../outside"; then
+    echo "relative escape must be rejected" >&2
+    exit 1
+fi
