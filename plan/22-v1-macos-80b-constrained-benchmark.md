@@ -280,7 +280,7 @@ Links: docs/superpowers/specs/2026-08-11-macos-constrained-80b-design.md
 - Consumes: Hugging Face model API response for `Qwen/Qwen3-Next-80B-A3B-Instruct-GGUF`.
 - Produces: guest file `/var/lib/slim-arc/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf`; manifest fields `repo_id`, `revision`, `filename`, `size`, `expected_sha256`, `actual_sha256`, `verified_at`.
 
-- [ ] **Step 1: Write parser tests with a minimal official-API-shaped fixture**
+- [x] **Step 1: Write parser tests with a minimal official-API-shaped fixture**
 
 ```python
 def test_selects_exact_q4_k_m_file() -> None:
@@ -297,17 +297,17 @@ def test_selects_exact_q4_k_m_file() -> None:
     assert model.expected_sha256 == "a" * 64
 ```
 
-- [ ] **Step 2: Run the parser test and verify it fails**
+- [x] **Step 2: Run the parser test and verify it fails**
 
 Run: `uv run --with pytest pytest -q tests/macos/test_query_hf_model.py`
 
 Expected: FAIL because `select_model_file` is not implemented.
 
-- [ ] **Step 3: Implement strict metadata selection**
+- [x] **Step 3: Implement strict metadata selection**
 
 `query_hf_model.py` must reject missing LFS metadata, a filename mismatch, a non-64-character lowercase SHA-256, a file smaller than 40 GB, or a file larger than 60 GB. It must emit JSON and never print authentication environment variables.
 
-- [ ] **Step 4: Implement resumable guest-local download**
+- [x] **Step 4: Implement resumable guest-local download**
 
 `download-model.sh` must:
 
@@ -319,19 +319,19 @@ Expected: FAIL because `select_model_file` is not implemented.
 6. write the small manifest to the repository result directory;
 7. refuse to overwrite a complete file whose hash differs.
 
-- [ ] **Step 5: Run unit tests and start/resume the download**
+- [x] **Step 5: Run unit tests and start/resume the download**
 
 Run: `uv run --with pytest pytest -q tests/macos/test_query_hf_model.py && uv run python scripts/macos/campaign.py run --state docs/macos_test_notes/2026-08-11/campaign.json -- bash scripts/macos/download-model.sh docs/macos_test_notes/2026-08-11`
 
 Expected: parser tests pass; download resumes after interruption; final hash equals the remote LFS SHA-256.
 
-- [ ] **Step 6: Confirm Git ignores the model and partial file**
+- [x] **Step 6: Confirm Git ignores the model and partial file**
 
 Run: `git status --short --ignored | rg 'Qwen3-Next|\.partial'`
 
 Expected: no model path is staged or untracked in the repository.
 
-- [ ] **Step 7: Commit the verified download tooling**
+- [x] **Step 7: Commit the verified download tooling**
 
 ```text
 [feat] Add verified 80B model download
@@ -412,7 +412,7 @@ Links: docs/superpowers/specs/2026-08-11-macos-constrained-80b-design.md
 - Produces: `RunConfig(memory_gib: int, cpus: int, pp: int, tg: int, repetitions: int, timeout_seconds: int, variant: str, env: dict[str, str])`; `run_once(config: RunConfig, result_dir: Path) -> RunResult`.
 - Consumes: image/model/profile from Tasks 2–5.
 
-- [ ] **Step 1: Write validation and command-construction tests**
+- [x] **Step 1: Write validation and command-construction tests**
 
 ```python
 def test_no_swap_docker_limits_are_exact() -> None:
@@ -427,17 +427,17 @@ def test_rejects_unbounded_or_too_large_values() -> None:
         RunConfig(memory_gib=17, cpus=4, pp=4, tg=1, repetitions=1, timeout_seconds=1, variant="patched", env={}).validate()
 ```
 
-- [ ] **Step 2: Run tests and verify they fail**
+- [x] **Step 2: Run tests and verify they fail**
 
 Run: `uv run --with pytest pytest -q tests/macos/test_run_constrained.py`
 
 Expected: FAIL because the controller does not exist.
 
-- [ ] **Step 3: Implement immutable configuration and safe argv construction**
+- [x] **Step 3: Implement immutable configuration and safe argv construction**
 
 Use `@dataclass(frozen=True)` and `subprocess.run(argv, shell=False, timeout=...)`. Accept only allowlisted SLIM-ARC environment variable names. Container names must include timestamp plus a random suffix and never interpolate user data into a shell command.
 
-- [ ] **Step 4: Implement guest-cache reset and OOM classification**
+- [x] **Step 4: Implement guest-cache reset and OOM classification**
 
 Cold runs invoke only the dedicated profile:
 
@@ -447,19 +447,19 @@ colima ssh --profile slim-arc -- sudo sh -c 'sync; echo 3 > /proc/sys/vm/drop_ca
 
 After the wrapper exits, inspect the stopped container before removal. Classify `State.OOMKilled=true` or an increased `oom_kill` counter as `oom`; classify controller timeout as `timeout`; otherwise preserve exit code and stderr summary.
 
-- [ ] **Step 5: Test command construction, timeout and fake OOM paths**
+- [x] **Step 5: Test command construction, timeout and fake OOM paths**
 
 Run: `uv run --with pytest pytest -q tests/macos/test_run_constrained.py`
 
 Expected: PASS without starting a real VM or Docker daemon.
 
-- [ ] **Step 6: Execute one 12 GB patched smoke run**
+- [x] **Step 6: Execute one 12 GB patched smoke run**
 
 Run: `uv run python scripts/macos/run_constrained.py --memory-gib 12 --cpus 4 --pp 4 --tg 1 --repetitions 2 --timeout-seconds 1800 --variant patched --cold-cache --result-dir docs/macos_test_notes/2026-08-11/runs/12g-patched-smoke`
 
 Expected: two valid outputs, no OOM, `memory.swap.current=0`, complete manifest.
 
-- [ ] **Step 7: Commit the safe controller**
+- [x] **Step 7: Commit the safe controller**
 
 ```text
 [feat] Run cgroup-limited benchmarks
@@ -482,7 +482,7 @@ Links: docs/superpowers/specs/2026-08-11-macos-constrained-80b-design.md
 - Consumes: `run_once` from Task 6.
 - Produces: resumable matrix state with per-tier attempts and `lowest_survival_gib`, `lowest_stable_gib`, `stop_reason`.
 
-- [ ] **Step 1: Write the staircase state-machine tests**
+- [x] **Step 1: Write the staircase state-machine tests**
 
 ```python
 def test_descends_to_three_after_four_succeeds_twice() -> None:
@@ -498,25 +498,25 @@ def test_tests_five_after_four_fails_twice() -> None:
     assert state.next_survival_tier() == 5
 ```
 
-- [ ] **Step 2: Implement checkpointed matrix transitions**
+- [x] **Step 2: Implement checkpointed matrix transitions**
 
 The no-swap survival order is 12 → 8 → 6 → 4 → conditional 3 → conditional 2, or 4 failure → 5. Each tier requires two successes or two failures. A process restart must resume from `matrix-state.json` without repeating completed tiers unless `--rerun` is explicit.
 
-- [ ] **Step 3: Implement the stable-tier search**
+- [x] **Step 3: Implement the stable-tier search**
 
 Start `pp64 + tg16` at `lowest_survival_gib`, use a 5400-second timeout, and move upward through the already tested tier order until one cold and one warm repetition succeed without OOM.
 
-- [ ] **Step 4: Implement the CPU matrix**
+- [x] **Step 4: Implement the CPU matrix**
 
 At `lowest_stable_gib`, run 2, 4, 6 and 8 vCPU with matching `THREADS`. Do not run this task if a stable tier was not found.
 
-- [ ] **Step 5: Run unit tests and the 12-hour matrix**
+- [x] **Step 5: Run unit tests and the 12-hour matrix**
 
 Run: `uv run --with pytest pytest -q tests/macos/test_run_matrix.py && uv run python scripts/macos/run_matrix.py --campaign-state docs/macos_test_notes/2026-08-11/campaign.json --result-root docs/macos_test_notes/2026-08-11`
 
 Expected: the controller stops launching new work at the deadline, terminates the active child through the Task 6 timeout path, and saves a resumable state.
 
-- [ ] **Step 6: Commit the adaptive matrix**
+- [x] **Step 6: Commit the adaptive matrix**
 
 ```text
 [feat] Automate constrained 80B matrix
@@ -541,7 +541,7 @@ Links: docs/superpowers/specs/2026-08-11-macos-constrained-80b-design.md
 - Consumes: all manifests and logs from Tasks 5–7.
 - Produces: normalized comparison rows and a human-readable evidence report used as the gate for plans 23 and 24.
 
-- [ ] **Step 1: Write aggregation tests for success, OOM and missing metrics**
+- [x] **Step 1: Write aggregation tests for success, OOM and missing metrics**
 
 ```python
 def test_selects_lowest_stable_no_swap_tier(rows: list[RunRow]) -> None:
@@ -551,7 +551,7 @@ def test_never_promotes_swap_row_to_no_swap_result(rows: list[RunRow]) -> None:
     assert all(row.swap_limit_bytes == 0 for row in no_swap_rows(rows))
 ```
 
-- [ ] **Step 2: Implement strict log normalization**
+- [x] **Step 2: Implement strict log normalization**
 
 Reject duplicate run IDs, model hashes, llama commits or resource limits that disagree within an A/B group. Preserve unsupported metrics as null; do not convert them to zero.
 

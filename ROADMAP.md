@@ -2,6 +2,39 @@
 
 ---
 
+## 2026-08-11 官方 80B 模型下载与完整性验证完成
+
+### 变更描述
+- 固定 Qwen 官方 GGUF revision `4c8630cf7af926a9c5095cb4bbbbc65d36e20f77`，下载单文件 Q4_K_M 模型并验证最终大小 `48410988384` bytes。
+- 完整文件两次计算 SHA-256 均为 `d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a`，与官方 LFS 元数据一致。
+- 新增严格 Hugging Face 元数据解析、默认可续传下载和可选 8 路 Range 下载；分片 worker 使用 HTTP/1.1 与 256 MiB 原子小块，将一次断流的最大重传量限制在当前小块。
+- 模型保留在 Colima 专用数据盘 `/var/lib/slim-arc/models`，Git 只记录不含宿主绝对路径的完整性 manifest；下载完成后无 partial、metadata、segment 或 curl 进程残留。
+- 8 个元数据单测、Range 边界测试、Ruff、ty、Shell syntax 与 `git diff --check` 全部通过。
+
+### 涉及文件
+- `scripts/macos/query_hf_model.py`
+- `scripts/macos/download-model.sh`
+- `scripts/macos/download-model-guest.sh`
+- `scripts/macos/download-model-segmented-guest.sh`
+- `tests/macos/test_query_hf_model.py`
+- `tests/macos/test-segment-ranges.sh`
+- `docs/macos_test_notes/2026-08-11/model-manifest.json`
+- `plan/22-v1-macos-80b-constrained-benchmark.md`
+- `plan/22-v2-macos-80b-constrained-benchmark.md`
+
+### 决策原因
+- 单连接实测仅约 2–4 MB/s，无法合理利用固定 12 小时实验窗口；官方 CDN 已验证支持 HTTP 206 Range。
+- 完整分片直接重试会在 HTTP/2 断流时丢失数 GB 有效进度，小块原子提交在保持最终全文件 SHA-256 口径不变的同时限制重传放大。
+- 模型文件约 48.4 GB，必须留在 VM 数据盘而不能进入主仓库；manifest 足以将后续运行绑定到 revision、大小和内容哈希。
+
+### 错误复盘
+- 日期：2026-08-11。
+- 描述：初始单连接下载吞吐过低；第一版约 5 GB 分片在 CDN HTTP/2 `INTERNAL_ERROR` 后由 curl 截断 work 文件并整段重试，浪费约 8 GB 下载量。通过 `bash -s` 远端执行时还触发了 `BASH_SOURCE[0]` guard 误判；失败启动曾遗留空 manifest 临时文件；终止旧控制器后远端 curl 未随 PTY 退出，TERM 超时后才以精确解析的 PID 执行 KILL。另一次尝试组合 `--continue-at -` 与绝对 Range 的语义不够可靠，未进入正式实现。
+- 原因分类：技术盲区、规则违反。
+- 预防措施：大文件下载在正式等待前先做 Range、断流和断点语义测试；并发 worker 固定 HTTP/1.1 与 256 MiB 原子块；source guard 同时覆盖直接执行和 stdin source；host 临时文件使用边界受限 trap；远端后台进程以精确 URL 解析 PID 并验证完全退出，拒绝采用语义不确定的 curl 参数组合。
+
+---
+
 ## 2026-08-11 受限实验控制面与结果归一化完成
 
 ### 变更描述
