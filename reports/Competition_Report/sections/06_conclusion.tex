@@ -16,6 +16,8 @@
     \item \textbf{实现了 80B 模型在端侧的流畅运行}：在 32\,GB 热缓存环境下，IQ4\_XS 量化的 Qwen3-Next-80B 达到了 \textbf{5.16\,tokens/s} 的 decode 速度（含 FlashAttention），实现了流畅的交互式推理。在 8\,GB 最受限环境下，达到了 0.76\,tokens/s，相比 baseline 提升 850\%（9.5 倍）。
 
     \item \textbf{通过标准 benchmark 验证了精度边界}：遵循综述~\cite{survey2026}的 ALEM 协议，在 GSM8K 上测量了不同量化配置的推理精度，发现 IQ4\_XS 虽保持语言流畅性但数学推理崩溃（0\%），而 Q4\_K\_M 保持 50\% 精度，为端侧模型选择提供了量化指导。
+
+    \item \textbf{在真实端侧（RK3588）完成真机验证并消除负优化}：在 8\,GB ARM 端侧设备上确认 80B 模型可运行不 OOM（RSS 约 6.3\,GB），发现并修复静态 MADV\_RANDOM 造成的 4--6$\times$ 负优化——通过动态 MADV 阶段切换使端侧解码与禁用持平、prefill 提升 10--15\%，并验证长上下文不 OOM 与专家预取置信度门控（命中率 31\%$\to$55\%）的收益，确立了"按内存比例选择 MADV 策略"的适用域边界。
 \end{enumerate}
 
 \subsection{局限性}
