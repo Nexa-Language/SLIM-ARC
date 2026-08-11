@@ -2,6 +2,46 @@
 
 ---
 
+## 2026-08-11 macOS 80B 实验与决赛优化计划完成
+
+### 变更描述
+- 将已批准设计拆分为三份可独立验收的执行计划：受限资源基线、压力感知预取和错误 expert 页回收。
+- 将模型来源固定为 Qwen 官方 GGUF 仓库的单文件 Q4_K_M，并以远端 LFS 元数据和下载后 SHA-256 为完整性口径。
+- 为环境、构建、下载、cgroup 运行器、矩阵状态机、C++ 调度策略和回收边界设计 TDD 步骤与五段式提交点。
+
+### 涉及文件
+- `plan/22-v1-macos-80b-constrained-benchmark.md`
+- `plan/23-v1-pressure-aware-prefetch.md`
+- `plan/24-v1-expert-waste-reclamation.md`
+- `docs/superpowers/specs/2026-08-11-macos-constrained-80b-design.md`
+- `ROADMAP.md`
+
+### 决策原因
+- 环境与基线、scheduler admission、expert 回收是三个可独立评审的子系统；后两项必须由前一阶段的真实证据触发。
+- 官方 Q4_K_M 当前页面标注约 48.4 GB，替代早期约 45.1 GB 的历史文件口径，避免模型来源和大小不可复现。
+- 先补齐普通权重 prefetch 未执行预算的闭环，再尝试只回收错误预取页，可降低侵入性和反复缺页风险。
+
+---
+
+## 2026-08-11 macOS 受限资源 80B 实验设计定稿
+
+### 变更描述
+- 设计 Colima ARM64 Linux VM + cgroups v2 的 macOS 受限资源测试架构。
+- 固定 Qwen3-Next-80B-A3B Q4_K_M、llama.cpp `360e134` 与 baseline/patched 双构建口径。
+- 确定无 swap 内存阶梯、最低稳定档、CPU 缩放、受控 swap 补充实验与 12 小时停止策略。
+- 从初赛遗留项中确定“现有配置消融 → 压力感知 admission control → 错误 expert 页回收”的优化顺序。
+
+### 涉及文件
+- `docs/superpowers/specs/2026-08-11-macos-constrained-80b-design.md`
+- `ROADMAP.md`
+
+### 决策原因
+- macOS 原生缺少 cgroups，`ulimit -v` 无法表达 GGUF 大虚拟映射下的物理内存限制；专用 Linux VM 能隔离 OOM 并提供可复现的内存与 CPU 配额。
+- 当前 unified scheduler 的普通权重预取预算尚未真正生效，且 RK3588 日志显示 expert prefetch 存在较高浪费，适合作为决赛阶段的数据驱动优化入口。
+- KV 深度 offload 与 Tile pipeline 对短上下文 80B 阶梯的收益证据不足，本阶段后置以控制风险。
+
+---
+
 ## 2026-08-11 团队分支主线集成完成
 
 ### 变更描述
