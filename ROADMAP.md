@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-08-11 macOS benchmark host preflight 完成
+
+### 变更描述
+- 新增 Apple Silicon/macOS、逻辑核数、物理内存与至少 120 GiB 空闲磁盘的只读 preflight。
+- 新增严格结果目录边界检查，拒绝 `/`、仓库根目录、`$HOME` 和未解析的 `..` 路径。
+- 新增不可延长的 12 小时 campaign 状态与进程组超时终止逻辑，重新运行不会重置 deadline。
+- 新增 5 个 Python 单元测试和 Shell 路径保护测试，Ruff、ty、pytest 与 shell syntax 均通过。
+
+### 涉及文件
+- `scripts/macos/common.sh`
+- `scripts/macos/preflight.sh`
+- `scripts/macos/campaign.py`
+- `tests/macos/test-common.sh`
+- `tests/macos/test_campaign.py`
+- `tests/README.md`
+- `plan/22-v1-macos-80b-constrained-benchmark.md`
+
+### 决策原因
+- 正式实验会安装 VM 工具并下载约 48.4 GB 模型，必须在任何外部写入前验证平台和磁盘安全余量。
+- 12 小时口径覆盖 provisioning、构建、下载和测试，deadline 必须持久化，不能通过重启脚本延长。
+- 终止范围限定为 controller 自己创建的进程组，避免影响 macOS 其他应用。
+
+---
+
 ## 2026-08-11 macOS 80B 实验与决赛优化计划完成
 
 ### 变更描述

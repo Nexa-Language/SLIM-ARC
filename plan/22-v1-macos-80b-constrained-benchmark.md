@@ -38,7 +38,7 @@
 - Produces: `CampaignWindow(started_at: datetime, deadline_at: datetime)`、`remaining_seconds(now: datetime) -> int`、`run_with_deadline(argv: list[str], window: CampaignWindow) -> int`。
 - Consumes: no project runtime code.
 
-- [ ] **Step 1: Write failing shell tests for path and safety helpers**
+- [x] **Step 1: Write failing shell tests for path and safety helpers**
 
 ```bash
 #!/usr/bin/env bash
@@ -54,13 +54,13 @@ fi
 assert_safe_result_dir "$(slim_arc_repo_root)/docs/macos_test_notes/2026-08-11"
 ```
 
-- [ ] **Step 2: Run the test and verify it fails before helpers exist**
+- [x] **Step 2: Run the test and verify it fails before helpers exist**
 
 Run: `bash tests/macos/test-common.sh`
 
 Expected: non-zero exit because `scripts/macos/common.sh` does not exist.
 
-- [ ] **Step 3: Write failing persisted-deadline tests**
+- [x] **Step 3: Write failing persisted-deadline tests**
 
 ```python
 def test_campaign_has_one_fixed_twelve_hour_deadline(tmp_path: Path) -> None:
@@ -77,7 +77,7 @@ def test_expired_campaign_refuses_new_process() -> None:
         run_with_deadline(["/usr/bin/true"], window, now=datetime(2026, 8, 12, 13, tzinfo=timezone.utc))
 ```
 
-- [ ] **Step 4: Implement the minimum host preflight and campaign helpers**
+- [x] **Step 4: Implement the minimum host preflight and campaign helpers**
 
 `preflight.sh` must check, without mutating the host:
 
@@ -95,17 +95,17 @@ df -g "$(slim_arc_repo_root)"
 
 `campaign.py start --hours 12 --state <path>` creates one immutable UTC deadline. Re-running `start` reads the existing state instead of extending it. `campaign.py run --state <path> -- <argv...>` uses `subprocess.Popen(argv, start_new_session=True)`; at the deadline it sends `SIGTERM` to the owned process group, waits at most 30 seconds, sends `SIGKILL` only to that group, and returns exit code 124. It must never use `shell=True`.
 
-- [ ] **Step 5: Run shell syntax and helper tests**
+- [x] **Step 5: Run shell syntax and helper tests**
 
 Run: `bash -n scripts/macos/common.sh scripts/macos/preflight.sh tests/macos/test-common.sh && bash tests/macos/test-common.sh && uv run --with pytest pytest -q tests/macos/test_campaign.py && bash scripts/macos/preflight.sh`
 
 Expected: all commands exit 0 and preflight prints only non-sensitive hardware/resource facts.
 
-- [ ] **Step 6: Document the macOS test entry point**
+- [x] **Step 6: Document the macOS test entry point**
 
 Add a `macOS constrained tests` section to `tests/README.md` explaining that `tests/test_env.sh` remains Linux-only and `scripts/macos/preflight.sh` is the host entry point.
 
-- [ ] **Step 7: Commit the preflight unit**
+- [x] **Step 7: Commit the preflight unit**
 
 ```text
 [chore] Add macOS benchmark preflight
