@@ -34,7 +34,9 @@ def test_existing_campaign_is_not_extended(tmp_path: Path) -> None:
     first_start = datetime(2026, 8, 11, 20, tzinfo=timezone.utc)
     first = campaign.load_or_start(state_path, hours=12, now=first_start)
 
-    second = campaign.load_or_start(state_path, hours=12, now=first_start + timedelta(hours=2))
+    second = campaign.load_or_start(
+        state_path, hours=12, now=first_start + timedelta(hours=2)
+    )
 
     assert second.started_at == first.started_at
     assert second.deadline_at == first.deadline_at
@@ -45,7 +47,9 @@ def test_expired_campaign_refuses_new_process() -> None:
     window = campaign.CampaignWindow.start(hours=12, now=start)
 
     with pytest.raises(campaign.CampaignExpired):
-        campaign.run_with_deadline(["/usr/bin/true"], window, now=start + timedelta(hours=13))
+        campaign.run_with_deadline(
+            ["/usr/bin/true"], window, now=start + timedelta(hours=13)
+        )
 
 
 def test_rejects_naive_datetime() -> None:

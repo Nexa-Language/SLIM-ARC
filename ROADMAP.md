@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-08-11 受限实验控制面与结果归一化完成
+
+### 变更描述
+- 新增 immutable `RunConfig` 和无 shell 插值的 Docker argv 构造，严格限制 2–16 GiB、1–8 vCPU、timeout、variant 与可用 `SLIM_ARC_*` 环境变量。
+- 新增 stopped-container OOM inspect、timeout 优先级、冷缓存控制、runner-owned 容器边界和原子 controller result。
+- 新增可恢复的 survival/stable/CPU 矩阵状态机，以及固定八组既有功能消融顺序。
+- 新增严格结果归一化，拒绝重复 run ID、模型/commit 混用和 controller/cgroup 限额不一致；缺失指标保持 unsupported。
+- macOS 测试累计 39 项通过，Ruff、ty、Shell syntax、JSON 语法与 `git diff --check` 均通过；真实 80B smoke/matrix 仍等待模型完整下载，不在本条中声明完成。
+
+### 涉及文件
+- `scripts/macos/run_constrained.py`
+- `scripts/macos/run_matrix.py`
+- `scripts/macos/run_ablation.py`
+- `scripts/macos/summarize_results.py`
+- `scripts/macos/configs/current-ablation.json`
+- `tests/macos/`
+- `tests/README.md`
+
+### 决策原因
+- 48.4 GB 模型下载耗时较长，先完成纯控制逻辑与失败分类可避免下载完成后临时拼装高风险命令。
+- 2 GiB 下限与计划中的 4 → 3 → 2 GiB 条件探测一致；最初设为 4 GiB 会使最低内存探索不可达。
+- controller result 固定携带已验证模型 SHA-256、llama commit 和预期限额，使 OOM 导致 wrapper manifest 缺失时仍能保留身份与资源证据。
+
+---
+
 ## 2026-08-11 cgroup 运行证据层完成
 
 ### 变更描述
