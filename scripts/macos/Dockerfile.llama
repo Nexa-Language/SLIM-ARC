@@ -66,7 +66,6 @@ COPY scripts/macos/container/run-benchmark.sh /usr/local/bin/slim-arc-run-benchm
 COPY scripts/macos/container/run_manifest.py /opt/slim-arc-runner/run_manifest.py
 RUN chmod 0755 /usr/local/bin/slim-arc-run-benchmark /opt/slim-arc-runner/run_manifest.py
 
-ENV LD_LIBRARY_PATH=/opt/llama-baseline/build/bin:/opt/llama-patched/build/bin
 WORKDIR /workspace
 CMD ["/bin/bash"]
 

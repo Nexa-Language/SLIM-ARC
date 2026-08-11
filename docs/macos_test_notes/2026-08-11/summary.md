@@ -1,5 +1,12 @@
 # macOS constrained 80B benchmark
 
+> **2026-08-11 validity correction:** the original image exported a baseline-first
+> `LD_LIBRARY_PATH`, so rows labeled `patched` loaded baseline `libllama.so`.
+> Memory-tier, cgroup/no-swap, and true baseline evidence remain valid, but all
+> pre-fix patched performance and ablation comparisons below are historical only
+> and must not be used for promotion. Plan 23 v3 records the corrected linkage
+> gate and replacement pressure A/B runs.
+
 All primary rows use cgroups v2 with swap disabled.
 
 - Model SHA-256: `d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a`

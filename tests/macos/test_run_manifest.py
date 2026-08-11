@@ -63,6 +63,35 @@ def test_manifest_has_resource_and_result_fields(tmp_path: Path) -> None:
     assert manifest["outcome"] == "success"
 
 
+def test_manifest_records_pressure_admission_environment(tmp_path: Path) -> None:
+    cgroup_dir = tmp_path / "cgroup"
+    cgroup_dir.mkdir()
+    write_fixture(cgroup_dir)
+    build_manifest = tmp_path / "build-manifest.env"
+    build_manifest.write_text("LLAMA_COMMIT=360e134\n", encoding="utf-8")
+
+    manifest = run_manifest.build_manifest(
+        variant="patched",
+        outcome="success",
+        exit_code=0,
+        cgroup_dir=cgroup_dir,
+        build_manifest_path=build_manifest,
+        pp=64,
+        tg=16,
+        threads=4,
+        repetitions=1,
+        environment={
+            "SLIM_ARC_PRESSURE_ADMISSION": "1",
+            "SLIM_ARC_PRESSURE_RESERVE_MB": "512",
+        },
+    )
+
+    assert manifest["environment"] == {
+        "SLIM_ARC_PRESSURE_ADMISSION": "1",
+        "SLIM_ARC_PRESSURE_RESERVE_MB": "512",
+    }
+
+
 def test_rejects_missing_hard_memory_limit(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="memory.max"):
         run_manifest.build_manifest(

@@ -14,10 +14,17 @@ require_positive_integer() {
 }
 
 case "${VARIANT:-}" in
-    baseline) benchmark="/opt/llama-baseline/build/bin/llama-bench" ;;
-    patched) benchmark="/opt/llama-patched/build/bin/llama-bench" ;;
+    baseline)
+        benchmark="/opt/llama-baseline/build/bin/llama-bench"
+        runtime_library_path="/opt/llama-baseline/build/bin"
+        ;;
+    patched)
+        benchmark="/opt/llama-patched/build/bin/llama-bench"
+        runtime_library_path="/opt/llama-patched/build/bin"
+        ;;
     *) printf 'VARIANT must be baseline or patched\n' >&2; exit 2 ;;
 esac
+export LD_LIBRARY_PATH="${runtime_library_path}"
 
 if [[ -e /opt/slim-arc-test-enabled && "${BENCHMARK_OVERRIDE:-}" == "/opt/slim-arc-test/fake-llama-bench" ]]; then
     benchmark="${BENCHMARK_OVERRIDE}"

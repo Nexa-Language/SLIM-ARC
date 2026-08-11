@@ -2,6 +2,33 @@
 
 ---
 
+## 2026-08-11 macOS benchmark：修复 variant 动态库串用
+
+### 变更描述
+- 移除镜像中 baseline-first 的全局 `LD_LIBRARY_PATH`，container wrapper 按 `VARIANT` 将动态库路径严格设置为对应的单一 build 目录。
+- 新增真实镜像 `ldd` gate，分别验证 baseline/patched `llama-bench` 解析到自身 `libllama`，并由 `verify-build.sh` 强制执行。
+- `run_manifest.py` 补记 `SLIM_ARC_PRESSURE_ADMISSION` 与 `SLIM_ARC_PRESSURE_RESERVE_MB`，确保 controller 和 container 两侧环境冻结一致。
+- 修复后 pressure smoke 出现 `[SLIM-ARC-PRESSURE]` 与 expert metrics，证明 patched library 已实际执行；2 GiB、pp4/tg1 成功且 swap/OOM 均为零。
+
+### 涉及文件
+- `scripts/macos/Dockerfile.llama`
+- `scripts/macos/container/run-benchmark.sh`
+- `scripts/macos/container/run_manifest.py`
+- `scripts/macos/verify-build.sh`
+- `tests/macos/test-variant-linkage.sh`
+- `tests/macos/test_run_manifest.py`
+- `docs/macos_test_notes/2026-08-11/build/`
+- `docs/macos_test_notes/2026-08-11/runs/pressure-linkage-smoke/`
+- `docs/macos_test_notes/2026-08-11/summary.md`
+- `plan/23-v3-pressure-aware-prefetch.md`
+
+### 决策原因
+- 原镜像把 `/opt/llama-baseline/build/bin` 放在 patched 之前；ELF `LD_LIBRARY_PATH` 优先于 patched executable 的 RUNPATH，导致名为 patched 的进程加载 baseline `libllama.so`。
+- 原因分类为“技术盲区”：构建验证只比较二进制文件/hash，没有检查运行时依赖解析。预防措施是把 variant linkage 作为真实镜像强制门禁，并要求 patched smoke 必须出现补丁专属指标。
+- plan 22 的内存档位、cgroup/no-swap 和 baseline 数据仍有效；所有旧 patched 性能/消融行以及修复前的 `pressure-off-*`、`pressure-on-cold` 行不得再用于结论，需由 v3 重跑替代。
+
+---
+
 ## 2026-08-11 pressure admission Task 4：cgroup headroom 已接入统一调度
 
 ### 变更描述

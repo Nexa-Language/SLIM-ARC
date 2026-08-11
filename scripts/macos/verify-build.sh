@@ -32,5 +32,6 @@ bash "$(slim_arc_repo_root)/tests/macos/test-build-manifest.sh" "${manifest_path
 DOCKER_CONTEXT="${docker_context}" docker run --rm "${image_tag}" cat /opt/patch-apply-first.log >"${result_dir}/patch-apply.log"
 grep -q 'SLIM-ARC integration complete' "${result_dir}/patch-apply.log"
 DOCKER_CONTEXT="${docker_context}" docker image inspect "${image_tag}" --format '{{json .RepoTags}} {{.Id}} {{.Architecture}} {{.Os}}' >"${result_dir}/image-inspect.txt"
+bash "$(slim_arc_repo_root)/tests/macos/test-variant-linkage.sh" "${image_tag}"
 
 cat "${manifest_path}"
