@@ -2,6 +2,26 @@
 
 ---
 
+## 2026-08-11 团队分支主线集成完成
+
+### 变更描述
+- 将 `haoma` 的 6 个提交线性纳入 `main`。
+- 从归档分支选择性纳入 9 篇论文和 26 份计划/审计文档。
+- `main` 首次交付推送成功，本地与远端均指向 `19794efa7adc33b833d54c9c82e72ff3e2b153c1`。
+- 完成历史、文件边界、Python AST、Shell 语法、prefetch API、PDF 与 Git 对象检查。
+
+### 涉及文件
+- `ROADMAP.md`
+- `plan/21-v2-integrate-team-branches.md`
+- `docs/integration/team-branches-2026-08-11.md`
+
+### 决策原因
+- 按仓库所有者要求直接交付单一 `main`，不创建额外远端集成分支或 PR。
+- 保留队友实现与比赛资料，同时排除第三方源码镜像、构建输出和 `node_modules`。
+- `tests/test_env.sh` 仅适用于 Linux cgroups v2；macOS 无 `mountpoint` 和 `/sys/fs/cgroup`，因此记录为平台不适用，不替代 RK3588/80B 原始实验日志。
+
+---
+
 ## 2026-08-11 主线交付方式调整（v2）
 
 ### 变更描述

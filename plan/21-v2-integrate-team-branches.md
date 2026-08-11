@@ -22,8 +22,8 @@
 - [x] 排除第三方源码镜像、`build/`、`build-host/` 与 `node_modules/` 批次。
 - [x] 添加固定 SHA、纳入范围与排除范围的集成清单。
 - [x] 验证提交 ancestry、工作树、关键接口、脚本语法与可用测试。
-- [ ] 直接 push 本地 `main` 到远端 `main`。
-- [ ] 重新读取远端 `main`，确认最终 SHA 和工作区状态。
+- [x] 直接 push 本地 `main` 到远端 `main`。
+- [x] 重新读取远端 `main`，确认推送 SHA 和工作区状态。
 
 ## 验收标准
 
