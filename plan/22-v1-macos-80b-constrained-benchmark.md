@@ -271,6 +271,7 @@ Links: docs/superpowers/specs/2026-08-11-macos-constrained-80b-design.md
 
 **Files:**
 - Create: `scripts/macos/download-model.sh`
+- Create: `scripts/macos/download-model-guest.sh`
 - Create: `scripts/macos/query_hf_model.py`
 - Test: `tests/macos/test_query_hf_model.py`
 - Create at runtime only: `docs/macos_test_notes/2026-08-11/model-manifest.json`
@@ -353,7 +354,7 @@ Links: https://huggingface.co/Qwen/Qwen3-Next-80B-A3B-Instruct-GGUF
 - Consumes: `VARIANT=baseline|patched`, `MODEL_PATH`, `PP`, `TG`, `THREADS`, `REPETITIONS`, and SLIM-ARC environment switches.
 - Produces: `run-manifest.json`, `rep-N.stdout.log`, `rep-N.stderr.log`, `cgroup-before.txt`, `cgroup-after.txt`, `proc-status.txt`, and wrapper exit status under `/results`.
 
-- [ ] **Step 1: Write manifest schema tests**
+- [x] **Step 1: Write manifest schema tests**
 
 ```python
 def test_manifest_has_resource_and_result_fields(manifest: dict[str, object]) -> None:
@@ -365,7 +366,7 @@ def test_manifest_has_resource_and_result_fields(manifest: dict[str, object]) ->
     assert manifest["outcome"] in {"success", "oom", "timeout", "error"}
 ```
 
-- [ ] **Step 2: Implement strict wrapper validation**
+- [x] **Step 2: Implement strict wrapper validation**
 
 The wrapper must reject unknown variants, missing model/result mounts, non-positive integer parameters and writable model files. It selects only one of:
 
@@ -374,21 +375,21 @@ The wrapper must reject unknown variants, missing model/result mounts, non-posit
 /opt/llama-patched/build/bin/llama-bench
 ```
 
-- [ ] **Step 3: Capture cgroup and process evidence before exit**
+- [x] **Step 3: Capture cgroup and process evidence before exit**
 
 Read the current container cgroup path from `/proc/self/cgroup`. Save available values from `memory.current`, `memory.peak`, `memory.events`, `memory.stat`, `memory.swap.current`, `cpu.stat`, `io.stat` and pressure files. Missing optional files are recorded as `unsupported`; missing `memory.max` is fatal.
 
-- [ ] **Step 4: Run repetitions inside one container**
+- [x] **Step 4: Run repetitions inside one container**
 
 Use the pinned binary's `--help` output to map the accepted prompt/generation flags, then run exact `pp` and `tg` values. Preserve all stdout/stderr and use `/usr/bin/time -v` for major/minor faults, RSS, CPU and I/O. Warm repetitions remain in the same cgroup.
 
-- [ ] **Step 5: Test with a tiny fixture before the 80B model**
+- [x] **Step 5: Test with a tiny fixture before the 80B model**
 
 Run the wrapper with a deterministic fake benchmark executable injected by a test-only image target.
 
 Expected: success manifest, two repetition logs, `memory.max` present and swap limit reported as zero.
 
-- [ ] **Step 6: Commit the evidence wrapper**
+- [x] **Step 6: Commit the evidence wrapper**
 
 ```text
 [feat] Capture constrained run evidence

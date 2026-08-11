@@ -2,6 +2,35 @@
 
 ---
 
+## 2026-08-11 cgroup 运行证据层完成
+
+### 变更描述
+- 在固定 ARM64 镜像中加入 baseline/patched 严格二选一的 benchmark wrapper，拒绝非只读模型挂载、缺失结果挂载、非法正整数参数和未知 `SLIM_ARC_*` 环境变量。
+- 每次运行记录 cgroup v2 的 memory、swap、CPU、I/O、pressure 指标以及 `/usr/bin/time -v`、进程状态、逐次 stdout/stderr 和退出码。
+- 增加纯 Python manifest 生成与校验模块，强制有限 `memory.max`、`memory.swap.max=0` 和有限 CPU quota。
+- 增加 test-only 镜像 target；以 64 MiB、1 CPU、2 次 deterministic fake benchmark 完成端到端验证，峰值内存约 8.5 MiB，OOM 计数为 0。
+
+### 涉及文件
+- `scripts/macos/container/`
+- `scripts/macos/Dockerfile.llama`
+- `scripts/macos/build-llama-image.sh`
+- `tests/macos/test_run_manifest.py`
+- `docs/macos_test_notes/2026-08-11/wrapper-fixture/`
+- `plan/22-v1-macos-80b-constrained-benchmark.md`
+
+### 决策原因
+- 运行数据必须来自容器自身的 cgroup，而不是以宿主 RSS 代替 page cache 计费后的物理内存峰值。
+- production 镜像不包含 fake binary；仅显式 test target 带固定 override marker，避免测试入口进入正式实验路径。
+- 每次 repetition 独立保存日志但留在同一 cgroup 中，使 warm page cache 和累计 `memory.peak` 可审计。
+
+### 错误复盘
+- 日期：2026-08-11。
+- 描述：远端拒绝演练最初使用了 zsh 只读变量名 `status`，并错误假设 Colima CLI 会保留远端 exit 2；清理两个临时文件时又误以为 macOS `unlink` 接受多个参数。
+- 原因分类：技术盲区、规则违反。
+- 预防措施：跨 shell 临时变量使用任务前缀或无保留字名称；只断言 Colima 非零与错误文本，不依赖被 wrapper 归一化的具体退出码；macOS 临时文件逐个按已解析的绝对路径清理。
+
+---
+
 ## 2026-08-11 固定版本 llama.cpp 双变体镜像完成
 
 ### 变更描述

@@ -1,4 +1,4 @@
-FROM ubuntu:24.04
+FROM ubuntu:24.04 AS build-runtime
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG LLAMA_COMMIT=360e134
@@ -62,6 +62,17 @@ RUN { \
         printf 'CMAKE=%s\n' "$(cmake --version | head -n 1)"; \
     } > /opt/build-manifest.env
 
+COPY scripts/macos/container/run-benchmark.sh /usr/local/bin/slim-arc-run-benchmark
+COPY scripts/macos/container/run_manifest.py /opt/slim-arc-runner/run_manifest.py
+RUN chmod 0755 /usr/local/bin/slim-arc-run-benchmark /opt/slim-arc-runner/run_manifest.py
+
 ENV LD_LIBRARY_PATH=/opt/llama-baseline/build/bin:/opt/llama-patched/build/bin
 WORKDIR /workspace
 CMD ["/bin/bash"]
+
+FROM build-runtime AS test
+COPY scripts/macos/container/fake-llama-bench.sh /opt/slim-arc-test/fake-llama-bench
+RUN chmod 0755 /opt/slim-arc-test/fake-llama-bench \
+    && touch /opt/slim-arc-test-enabled
+
+FROM build-runtime AS runtime

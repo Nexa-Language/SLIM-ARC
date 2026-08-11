@@ -23,9 +23,10 @@ cleanup() {
 }
 trap cleanup EXIT
 
-install -d "${build_context}/scripts" "${build_context}/patches/llama-upstream"
+install -d "${build_context}/scripts/macos" "${build_context}/patches/llama-upstream"
 cp "${script_dir}/Dockerfile.llama" "${build_context}/Dockerfile"
 cp "${repo_root}/scripts/apply-slim-arc.py" "${build_context}/scripts/apply-slim-arc.py"
+cp -R "${script_dir}/container" "${build_context}/scripts/macos/container"
 cp -R "${repo_root}/patches/llama-upstream/." "${build_context}/patches/llama-upstream/"
 
 if find "${build_context}" -type f \( -name '*.pdf' -o -name '*.gguf' -o -name '.env' \) -print -quit | grep -q .; then
@@ -34,7 +35,13 @@ if find "${build_context}" -type f \( -name '*.pdf' -o -name '*.gguf' -o -name '
 fi
 
 DOCKER_CONTEXT="${docker_context}" docker build \
+    --target runtime \
     --tag "${image_tag}" \
+    "${build_context}"
+
+DOCKER_CONTEXT="${docker_context}" docker build \
+    --target test \
+    --tag "slim-arc-llama-test:360e134" \
     "${build_context}"
 
 DOCKER_CONTEXT="${docker_context}" docker image inspect "${image_tag}" --format '{{.Id}}'
