@@ -78,7 +78,7 @@ Expected: all existing tests pass. Any baseline failure becomes a separately rep
 - Consumes: unsigned address, byte length, and system page size.
 - Produces: `slim_arc::page_range interior_page_range(uintptr_t, size_t, size_t) noexcept`.
 
-- [ ] **Step 1: Write the public value type and failing unit test**
+- [x] **Step 1: Write the public value type and failing unit test**
 
 The desired header API is:
 
@@ -128,7 +128,7 @@ assert(subpage.skipped_bytes == 0x0ffc);
 
 Also cover zero length, zero page size, non-power-of-two page size, address overflow, and a returned interval never escaping `[address, address + length)`.
 
-- [ ] **Step 2: Register the target and verify RED**
+- [x] **Step 2: Register the target and verify RED**
 
 Add `test-slim-arc-page-range` to the test runner with only `slim-arc-page-range.cpp` as a module source.
 
@@ -140,7 +140,7 @@ bash tests/run-cpp-unit.sh test-slim-arc-page-range
 
 Expected: compilation or assertion failure because `interior_page_range` is not implemented.
 
-- [ ] **Step 3: Implement checked inward alignment**
+- [x] **Step 3: Implement checked inward alignment**
 
 The implementation must:
 
@@ -155,7 +155,7 @@ if (length > UINTPTR_MAX - address) {
 
 Compute the first aligned address without `address + page_size - 1` overflow, round the exclusive end down, return a valid zero-length range when the input is structurally valid but contains no complete page, and calculate skipped bytes with checked subtraction.
 
-- [ ] **Step 4: Verify GREEN and sanitizers**
+- [x] **Step 4: Verify GREEN and sanitizers**
 
 Run:
 
@@ -167,7 +167,7 @@ git diff --check
 
 Expected: both runs pass with no warnings.
 
-- [ ] **Step 5: Commit the page-range primitive**
+- [x] **Step 5: Commit the page-range primitive**
 
 Commit subject:
 
@@ -191,7 +191,7 @@ The body records inward-only alignment, rejected invalid page sizes, and sanitiz
 - Consumes: `page_range` from Task 2, immutable expert tensor views, prefetched IDs, selected IDs.
 - Produces: deterministic `wasted_expert_ids` and `build_expert_reclaim_plan` value results.
 
-- [ ] **Step 1: Write the desired planner API and failing tests**
+- [x] **Step 1: Write the desired planner API and failing tests**
 
 Use:
 
@@ -240,7 +240,7 @@ assert(plan.items[0].length == 4096);
 
 Add explicit tests for negative/out-of-range IDs, zero expert count, non-divisible layout, multiple views, address overflow, sub-page slices, duplicate selected IDs, and deterministic first-occurrence ordering.
 
-- [ ] **Step 2: Register the target and verify RED**
+- [x] **Step 2: Register the target and verify RED**
 
 Run:
 
@@ -250,11 +250,11 @@ bash tests/run-cpp-unit.sh test-slim-arc-expert-reclaim
 
 Expected: compilation or assertion failure because the planner is absent.
 
-- [ ] **Step 3: Implement set semantics without a new dependency**
+- [x] **Step 3: Implement set semantics without a new dependency**
 
 Preserve first occurrence order from `prefetched`, deduplicate with bounded vector scans, remove any ID appearing in `selected`, and reject each ID not valid for a tensor view. Require `total_bytes % expert_count == 0`. Use checked multiplication and addition before constructing an expert slice.
 
-- [ ] **Step 4: Verify GREEN and sanitizers**
+- [x] **Step 4: Verify GREEN and sanitizers**
 
 Run:
 
@@ -266,7 +266,7 @@ git diff --check
 
 Expected: all planner boundaries pass.
 
-- [ ] **Step 5: Commit the pure planner**
+- [x] **Step 5: Commit the pure planner**
 
 Commit subject:
 
@@ -289,7 +289,7 @@ Commit subject:
 - Consumes: current router observations and registered immutable expert metadata.
 - Produces: `std::vector<int> cached_experts_snapshot(int layer) const`, exact unique hit/waste accounting, and an idempotent generated graph hook.
 
-- [ ] **Step 1: Add a failing snapshot/metric test**
+- [x] **Step 1: Add a failing snapshot/metric test**
 
 The test must compile against:
 
@@ -299,7 +299,7 @@ std::vector<int> cached_experts_snapshot(int layer) const;
 
 It must store a snapshot, update the scheduler with a different router vector, and assert that the stored snapshot remains unchanged. Add a metric test where selected IDs contain duplicates and assert no unsigned waste underflow occurs.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -309,7 +309,7 @@ bash tests/run-cpp-unit.sh test-slim-arc-prefetch-budget
 
 Expected: compilation failure for the missing snapshot API or assertion failure for duplicate-safe accounting.
 
-- [ ] **Step 3: Add `expert_state_mtx_` and snapshot mutable state**
+- [x] **Step 3: Add `expert_state_mtx_` and snapshot mutable state**
 
 Move the following under the dedicated mutex:
 
@@ -322,7 +322,7 @@ expert_pop_counts_
 
 `cache_router_experts` computes unique set intersection/difference once. `issue_expert_willneed` snapshots predictor state and target metadata under the lock, releases it, issues advice, then stores only the successfully issued expert IDs under the lock.
 
-- [ ] **Step 4: Change both generated hook sites**
+- [x] **Step 4: Change both generated hook sites**
 
 Replace:
 
@@ -343,7 +343,7 @@ if (!experts.empty()) {
 
 The patch test runs the script twice and asserts byte-identical output and no `get_cached_experts` call remains.
 
-- [ ] **Step 5: Verify GREEN**
+- [x] **Step 5: Verify GREEN**
 
 Run:
 
@@ -357,7 +357,7 @@ git diff --check
 
 Expected: snapshot, duplicate accounting, and patch idempotence pass.
 
-- [ ] **Step 6: Commit the concurrency boundary**
+- [x] **Step 6: Commit the concurrency boundary**
 
 Commit subject:
 
@@ -377,6 +377,8 @@ Commit subject:
 - Create: `tests/cpp/test-slim-arc-runtime.cpp`
 - Modify: `patches/llama-upstream/slim-arc-prefetch.h`
 - Modify: `patches/llama-upstream/slim-arc-prefetch.cpp`
+- Modify: `patches/llama-upstream/slim-arc-unified-scheduler.h`
+- Modify: `patches/llama-upstream/slim-arc-unified-scheduler.cpp`
 - Modify: `scripts/apply-slim-arc.py`
 - Modify: `tests/cpp/test-slim-arc-prefetch-budget.cpp`
 - Modify: `tests/run-cpp-unit.sh`
@@ -386,11 +388,11 @@ Commit subject:
 - Consumes: graph notifications, model-owned mmap/tensor addresses, environment configuration.
 - Produces: a model-owned runtime with lease-guarded global access, a bounded request queue, strict flags, and post-join metrics.
 
-- [ ] **Step 1: Write failing two-worker request-claim tests**
+- [x] **Step 1: Write failing two-worker request-claim tests**
 
 Create a scheduler with two workers, register one valid tensor, notify layer 0 twice, and require exactly two completed requests. Run a second case with two different layers and require each request generation to be claimed once. The current layer-only predicate must fail the same-layer case; an incomplete generation-only fix may fail by letting both workers claim one request.
 
-- [ ] **Step 2: Write failing runtime-lease and mapping-owner tests**
+- [x] **Step 2: Write failing runtime-lease and mapping-owner tests**
 
 Define a single model-owned runtime interface:
 
@@ -429,14 +431,14 @@ The test acquires a lease, starts `deactivate()` on another thread, proves teard
 
 This replaces both raw global scheduler getters. `runtime_owner` is stored as the final member of `llama_model::impl`, so reverse member destruction deactivates and joins the runtime before `pimpl->mappings` can unmap model pages. The global registry never owns the runtime; it holds a mutex-protected non-owning pointer only while the owner is active. Lease acquisition increments an active-call count before releasing the registry lock. Deactivation removes the registry pointer, rejects new leases, waits for the count to reach zero, then stops workers.
 
-- [ ] **Step 3: Write failing strict parser tests**
+- [x] **Step 3: Write failing strict parser tests**
 
 Add seams/counters that prove:
 
 - `SLIM_ARC_EXPERT_CONF=0`, empty, `false`, and invalid text do not enable the flag;
 - popularity accepts only a complete integer in `[0, 64]` and rejects negative, overflow, empty, and trailing text.
 
-- [ ] **Step 4: Verify RED**
+- [x] **Step 4: Verify RED**
 
 Run:
 
@@ -447,7 +449,7 @@ bash tests/run-cpp-unit.sh test-slim-arc-runtime
 
 Expected: the current same-layer wake predicate, raw global access, persistent global mmap registry, or permissive parser fails the new assertions.
 
-- [ ] **Step 5: Implement a bounded claimed-request queue**
+- [x] **Step 5: Implement a bounded claimed-request queue**
 
 Replace target-layer/signature state with:
 
@@ -464,9 +466,11 @@ static constexpr size_t max_pending_requests{64};
 
 Each worker pops one request under `mtx_`; no worker observes a request without removing it. When the queue is full, drop only the oldest unclaimed request, increment `dropped_requests_`, then enqueue the new request. Tests do not accept duplicate processing or an unbounded queue.
 
-- [ ] **Step 6: Move every address registry into `runtime_owner`**
+- [x] **Step 6: Move every address registry into `runtime_owner`**
 
 Remove `g_scheduler`, `g_unified_scheduler`, and `g_mmap_regions`. `runtime_owner` contains `prefetch_scheduler` before `unified_io_scheduler` so reverse member destruction destroys unified state first. The scheduler owns mmap regions, tensor metadata, and expert metadata; no address registry exists outside the runtime.
+
+Implement a new idempotent `patch_model()` path in `apply-slim-arc.py`. The pinned anchors are the final `tensor_split_owned` member in `llama_model::impl` and the `use_mmap_buffer` mapping-transfer loop in `llama_model_base::load_tensors`. Extend the fixture with a minimal `llama-model.cpp` containing both anchors. The generated model patch must validate mapping indices, offsets, byte lengths, and address addition before registration. `patch_model_loader()` becomes cleanup-only and must not insert or retain scheduler, mapping-registry, or SLIM-ARC address ownership.
 
 Patch pinned `src/llama-model.cpp`, not `llama-model-loader.cpp`, to:
 
@@ -479,11 +483,11 @@ Generated graph hooks acquire a `runtime_lease` and use `lease.prefetch()` / `le
 
 Add `slim-arc-runtime.h/.cpp` to the standalone copy list and `slim-arc-runtime.cpp` to generated CMake exactly once. Remove model-loader construction of static schedulers and the global mmap registry block; model loader retains no SLIM-ARC address after mappings transfer to `llama_model::impl`.
 
-- [ ] **Step 7: Implement strict env parsing**
+- [x] **Step 7: Implement strict env parsing**
 
 Use exact value `1` to enable boolean flags and `std::from_chars` for popularity K in `[0, 64]`. Reject negative, overflow, empty, and trailing-text input. Emit one bounded warning and use the safe disabled default.
 
-- [ ] **Step 8: Verify GREEN and sanitizers**
+- [x] **Step 8: Verify GREEN and sanitizers**
 
 Run:
 
@@ -496,7 +500,7 @@ uv run --with pytest pytest -q tests/test_apply_expert_reclaim.py
 git diff --check
 ```
 
-- [ ] **Step 9: Commit lifecycle hardening**
+- [x] **Step 9: Commit lifecycle hardening**
 
 Commit subject:
 
@@ -513,13 +517,14 @@ Commit subject:
 - Modify: `patches/llama-upstream/slim-arc-prefetch.cpp`
 - Modify: `scripts/apply-slim-arc.py`
 - Modify: `tests/cpp/test-slim-arc-prefetch-budget.cpp`
+- Modify: `tests/run-cpp-unit.sh`
 - Modify: `tests/test_apply_expert_reclaim.py`
 
 **Interfaces:**
-- Consumes: Task 3 planner, consumed `last_prefetched_experts_`, actual selected IDs, page size.
+- Consumes: Task 3 planner, an exact consumed generation record, actual selected IDs, page size.
 - Produces: opt-in `SLIM_ARC_EXPERT_RECLAIM_WASTE=1` behavior and `expert_reclaim_stats`.
 
-- [ ] **Step 1: Write failing syscall-seam tests**
+- [x] **Step 1: Write failing syscall-seam tests**
 
 Define:
 
@@ -537,7 +542,7 @@ struct expert_reclaim_stats {
 
 Inject a test advice function that records address, length, and advice. Assert selected experts are never advised, every call uses `POSIX_MADV_DONTNEED`, successful bytes exclude failed calls, failures do not throw, and flag-off counters remain zero.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -547,15 +552,15 @@ bash tests/run-cpp-unit.sh test-slim-arc-prefetch-budget
 
 Expected: missing reclaim stats or no recorded DONTNEED call.
 
-- [ ] **Step 3: Integrate lock-inside/execute-outside reclaim**
+- [x] **Step 3: Integrate lock-inside/execute-outside reclaim**
 
 At router comparison, consume the previous prefetch set once under the expert mutex, snapshot tensor views and selected IDs, release the mutex, construct the plan, then execute advice. Count only return-code-zero calls as reclaimed bytes. Saturate all counters.
 
-- [ ] **Step 4: Carry source files through patch and CMake**
+- [x] **Step 4: Carry source files through patch and CMake**
 
 Add page-range and expert-reclaim headers/sources to the standalone copy list. Add both `.cpp` sources to the generated CMake list exactly once. Remove on-demand prototype files from the active copy list while preserving their historical tracked files if provenance requires them.
 
-- [ ] **Step 5: Verify GREEN**
+- [x] **Step 5: Verify GREEN**
 
 Run:
 
@@ -569,7 +574,7 @@ python3 -m py_compile scripts/apply-slim-arc.py
 git diff --check
 ```
 
-- [ ] **Step 6: Commit runtime reclaim**
+- [x] **Step 6: Commit runtime reclaim**
 
 Commit subject:
 
