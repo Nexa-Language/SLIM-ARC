@@ -238,6 +238,52 @@ void test_pending_generations_are_bounded_before_advice() {
     assert(munmap(mapping, page_size) == 0);
 }
 
+void test_cancelled_generation_counts_once_as_waste() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const mapping = mmap(nullptr, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1};
+        scheduler.register_expert_tensor("blk.7.exps", mapping, page_size, 7, 1);
+        const int expert_id{0};
+        const uint64_t generation = scheduler.prefetch_experts(7, &expert_id, 1);
+        assert(generation != 0);
+        assert(scheduler.pending_expert_records(7) == 1);
+
+        scheduler.cancel_expert_prefetch(7, generation);
+        assert(scheduler.pending_expert_records(7) == 0);
+        assert(scheduler.expert_hit_bytes() == 0);
+        assert(scheduler.expert_waste_bytes() == page_size);
+        scheduler.cancel_expert_prefetch(7, generation);
+        scheduler.cancel_expert_prefetch(7, 0);
+        assert(scheduler.expert_waste_bytes() == page_size);
+    }
+    assert(munmap(mapping, page_size) == 0);
+}
+
+void test_prefetch_cancel_cycles_do_not_exhaust_pending_slots() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const mapping = mmap(nullptr, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1};
+        scheduler.register_expert_tensor("blk.8.exps", mapping, page_size, 8, 1);
+        const int expert_id{0};
+        for (size_t cycle = 0; cycle < 65; ++cycle) {
+            const uint64_t generation = scheduler.prefetch_experts(8, &expert_id, 1);
+            assert(generation != 0);
+            scheduler.cancel_expert_prefetch(8, generation);
+            assert(scheduler.pending_expert_records(8) == 0);
+        }
+        assert(scheduler.prefetch_experts(8, &expert_id, 1) != 0);
+    }
+    assert(munmap(mapping, page_size) == 0);
+}
+
 } // namespace
 
 int main() {
@@ -253,5 +299,7 @@ int main() {
     test_same_layer_generations_settle_in_reverse_order_once();
     test_zero_generation_updates_predictor_without_settling_metrics();
     test_pending_generations_are_bounded_before_advice();
+    test_cancelled_generation_counts_once_as_waste();
+    test_prefetch_cancel_cycles_do_not_exhaust_pending_slots();
     return 0;
 }

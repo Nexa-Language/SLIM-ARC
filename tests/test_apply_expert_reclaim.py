@@ -69,4 +69,7 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert context.count("prefetch_experts(l, experts.data(), static_cast<int>(experts.size()))") == 2
     assert context.count("expert_generation_tokens") >= 4
     assert context.count("cache_router_experts(layer, ue.data(), static_cast<int>(ue.size()), expert_generation)") == 1
+    assert "expert_generation_tokens[static_cast<size_t>(layer)] = 0;" in context
+    assert "cancel_expert_prefetch" in context
+    assert context.index("if (status == GGML_STATUS_SUCCESS)") < context.index("cancel_expert_prefetch")
     assert "get_cached_experts" not in context

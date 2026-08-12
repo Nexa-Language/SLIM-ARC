@@ -332,6 +332,32 @@ void prefetch_scheduler::cache_router_experts(
     cached_router_experts_[layer] = std::move(current);
 }
 
+void prefetch_scheduler::cancel_expert_prefetch(int layer, uint64_t generation) {
+    if (generation == 0) return;
+
+    std::lock_guard<std::mutex> lock(expert_state_mtx_);
+    if (layer < 0 || static_cast<size_t>(layer) >= pending_expert_prefetches_.size()) {
+        atomic_saturating_add(expert_unmatched_generations_, uint64_t{1});
+        return;
+    }
+
+    std::vector<expert_prefetch_record> & pending = pending_expert_prefetches_[layer];
+    const auto it = std::find_if(pending.begin(), pending.end(), [generation](const auto & record) {
+        return record.generation == generation;
+    });
+    if (it == pending.end()) {
+        atomic_saturating_add(expert_unmatched_generations_, uint64_t{1});
+        return;
+    }
+
+    size_t waste_bytes = 0;
+    for (size_t issued_bytes : it->issued_bytes) {
+        waste_bytes = saturating_add(waste_bytes, issued_bytes);
+    }
+    atomic_saturating_add(expert_waste_bytes_, waste_bytes);
+    pending.erase(it);
+}
+
 std::vector<int> prefetch_scheduler::cached_experts_snapshot(int layer) const {
     std::lock_guard<std::mutex> lock(expert_state_mtx_);
     if (layer < 0 || static_cast<size_t>(layer) >= cached_router_experts_.size()) {

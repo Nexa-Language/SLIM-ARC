@@ -334,15 +334,33 @@ def patch_context(filepath):
                             if (!found) ue.push_back(eid);
                         }
                     }
-                    const uint64_t expert_generation = static_cast<size_t>(layer) < expert_generation_tokens.size()
-                        ? expert_generation_tokens[static_cast<size_t>(layer)]
-                        : 0;
                     if (!ue.empty()) {
-                        s->cache_router_experts(layer, ue.data(), static_cast<int>(ue.size()), expert_generation);
+                        if (static_cast<size_t>(layer) < expert_generation_tokens.size()) {
+                            const uint64_t expert_generation = expert_generation_tokens[static_cast<size_t>(layer)];
+                            if (expert_generation != 0) {
+                                s->cache_router_experts(layer, ue.data(), static_cast<int>(ue.size()), expert_generation);
+                                expert_generation_tokens[static_cast<size_t>(layer)] = 0;
+                            } else {
+                                s->cache_router_experts(layer, ue.data(), static_cast<int>(ue.size()));
+                            }
+                        } else {
+                            s->cache_router_experts(layer, ue.data(), static_cast<int>(ue.size()));
+                        }
                     }
                     // SLIM-ARC FIX 2026-08-08: 移除 break——缓存所有层的 topk 专家，
                     // 使跨层/跨步预测可用（原实现只缓存第一层，专家预取几乎从不触发）。
                 }
+            }
+        }
+    }
+    // Every nonzero generation must reach a terminal state even if graph
+    // compute failed, the router node is absent, or its selected IDs are empty.
+    if (auto * s = slim_arc::get_global_prefetch_scheduler()) {
+        for (size_t layer = 0; layer < expert_generation_tokens.size(); ++layer) {
+            const uint64_t expert_generation = expert_generation_tokens[layer];
+            if (expert_generation != 0) {
+                s->cancel_expert_prefetch(static_cast<int>(layer), expert_generation);
+                expert_generation_tokens[layer] = 0;
             }
         }
     }

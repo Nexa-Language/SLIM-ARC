@@ -101,6 +101,8 @@ class prefetch_scheduler {
     void cache_router_experts(int layer, const int * expert_ids, int n);
     // 结算指定预取代次；generation 为 0 时只更新预测器，不结算指标。
     void cache_router_experts(int layer, const int * expert_ids, int n, uint64_t generation);
+    // 终止指定预取代次，并将其成功 issued bytes 一次性记为 waste。
+    void cancel_expert_prefetch(int layer, uint64_t generation);
     // 获取某层最近缓存的路由专家 ID 的独立副本。
     std::vector<int> cached_experts_snapshot(int layer) const;
     // 对指定层的给定专家发起 WILLNEED 预取，并返回不可复用的结算代次。
