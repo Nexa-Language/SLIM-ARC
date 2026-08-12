@@ -258,9 +258,10 @@ def patch_context(filepath):
                 // 而非上一层的跨层路由）。实测精度 temporal=35% vs spatial=4.5%，
                 // 空间预测 95% 为无效预取，在 I/O 受限场景反而抢占带宽。
                 for (int l = min_layer; l <= max_layer; ++l) {
-                    int nc = 0;
-                    const int * ce = s->get_cached_experts(l, &nc);
-                    if (ce && nc > 0) s->prefetch_experts(l, ce, nc);
+                    const std::vector<int> experts = s->cached_experts_snapshot(l);
+                    if (!experts.empty()) {
+                        s->prefetch_experts(l, experts.data(), static_cast<int>(experts.size()));
+                    }
                 }
             }
         }
@@ -276,9 +277,10 @@ def patch_context(filepath):
             }
             // SLIM-ARC FIX 2026-08-08: 同 unified 分支——时间预测（l 层用上一 token 同层路由）
             for (int l = min_layer; l <= max_layer; ++l) {
-                int nc = 0;
-                const int * ce = s->get_cached_experts(l, &nc);
-                if (ce && nc > 0) s->prefetch_experts(l, ce, nc);
+                const std::vector<int> experts = s->cached_experts_snapshot(l);
+                if (!experts.empty()) {
+                    s->prefetch_experts(l, experts.data(), static_cast<int>(experts.size()));
+                }
             }
         }
     }

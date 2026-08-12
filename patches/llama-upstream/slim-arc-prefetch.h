@@ -99,8 +99,8 @@ class prefetch_scheduler {
     void register_expert_tensor(const char * name, void * addr, size_t size, int layer, int n_experts);
     // 缓存该层路由器选中的专家 ID（用于跨层预测）
     void cache_router_experts(int layer, const int * expert_ids, int n);
-    // 获取某层最近缓存的路由专家 ID
-    const int * get_cached_experts(int layer, int * n) const;
+    // 获取某层最近缓存的路由专家 ID 的独立副本。
+    std::vector<int> cached_experts_snapshot(int layer) const;
     // 对指定层的给定专家发起 WILLNEED 预取
     void prefetch_experts(int layer, const int * expert_ids, int n);
 
@@ -153,13 +153,17 @@ class prefetch_scheduler {
     std::vector<std::vector<tensor_prefetch_info>> tensors_by_layer_;
     // MoE expert registry indexed by layer
     std::vector<std::vector<expert_tensor_info>>   experts_by_layer_;
+    // Guards the expert registry and router predictor/accounting state.
+    mutable std::mutex                              expert_state_mtx_;
     // Router-selected expert IDs per layer (for next-layer prediction)
-    mutable std::vector<std::vector<int>>          cached_router_experts_;
+    std::vector<std::vector<int>>                  cached_router_experts_;
     // 最近一次实际下发的预取专家集合（每层，供命中率统计，改进 1）
-    mutable std::vector<std::vector<int>>          last_prefetched_experts_;
+    std::vector<std::vector<int>>                  last_prefetched_experts_;
+    // 与 last_prefetched_experts_ 平行，保存每个唯一 expert 成功 advice 的字节数。
+    std::vector<std::vector<size_t>>               last_prefetched_expert_bytes_;
     // ---- SLIM-ARC FIX 2026-08-09: 置信度门控（改进 2）----
     // 上一步（t-2）路由，用于"连续两 token 稳定专家"高置信度过滤
-    mutable std::vector<std::vector<int>>          prev_router_experts_;
+    std::vector<std::vector<int>>                  prev_router_experts_;
     // SLIM_ARC_EXPERT_CONF=1 时启用 2-token 稳定性门控
     bool                                           conf_gating_ = false;
 
@@ -174,7 +178,7 @@ class prefetch_scheduler {
     // SLIM_ARC_EXPERT_POP=K：预取 temporal 并集 top-K 热门专家
     int                                            pop_k_ = 0;
     // 每层专家激活频次计数（近窗口）
-    mutable std::vector<std::vector<int>>          expert_pop_counts_;
+    std::vector<std::vector<int>>                  expert_pop_counts_;
 };
 
 // Global singleton (set by llama_context during init)

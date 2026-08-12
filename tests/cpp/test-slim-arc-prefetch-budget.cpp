@@ -109,6 +109,61 @@ void test_zero_expert_budget_disables_expert_prefetch() {
     assert(munmap(mapping, page_size) == 0);
 }
 
+void test_cached_expert_snapshot_does_not_change_after_router_update() {
+    slim_arc::prefetch_scheduler scheduler{1, 1};
+    const int initial[] = {2, 4};
+    scheduler.cache_router_experts(3, initial, 2);
+    const std::vector<int> snapshot = scheduler.cached_experts_snapshot(3);
+
+    const int updated[] = {7};
+    scheduler.cache_router_experts(3, updated, 1);
+
+    assert((snapshot == std::vector<int>{2, 4}));
+    assert((scheduler.cached_experts_snapshot(3) == std::vector<int>{7}));
+}
+
+void test_duplicate_router_ids_do_not_overcount_hits_or_underflow_waste() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const mapping = mmap(nullptr, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1};
+        scheduler.register_expert_tensor("blk.1.exps", mapping, page_size, 1, 1);
+        const int duplicate_selection[] = {0, 0};
+        scheduler.prefetch_experts(1, duplicate_selection, 2);
+        assert(scheduler.expert_prefetch_bytes() == page_size);
+
+        scheduler.cache_router_experts(1, duplicate_selection, 2);
+        assert(scheduler.expert_hit_bytes() == page_size);
+        assert(scheduler.expert_waste_bytes() == 0);
+    }
+    assert(munmap(mapping, page_size) == 0);
+}
+
+void test_partial_expert_advice_failure_accounts_only_successful_bytes() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const mapping = mmap(nullptr, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1};
+        scheduler.register_expert_tensor("blk.2.valid", mapping, page_size, 2, 1);
+        scheduler.register_expert_tensor("blk.2.invalid", reinterpret_cast<void *>(1), page_size, 2, 1);
+        const int expert_id{0};
+        scheduler.prefetch_experts(2, &expert_id, 1);
+        assert(scheduler.expert_prefetch_bytes() == page_size);
+
+        scheduler.cache_router_experts(2, &expert_id, 1);
+        assert(scheduler.expert_hit_bytes() == page_size);
+        assert(scheduler.expert_waste_bytes() == 0);
+        assert(scheduler.expert_hit_bytes() + scheduler.expert_waste_bytes() == scheduler.expert_prefetch_bytes());
+    }
+    assert(munmap(mapping, page_size) == 0);
+}
+
 } // namespace
 
 int main() {
@@ -118,5 +173,8 @@ int main() {
     test_scheduler_enforces_budget_and_counts_success();
     test_scheduler_counts_madvise_failure_without_issuing_bytes();
     test_zero_expert_budget_disables_expert_prefetch();
+    test_cached_expert_snapshot_does_not_change_after_router_update();
+    test_duplicate_router_ids_do_not_overcount_hits_or_underflow_waste();
+    test_partial_expert_advice_failure_accounts_only_successful_bytes();
     return 0;
 }
