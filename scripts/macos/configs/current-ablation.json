@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "configurations": [
+    {
+      "name": "baseline",
+      "variant": "baseline",
+      "env": {}
+    },
+    {
+      "name": "patched-default",
+      "variant": "patched",
+      "env": {}
+    },
+    {
+      "name": "patched-no-prefetch",
+      "variant": "patched",
+      "env": {
+        "SLIM_ARC_NO_PREFETCH": "1"
+      }
+    },
+    {
+      "name": "patched-decode-sequential",
+      "variant": "patched",
+      "env": {
+        "SLIM_ARC_DECODE_MADV": "SEQUENTIAL"
+      }
+    },
+    {
+      "name": "patched-decode-normal",
+      "variant": "patched",
+      "env": {
+        "SLIM_ARC_DECODE_MADV": "NORMAL"
+      }
+    },
+    {
+      "name": "patched-decode-random",
+      "variant": "patched",
+      "env": {
+        "SLIM_ARC_DECODE_MADV": "RANDOM"
+      }
+    },
+    {
+      "name": "patched-expert-confidence",
+      "variant": "patched",
+      "env": {
+        "SLIM_ARC_EXPERT_CONF": "1"
+      }
+    },
+    {
+      "name": "patched-expert-budget-confidence",
+      "variant": "patched",
+      "env": {
+        "SLIM_ARC_EXPERT_BUDGET": "1",
+        "SLIM_ARC_EXPERT_CONF": "1"
+      }
+    }
+  ]
+}

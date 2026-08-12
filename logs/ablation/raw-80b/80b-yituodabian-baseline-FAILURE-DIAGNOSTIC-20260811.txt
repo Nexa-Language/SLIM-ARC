@@ -1,0 +1,62 @@
+================================================================================
+SLIM-ARC 80B 基线测试（TC-01）失败诊断记录 —— 本板 yituodabian
+日期: 2026-08-11T13:37:00+08:00
+================================================================================
+
+1. 测试任务
+   - 步骤 3：正式基线测试（Q4_K_M 模型），TC-01 pp32/tg16 与 pp512/tg128
+   - 命令（修正 -fa disable -> -fa off 后）：
+     SLIM_ARC_DISABLE=1 $BENCH -m $MODEL -p 32 -n 16 -t 4 -ngl 99 -fa off
+   - $BENCH = /home/yituodabian/SLIM-ARC/src/llama-upstream/build/bin/llama-bench
+
+2. 失败现象
+   - llama-bench 报错：failed to load model
+   - llama-bench -v 详细错误：
+     gguf_init_from_reader: key 35 is empty
+     gguf_init_from_reader: failed to read key-value pairs
+     llama_model_load: error loading model: llama_model_loader: failed to load model
+     llama_bench: error: failed to load model '...Q4_K_M.gguf'
+   - llama-gguf r 模式同样失败（key 35 is empty），随后 GGML_ASSERT abort
+
+3. 诊断过程与证据
+   a) 文件头部正常：magic=GGUF, version=3, tensor_count=807, metadata_kv_count=44
+   b) 完整解析 44 个 key：前 34 个正常（含 tokenizer.ggml.model/pre）
+      -> 第 35 个 key 在文件偏移 ~1704119 字节处读到 key_len=0
+      -> 该位置之后连续 30.37 MB 全零，下一非零在 33554432（32MB）
+   c) 稀疏文件证据：
+      - ls -lh: 46G（声明大小 48,410,988,384 字节 ≈ 45.09 GiB）
+      - du -h: 实际磁盘占用仅 4.8G
+      - 1MiB 块扫描：46,168 MB 中仅 ~4,935 MB 非零，其余为空洞
+      - 非零块呈 ~32MB 间隔的稀疏分布，说明大量 chunk 未写入
+   d) 下载日志证据（/home/yituodabian/data/download_gguf.log, 4.6M）：
+      大量分块下载失败，典型错误：
+      - URLError: <urlopen error [Errno 110] Connection timed out>
+      - URLError: <urlopen error _ssl.c:1012: The handshake operation timed out>
+      - TimeoutError: The read operation timed out
+      - [SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol
+      - download_80b.log: "Error while downloading from https://us.aws.cdn.hf.co/...
+        The read operation timed out / Trying to resume download..."
+
+4. 根因结论
+   模型文件 /home/yituodabian/data/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf
+   下载不完整/损坏：
+   - 声明大小 45.09 GiB，实际仅约 4.8 GiB 有效数据（~90% 为全零空洞）
+   - 网络不稳定（HuggingFace CDN 连接超时），分块下载大量 chunk 失败未写入
+   - 结果：GGUF 头部元数据（tokenizer 词表区，~1.7MB 处）即损坏，llama.cpp 无法解析
+
+5. 测试影响
+   - TC-01 基线测试（pp32/tg16、pp512/tg128）无法执行：模型无法加载
+   - 环境/工具链就绪，失败纯属模型文件问题，非 llama-bench/构建问题
+
+6. 建议（需另起子任务/用户决策）
+   - 依据红线 RL-03（模型文件只读），本次不删除/重写模型文件
+   - 重新下载模型（测试计划 §3.3），建议：
+     a) 优先断点续传补全该文件，或删除后重新完整下载
+     b) 下载后执行 sha256sum 校验（§7.3 表）与 llama-gguf 读取验证
+     c) 校验通过后再执行本步骤 3 基线测试
+
+7. 环境参考（见 env-yituodabian-20260811-*.txt）
+   - 树莓派 5, Cortex-A76 4 核 2.4GHz, 4 GiB 内存, Debian 13
+   - 模型存放: /home/yituodabian/data (fuseblk/NTFS, 932G 可用 846G)
+   - llama.cpp: 纯 CPU 构建（--list-devices: none），-ngl 99 会被忽略
+================================================================================

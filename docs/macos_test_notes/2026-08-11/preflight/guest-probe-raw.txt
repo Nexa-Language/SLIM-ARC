@@ -1,0 +1,60 @@
+Client: Docker Engine - Community
+ Version:    29.7.2
+ Context:    colima-slim-arc
+ Debug Mode: false
+
+Server:
+ Containers: 0
+  Running: 0
+  Paused: 0
+  Stopped: 0
+ Images: 1
+ Server Version: 29.5.2
+ Storage Driver: overlayfs
+  driver-type: io.containerd.snapshotter.v1
+ Logging Driver: json-file
+ Cgroup Driver: cgroupfs
+ Cgroup Version: 2
+ Plugins:
+  Volume: local
+  Network: bridge host ipvlan macvlan null overlay
+  Log: awslogs fluentd gcplogs gelf journald json-file local splunk syslog
+ CDI spec directories:
+  /etc/cdi
+  /var/run/cdi
+ Swarm: inactive
+ Runtimes: io.containerd.runc.v2 runc
+ Default Runtime: runc
+ Init Binary: docker-init
+ containerd version: 193637f7ee8ae5f5aa5248f49e7baa3e6164966e
+ runc version: v1.3.5-0-g488fc13e
+ init version: de40ad0
+ Security Options:
+  apparmor
+  seccomp
+   Profile: builtin
+  cgroupns
+ Kernel Version: 6.8.0-117-generic
+ Operating System: Ubuntu 24.04.4 LTS
+ OSType: linux
+ Architecture: aarch64
+ CPUs: 8
+ Total Memory: 15.58GiB
+ Name: colima-slim-arc
+ ID: a57a703b-85cd-4a6b-a00a-41d03c27b8e7
+ Docker Root Dir: /var/lib/docker
+ Debug Mode: false
+ Experimental: false
+ Insecure Registries:
+  ::1/128
+  127.0.0.0/8
+ Live Restore Enabled: false
+ Firewall Backend: iptables
+  EnableUserlandProxy: true
+  UserlandProxyPath: /usr/bin/docker-proxy
+
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/vdb1        98G   14M   93G   1% /mnt/lima-colima-slim-arc
+cpuset cpu io memory hugetlb pids rdma misc
+memory.max=67108864
+memory.swap.max=0

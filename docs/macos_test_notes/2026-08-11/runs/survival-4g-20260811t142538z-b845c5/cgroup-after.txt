@@ -1,0 +1,99 @@
+CGROUP_RELATIVE=/
+=== memory.current ===
+4041166848
+=== memory.max ===
+4294967296
+=== memory.peak ===
+4294967296
+=== memory.events ===
+low 0
+high 0
+max 52491
+oom 0
+oom_kill 0
+oom_group_kill 0
+=== memory.stat ===
+anon 966656
+file 3950030848
+kernel 89501696
+kernel_stack 32768
+pagetables 98304
+sec_pagetables 0
+percpu 0
+sock 0
+vmalloc 8192
+shmem 0
+zswap 0
+zswapped 0
+file_mapped 2314240
+file_dirty 0
+file_writeback 0
+swapcached 0
+anon_thp 0
+file_thp 0
+shmem_thp 0
+inactive_anon 4096
+active_anon 913408
+inactive_file 1318961152
+active_file 2631041024
+unevictable 0
+slab_reclaimable 88600448
+slab_unreclaimable 234112
+slab 88834560
+workingset_refault_anon 0
+workingset_refault_file 1497914
+workingset_activate_anon 0
+workingset_activate_file 100963
+workingset_restore_anon 0
+workingset_restore_file 100963
+workingset_nodereclaim 47444
+pgscan 25279934
+pgsteal 12838587
+pgscan_kswapd 0
+pgscan_direct 25279934
+pgscan_khugepaged 0
+pgsteal_kswapd 0
+pgsteal_direct 12838587
+pgsteal_khugepaged 0
+pgfault 1385265
+pgmajfault 28748
+pgrefill 626
+pgactivate 389915
+pgdeactivate 0
+pglazyfree 0
+pglazyfreed 0
+zswpin 0
+zswpout 0
+zswpwb 0
+thp_fault_alloc 0
+thp_collapse_alloc 0
+thp_swpout 0
+thp_swpout_fallback 0
+=== memory.swap.current ===
+0
+=== memory.swap.max ===
+0
+=== memory.pressure ===
+some avg10=12.14 avg60=4.82 avg300=1.17 total=3889109
+full avg10=12.14 avg60=4.82 avg300=1.17 total=3889108
+=== cpu.max ===
+400000 100000
+=== cpu.stat ===
+usage_usec 19782478
+user_usec 1010221
+system_usec 18772257
+core_sched.force_idle_usec 0
+nr_periods 269
+nr_throttled 0
+throttled_usec 0
+nr_bursts 0
+burst_usec 0
+=== cpu.pressure ===
+some avg10=0.00 avg60=0.00 avg300=0.00 total=171660
+full avg10=0.00 avg60=0.00 avg300=0.00 total=171657
+=== io.stat ===
+253:16 rbytes=56536784896 wbytes=0 rios=278639 wios=0 dbytes=0 dios=0
+253:0 rbytes=65536 wbytes=0 rios=1 wios=0 dbytes=0 dios=0
+=== io.pressure ===
+some avg10=28.31 avg60=8.02 avg300=1.85 total=6014696
+full avg10=28.31 avg60=8.02 avg300=1.85 total=6014515

@@ -1,0 +1,9 @@
+{
+  "actual_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "expected_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "filename": "Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf",
+  "repo_id": "Qwen/Qwen3-Next-80B-A3B-Instruct-GGUF",
+  "revision": "4c8630cf7af926a9c5095cb4bbbbc65d36e20f77",
+  "size": 48410988384,
+  "verified_at": "2026-08-11T14:17:16.915666+00:00"
+}

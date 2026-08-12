@@ -1,0 +1,171 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-08-12T00:08:00+08:00",
+  "decision": "kept_opt_in",
+  "enabled_for_final_demo": false,
+  "model": {
+    "repository": "Qwen/Qwen3-Next-80B-A3B-Instruct-GGUF",
+    "filename": "Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf",
+    "sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "runtime": {
+    "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+    "memory_gib": 2,
+    "cpus": 4,
+    "swap_limit_bytes": 0,
+    "pp": 64,
+    "tg": 16,
+    "base_environment": {
+      "SLIM_ARC_EXPERT_BUDGET": "1",
+      "SLIM_ARC_EXPERT_CONF": "1"
+    }
+  },
+  "rows": [
+    {
+      "configuration": "pressure_off",
+      "cold": {
+        "run_id": "pressure-valid-off-cold",
+        "wall_seconds": [63.32],
+        "pp_tokens_per_second": [3.341876],
+        "tg_tokens_per_second": [0.712737],
+        "memory_peak_bytes": 2147483648,
+        "memory_max_events": 189499
+      },
+      "warm": {
+        "run_id": "pressure-valid-off-warm",
+        "wall_seconds": [52.12, 58.39],
+        "median_wall_seconds": 55.255,
+        "pp_tokens_per_second": [3.962324, 3.664736],
+        "tg_tokens_per_second": [0.996102, 0.958346],
+        "memory_peak_bytes": 2147483648,
+        "memory_max_events": 324335
+      },
+      "expert_metrics_per_repetition": {
+        "issued_mib": 3759.6,
+        "hit_mib": 1792.0,
+        "waste_mib": 2407.4,
+        "hit_rate_percent": 42.67
+      }
+    },
+    {
+      "configuration": "pressure_reserve_512_mib",
+      "cold": {
+        "run_id": "pressure-valid-512-cold",
+        "wall_seconds": [62.41],
+        "pp_tokens_per_second": [3.704479],
+        "tg_tokens_per_second": [0.712419],
+        "memory_peak_bytes": 2147483648,
+        "memory_max_events": 187954
+      },
+      "warm": {
+        "run_id": "pressure-valid-512-warm",
+        "wall_seconds": [58.41, 63.13],
+        "median_wall_seconds": 60.77,
+        "pp_tokens_per_second": [3.825555, 3.732579],
+        "tg_tokens_per_second": [0.774352, 0.816451],
+        "memory_peak_bytes": 2147483648,
+        "memory_max_events": 348301
+      },
+      "pressure_metrics": {
+        "samples_per_repetition": 17,
+        "throttled_samples_per_repetition": 17,
+        "fallback_samples_per_repetition": 0,
+        "effective_bytes": 0,
+        "issued_bytes": 0,
+        "madvise_failures": 0
+      }
+    },
+    {
+      "configuration": "pressure_reserve_1024_mib",
+      "cold": {
+        "run_id": "pressure-valid-1024-cold",
+        "wall_seconds": [65.37],
+        "pp_tokens_per_second": [3.590303],
+        "tg_tokens_per_second": [0.646847],
+        "memory_peak_bytes": 2147483648,
+        "memory_max_events": 189901
+      },
+      "warm": {
+        "run_id": "pressure-valid-1024-warm",
+        "wall_seconds": [51.84, 63.10],
+        "median_wall_seconds": 57.47,
+        "pp_tokens_per_second": [4.098801, 2.825610],
+        "tg_tokens_per_second": [0.972381, 0.945002],
+        "memory_peak_bytes": 2147483648,
+        "memory_max_events": 318603
+      },
+      "pressure_metrics": {
+        "samples_per_repetition": 17,
+        "throttled_samples_per_repetition": 17,
+        "fallback_samples_per_repetition": 0,
+        "effective_bytes": 0,
+        "issued_bytes": 0,
+        "madvise_failures": 0
+      }
+    }
+  ],
+  "comparisons_against_pressure_off": {
+    "reserve_512": {
+      "cold_wall_change_percent": -1.44,
+      "warm_median_wall_change_percent": 9.98,
+      "memory_peak_reduction_percent": 0.0
+    },
+    "reserve_1024": {
+      "cold_wall_change_percent": 3.24,
+      "warm_median_wall_change_percent": 4.01,
+      "memory_peak_reduction_percent": 0.0
+    }
+  },
+  "promotion_threshold": {
+    "minimum_memory_peak_reduction_percent": 10.0,
+    "maximum_warm_wall_regression_percent": 15.0,
+    "lower_tier_improvement_available": false
+  },
+  "exploratory": {
+    "run_id": "pressure-reserve0-smoke",
+    "pp": 4,
+    "tg": 1,
+    "reserve_mib": 0,
+    "effective_bytes": 0,
+    "conclusion": "The 10 percent reserve also leaves no prefetch headroom at 2 GiB."
+  },
+  "invalidated_run_ids": [
+    "12g-patched-smoke",
+    "ablation-patched-decode-normal-cold-20260811t144911z-18e14c",
+    "ablation-patched-decode-normal-warm-20260811t145025z-7e3990",
+    "ablation-patched-decode-random-cold-20260811t145120z-ba9179",
+    "ablation-patched-decode-random-warm-20260811t145238z-bb51a2",
+    "ablation-patched-decode-sequential-cold-20260811t144701z-bf3d1a",
+    "ablation-patched-decode-sequential-warm-20260811t144814z-41a952",
+    "ablation-patched-default-cold-20260811t144242z-5b785d",
+    "ablation-patched-default-warm-20260811t144357z-383272",
+    "ablation-patched-expert-budget-confidence-cold-20260811t145545z-4b6735",
+    "ablation-patched-expert-budget-confidence-warm-20260811t145657z-c6e4ae",
+    "ablation-patched-expert-confidence-cold-20260811t145334z-b78d50",
+    "ablation-patched-expert-confidence-warm-20260811t145448z-854206",
+    "ablation-patched-no-prefetch-cold-20260811t144453z-3413a3",
+    "ablation-patched-no-prefetch-warm-20260811t144607z-c7c87f",
+    "cpu-2c-20260811t143036z-65a51a",
+    "cpu-4c-20260811t143308z-2ca815",
+    "cpu-6c-20260811t143527z-7d5545",
+    "cpu-8c-20260811t143741z-81c163",
+    "stable-2g-cold-20260811t142833z-fac323",
+    "stable-2g-warm-20260811t142943z-75ae5c",
+    "survival-12g-20260811t142148z-e6d577",
+    "survival-12g-20260811t142230z-4539c9",
+    "survival-2g-20260811t142733z-15ee2e",
+    "survival-2g-20260811t142803z-0b3d75",
+    "survival-3g-20260811t142634z-421400",
+    "survival-3g-20260811t142703z-f08a09",
+    "survival-4g-20260811t142538z-b845c5",
+    "survival-4g-20260811t142606z-747a42",
+    "survival-6g-20260811t142429z-d4ab83",
+    "survival-6g-20260811t142504z-151b37",
+    "survival-8g-20260811t142309z-4691d3",
+    "survival-8g-20260811t142348z-98a99f",
+    "pressure-off-cold",
+    "pressure-off-warm",
+    "pressure-on-cold"
+  ],
+  "invalidation_reason": "The pre-fix image resolved patched executables to baseline shared libraries because LD_LIBRARY_PATH overrode RUNPATH."
+}

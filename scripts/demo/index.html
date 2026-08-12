@@ -52,6 +52,59 @@
             border: 1px solid rgba(100,255,218,0.3);
         }
         .badge.danger { background: rgba(255,107,107,0.1); color: var(--danger); border-color: rgba(255,107,107,0.3); }
+        /* SLIM-ARC FEATURE 2026-08-12: 模型切换按钮组 */
+        .model-switch {
+            display: flex; gap: 4px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px; padding: 3px;
+        }
+        .model-btn {
+            padding: 5px 14px; border: none; border-radius: 6px;
+            background: transparent; color: var(--muted);
+            font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .model-btn:hover { color: var(--text); }
+        .model-btn.active { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--bg); }
+        .model-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        /* SLIM-ARC FEATURE 2026-08-12: 切换加载遮罩 */
+        .overlay {
+            position: fixed; inset: 0; z-index: 1000;
+            background: rgba(10,14,26,0.92);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .overlay-box {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 40px 48px; max-width: 460px; width: 90%;
+            text-align: center;
+        }
+        .spinner {
+            width: 48px; height: 48px; margin: 0 auto 20px;
+            border: 4px solid var(--border); border-top-color: var(--accent);
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .overlay-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; }
+        .overlay-sub { font-size: 14px; color: var(--muted); margin-bottom: 16px; line-height: 1.6; }
+        .overlay-error {
+            background: rgba(255,107,107,0.1); color: var(--danger);
+            border: 1px solid rgba(255,107,107,0.3);
+            border-radius: 8px; padding: 12px 16px;
+            font-size: 13px; margin-bottom: 16px;
+            text-align: left; word-break: break-all;
+            max-height: 140px; overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .overlay-btn {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: var(--bg); border: none; border-radius: 8px;
+            padding: 10px 24px; font-size: 14px; font-weight: 600; cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .overlay-btn:hover { transform: translateY(-1px); }
         /* 主布局 */
         .main {
             display: grid;
@@ -242,6 +295,11 @@
             </div>
         </div>
         <div class="topbar-right">
+            <!-- SLIM-ARC FEATURE 2026-08-12: 模型切换按钮组（4B / 80B） -->
+            <div class="model-switch">
+                <button class="model-btn active" id="btn-4b" onclick="switchModel('4b')">4B</button>
+                <button class="model-btn" id="btn-80b" onclick="switchModel('80b')">80B</button>
+            </div>
             <span class="badge" id="model-badge">--</span>
             <span class="badge" id="tier-badge">--</span>
         </div>
@@ -310,10 +368,21 @@
     </div>
 
     <script>
-        const LLAMA_SERVER = 'http://127.0.0.1:8080';
-        const MONITOR_API = 'http://127.0.0.1:8001/api/monitor';
+        // SLIM-ARC FIX 2026-08-12: 使用当前访问 hostname 动态拼接后端地址。
+        // 此前硬编码 127.0.0.1，若从非本机浏览器访问（如局域网 IP / 远程桌面），
+        // 127.0.0.1 会指向访问者本机导致 fetch 失败、右侧监控数据完全不显示。
+        const HOST = window.location.hostname || '127.0.0.1';
+        const LLAMA_SERVER = `http://${HOST}:8080`;
+        const MONITOR_API = `http://${HOST}:8001/api/monitor`;
+        // SLIM-ARC FEATURE 2026-08-12: 模型切换接口
+        const SWITCH_API = `http://${HOST}:8001/api/switch-model`;
+        const SWITCH_STATUS_API = `http://${HOST}:8001/api/switch-status`;
 
         let sending = false;
+        let switching = false;          // 是否正在切换模型
+        let switchPollTimer = null;     // 切换状态轮询定时器
+        let switchTimeoutTimer = null;  // 切换总超时定时器
+        let currentModel = '4b';        // 当前生效模型（由 monitor config 同步）
 
         // 初始化专家格
         function initExperts(total, active) {
@@ -400,11 +469,22 @@
         async function pollMonitor() {
             try {
                 const r = await fetch(MONITOR_API);
+                // SLIM-ARC FIX 2026-08-12: 增加 HTTP 状态与数据完整性检查，
+                // 避免 monitor 未就绪/返回错误时右侧面板静默空白。
+                if (!r.ok) throw new Error('HTTP ' + r.status);
                 const data = await r.json();
+                if (!data || !data.config || !data.memory || !data.metrics) {
+                    throw new Error('monitor 返回数据不完整');
+                }
                 // 顶栏
                 document.getElementById('subtitle').textContent = `${data.config.model} · ${data.config.model_size} · ${data.config.tier}`;
                 document.getElementById('model-badge').textContent = `${data.config.model} (${data.config.model_size})`;
                 document.getElementById('tier-badge').textContent = data.config.tier;
+                // SLIM-ARC FEATURE 2026-08-12: 同步当前模型并刷新按钮高亮
+                if (data.config.model) {
+                    currentModel = data.config.model.includes('80B') ? '80b' : '4b';
+                    updateModelButtons();
+                }
                 // 内存
                 const mem = data.memory;
                 document.getElementById('mem-used').textContent = `${mem.used_gb} GB / ${mem.total_gb} GB`;
@@ -417,16 +497,29 @@
                     const last = tpsHistory[tpsHistory.length - 1];
                     document.getElementById('tps-current').textContent = last.tps.toFixed(2) + ' t/s';
                     drawTpsChart();
+                } else {
+                    // SLIM-ARC FIX 2026-08-12: 无推理活动时给出明确状态，
+                    // 而非误导性的 "0.00 t/s"（此前 tps_history 为空时该区域显示无数据）。
+                    document.getElementById('tps-current').textContent = '等待推理...';
                 }
                 document.getElementById('tokens-gen').textContent = Math.floor(data.metrics.n_decoded || 0);
                 // 专家
                 if (data.config.experts_total > 0) {
                     updateExperts(data.config.experts_active, data.config.experts_total);
+                } else {
+                    // SLIM-ARC FIX 2026-08-12: 非 MoE 模型(experts_total=0)时明确提示，
+                    // 避免继续显示 initExperts 生成的静态随机格子，被误认为真实专家激活数据。
+                    document.getElementById('experts-active').textContent = '非 MoE 模型';
+                    const el = document.getElementById('experts');
+                    el.innerHTML = '<div style="grid-column:1/-1;color:#8892b0;font-size:12px;padding:8px;text-align:center">当前模型非 MoE，无专家激活数据</div>';
                 }
                 // 优化链（每次更新，确保模型名同步）
                 renderOptChain(data.config);
             } catch (e) {
                 console.log('monitor error', e);
+                // SLIM-ARC FIX 2026-08-12: 监控不可用时在顶栏给出可见提示，
+                // 避免右侧面板静默空白（500ms 轮询会自动恢复）。
+                document.getElementById('subtitle').textContent = '⚠️ 监控服务未连接，正在重试...';
             }
         }
 
@@ -536,6 +629,133 @@
             if (e.key === 'Enter') send();
         });
         document.getElementById('input').focus();
+
+        // ============================================================
+        // SLIM-ARC FEATURE 2026-08-12: 模型切换（4B <-> 80B）
+        // ============================================================
+        function updateModelButtons() {
+            document.getElementById('btn-4b').classList.toggle('active', currentModel === '4b');
+            document.getElementById('btn-80b').classList.toggle('active', currentModel === '80b');
+        }
+
+        function setModelButtonsDisabled(disabled) {
+            document.getElementById('btn-4b').disabled = disabled;
+            document.getElementById('btn-80b').disabled = disabled;
+        }
+
+        function showSwitchOverlay(title, sub) {
+            document.getElementById('switch-title').textContent = title;
+            document.getElementById('switch-sub').textContent = sub;
+            document.getElementById('switch-error').style.display = 'none';
+            document.getElementById('switch-done').style.display = 'none';
+            document.getElementById('switch-overlay').style.display = 'flex';
+        }
+
+        function showSwitchError(errText) {
+            const errEl = document.getElementById('switch-error');
+            errEl.textContent = '⚠️ ' + errText;
+            errEl.style.display = 'block';
+            document.getElementById('switch-sub').textContent = '';
+            document.getElementById('switch-done').style.display = 'inline-block';
+        }
+
+        function closeSwitchOverlay() {
+            document.getElementById('switch-overlay').style.display = 'none';
+            if (switchPollTimer) { clearInterval(switchPollTimer); switchPollTimer = null; }
+            if (switchTimeoutTimer) { clearTimeout(switchTimeoutTimer); switchTimeoutTimer = null; }
+        }
+
+        function finishSwitch(failed, errText) {
+            if (switchPollTimer) { clearInterval(switchPollTimer); switchPollTimer = null; }
+            if (switchTimeoutTimer) { clearTimeout(switchTimeoutTimer); switchTimeoutTimer = null; }
+            switching = false;
+            setModelButtonsDisabled(false);
+            if (failed) {
+                showSwitchError(errText || '模型加载失败');
+            } else {
+                document.getElementById('switch-title').textContent = '✅ 模型加载完成';
+                document.getElementById('switch-sub').textContent = '服务已就绪，可以开始对话。';
+                document.getElementById('switch-done').style.display = 'inline-block';
+                setTimeout(closeSwitchOverlay, 2000);
+            }
+        }
+
+        async function pollSwitchStatus() {
+            if (switchPollTimer) clearInterval(switchPollTimer);
+            switchPollTimer = setInterval(async () => {
+                try {
+                    const r = await fetch(SWITCH_STATUS_API);
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    const s = await r.json();
+                    // 后端检测到失败（进程退出 / 4GB 上 80B OOM，属预期）
+                    if (s.error) {
+                        finishSwitch(true, s.error);
+                        return;
+                    }
+                    if (!s.switching && s.llama_ready) {
+                        // 目标模型已就绪
+                        currentModel = s.current_model || currentModel;
+                        updateModelButtons();
+                        finishSwitch(false);
+                        return;
+                    }
+                    // 仍在切换：更新已等待秒数
+                    const sec = Math.round(s.elapsed || 0);
+                    document.getElementById('switch-sub').textContent = `服务重启中，已等待 ${sec}s（80B 首次加载约 2-3 分钟）...`;
+                } catch (e) {
+                    // monitor 短暂不可达，忽略并继续轮询
+                }
+            }, 3000);
+        }
+
+        async function switchModel(target) {
+            if (switching) return;
+            if (target === currentModel) {
+                alert('当前已是该模型');
+                return;
+            }
+            const label = (target === '80b') ? '80B' : '4B';
+            // 确认对话框（重启服务，加载约 2-3 分钟）
+            if (!confirm(`切换到 ${label} 模型需要重启服务，约需 2-3 分钟加载，确认？`)) return;
+            switching = true;
+            setModelButtonsDisabled(true);
+            showSwitchOverlay(
+                `正在加载 ${label} 模型...`,
+                '服务将重启，请稍候，加载期间请勿关闭页面'
+            );
+            try {
+                const r = await fetch(SWITCH_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ model: target })
+                });
+                let data = {};
+                try { data = await r.json(); } catch (e) {}
+                if (!r.ok || data.status !== 'switching') {
+                    throw new Error((data.error || '切换请求失败') + '（HTTP ' + r.status + '）');
+                }
+                // 启动状态轮询 + 总超时保护（10 分钟）
+                pollSwitchStatus();
+                switchTimeoutTimer = setTimeout(() => {
+                    finishSwitch(true, '切换超时（10 分钟）。请检查 llama-server 日志：\nlogs/demo-llama-server.log');
+                }, 10 * 60 * 1000);
+            } catch (e) {
+                switching = false;
+                setModelButtonsDisabled(false);
+                showSwitchError('切换请求失败: ' + e.message);
+            }
+        }
     </script>
+
+    <!-- SLIM-ARC FEATURE 2026-08-12: 模型切换加载遮罩 -->
+    <div class="overlay" id="switch-overlay" style="display:none">
+        <div class="overlay-box">
+            <div class="spinner"></div>
+            <div class="overlay-title" id="switch-title">正在加载模型...</div>
+            <div class="overlay-sub" id="switch-sub">服务将重启，请稍候，加载期间请勿关闭页面</div>
+            <div class="overlay-error" id="switch-error" style="display:none"></div>
+            <button class="overlay-btn" id="switch-done" style="display:none" onclick="closeSwitchOverlay()">知道了</button>
+        </div>
+    </div>
 </body>
 </html>

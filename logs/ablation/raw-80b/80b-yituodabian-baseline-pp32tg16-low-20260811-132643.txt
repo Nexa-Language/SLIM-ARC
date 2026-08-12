@@ -1,0 +1,18 @@
+=== date ===
+2026-08-11T13:26:43+08:00
+=== uname ===
+Linux yituodabian 6.18.34+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.18.34-1+rpt1 (2026-06-09) aarch64 GNU/Linux
+=== model ===
+lrwxrwxrwx 1 yituodabian yituodabian 62 Aug 11 13:22 /home/yituodabian/SLIM-ARC/data/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf -> /home/yituodabian/data/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf
+=== command ===
+SLIM_ARC_DISABLE=1 /home/yituodabian/SLIM-ARC/src/llama-upstream/build/bin/llama-bench -m /home/yituodabian/SLIM-ARC/data/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf -p 32 -n 16 -t 4 -ngl 99 -fa off  (NOTE: original '-fa disable' invalid; corrected to '-fa off')
+=== SLIM_ARC env ===
+(none set)
+=== mem before ===
+               total        used        free      shared  buff/cache   available
+Mem:           4.0Gi       1.6Gi       2.1Gi        34Mi       423Mi       2.3Gi
+Swap:          2.0Gi          0B       2.0Gi
+=== START TC-01 pp32/tg16 (low) ===
+llama_bench: error: failed to load model '/home/yituodabian/SLIM-ARC/data/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf'
+| model                          |       size |     params | backend    | threads |  fa |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --: | --------------: | -------------------: |
