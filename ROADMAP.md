@@ -7,11 +7,15 @@
 ### 变更描述
 - 将决赛阶段收敛为 `predict -> admit -> prefetch -> observe -> reclaim` 的 MoE expert residency 闭环，优先实现可在 Mac 80A3B 上形成 A/B 证据的 Safe Expert Waste Reclamation 与 Pressure/Accuracy-Aware Expert Residency。
 - 明确先修复 router snapshot 裸指针、expert 状态并发、无界 popularity、指标重复计数与失效实验口径，再决定新策略是否进入最终演示配置。
+- 独立计划审阅发现 raw global getter、process-static mmap registry、宿主压力直读和 runtime metrics 数据通路无法形成可证明门禁；v2 改为 model-owned runtime + lease teardown barrier、可注入压力快照、固定 hysteresis/EWMA 和严格单行 metrics schema。
+- 设计提交 `912ec91f` 后的执行基线为 49 个 Python 测试通过，cgroup/pressure/prefetch/unified 四组 C++ normal 与 ASan/UBSan 通过，Python/Shell 语法和 `git diff --check` 通过；uv/Python 默认用户 cache 在受限权限下失败，改用 `/tmp/slim-arc-uv-cache` 与 `/tmp/slim-arc-pycache` 后验证，不计为代码失败。
 - 固化精简重复的 Mac 限内存/限核实验、晋级阈值、PPT/决赛报告增量规则、初赛材料冻结规则和单一数据源。
 - GitLab 决赛发布保留官方初赛 88 个提交，使用 fresh clone、allowlist、manifest、secret/size/test/report gate 和 fast-forward push；废弃伪造日期及全历史回放流程。
 
 ### 涉及文件
 - `plan/25-v1-finals-research-closure.md`
+- `plan/25-v2-finals-research-closure.md`
+- `plan/26-v1-finals-runtime-implementation.md`
 - `ROADMAP.md`
 
 ### 决策原因
