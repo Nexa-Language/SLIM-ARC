@@ -42,8 +42,8 @@ while IFS= read -r -d '' source_path; do
     context_source_paths+=("${source_path}")
 done < <(
     git -C "${repo_root}" ls-tree -r --name-only -z "${slim_arc_git_commit}" -- \
-        'patches/llama-upstream/**' \
-        'scripts/macos/container/**'
+        patches/llama-upstream \
+        scripts/macos/container
 )
 
 if ! git -C "${repo_root}" diff --quiet HEAD -- "${context_source_paths[@]}"; then
