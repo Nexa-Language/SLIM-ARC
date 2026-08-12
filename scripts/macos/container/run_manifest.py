@@ -54,6 +54,8 @@ RUNTIME_COUNTER_FIELDS = (
 RUNTIME_FIELD_NAMES = ("schema", *RUNTIME_COUNTER_FIELDS)
 UINT64_MAX = 2**64 - 1
 ASCII_UNSIGNED_DECIMAL = re.compile(r"[0-9]+", flags=re.ASCII)
+ASCII_GIT_COMMIT = re.compile(r"[0-9a-f]{40}", flags=re.ASCII)
+ASCII_SHA256 = re.compile(r"[0-9a-f]{64}", flags=re.ASCII)
 
 
 def _read_int(path: Path, *, positive: bool = False) -> int:
@@ -86,10 +88,23 @@ def _read_build_manifest(path: Path) -> dict[str, str]:
     values: dict[str, str] = {}
     for line in path.read_text(encoding="utf-8").splitlines():
         key, separator, value = line.partition("=")
-        if separator and key:
-            values[key] = value
+        if not separator or not key or not value or key in values:
+            raise ValueError("build manifest contains an invalid field")
+        values[key] = value
     if values.get("LLAMA_COMMIT") != "360e134":
         raise ValueError("unexpected llama commit in build manifest")
+    git_commit = values.get("SLIM_ARC_GIT_COMMIT")
+    build_context_sha256 = values.get("SLIM_ARC_BUILD_CONTEXT_SHA256")
+    patched_source_sha256 = values.get("PATCHED_SOURCE_SHA256")
+    if (
+        git_commit is None
+        or build_context_sha256 is None
+        or patched_source_sha256 is None
+        or ASCII_GIT_COMMIT.fullmatch(git_commit) is None
+        or ASCII_SHA256.fullmatch(build_context_sha256) is None
+        or ASCII_SHA256.fullmatch(patched_source_sha256) is None
+    ):
+        raise ValueError("SLIM-ARC build identity is missing or malformed")
     return values
 
 
@@ -241,6 +256,9 @@ def build_manifest(
         "cpu_period": cpu_period,
         "llama_commit": build["LLAMA_COMMIT"],
         "llama_resolved_commit": build.get("LLAMA_RESOLVED_COMMIT"),
+        "slim_arc_git_commit": build["SLIM_ARC_GIT_COMMIT"],
+        "slim_arc_build_context_sha256": build["SLIM_ARC_BUILD_CONTEXT_SHA256"],
+        "patched_source_sha256": build["PATCHED_SOURCE_SHA256"],
         "environment": collect_slim_arc_environment(environment),
         "runtime_metrics": runtime_metrics,
         "runtime_metrics_summary": _runtime_metrics_summary(runtime_metrics),

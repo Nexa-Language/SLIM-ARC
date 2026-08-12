@@ -8,4 +8,7 @@ grep -qx 'GGML_CPU_REPACK=OFF' "${manifest}"
 grep -qx 'GGML_METAL=OFF' "${manifest}"
 grep -qx 'BASELINE_PATCHED=0' "${manifest}"
 grep -qx 'SLIM_ARC_PATCHED=1' "${manifest}"
+[[ "$(grep -Ec '^SLIM_ARC_GIT_COMMIT=[0-9a-f]{40}$' "${manifest}")" == "1" ]]
+[[ "$(grep -Ec '^SLIM_ARC_BUILD_CONTEXT_SHA256=[0-9a-f]{64}$' "${manifest}")" == "1" ]]
+[[ "$(grep -Ec '^PATCHED_SOURCE_SHA256=[0-9a-f]{64}$' "${manifest}")" == "1" ]]
 grep -qx 'PATCH_IDEMPOTENT=1' "${manifest}"

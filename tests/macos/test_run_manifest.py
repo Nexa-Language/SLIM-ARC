@@ -27,6 +27,20 @@ RUNTIME_LINE = (
     "pressure_high=0 pressure_critical=0"
 )
 
+BUILD_IDENTITY = (
+    "SLIM_ARC_GIT_COMMIT=" + "b" * 40 + "\n"
+    "SLIM_ARC_BUILD_CONTEXT_SHA256=" + "c" * 64 + "\n"
+    "PATCHED_SOURCE_SHA256=" + "d" * 64 + "\n"
+)
+
+
+def write_build_manifest(path: Path, *, identity: str = BUILD_IDENTITY) -> Path:
+    path.write_text(
+        "LLAMA_COMMIT=360e134\nLLAMA_RESOLVED_COMMIT=" + "a" * 40 + "\n" + identity,
+        encoding="utf-8",
+    )
+    return path
+
 
 def write_fixture(cgroup_dir: Path, *, swap_max: str = "0") -> None:
     values = {
@@ -58,10 +72,7 @@ def test_manifest_has_resource_and_result_fields(tmp_path: Path) -> None:
     cgroup_dir.mkdir()
     write_fixture(cgroup_dir)
     build_manifest = tmp_path / "build-manifest.env"
-    build_manifest.write_text(
-        "LLAMA_COMMIT=360e134\nLLAMA_RESOLVED_COMMIT=" + "a" * 40 + "\n",
-        encoding="utf-8",
-    )
+    write_build_manifest(build_manifest)
     runtime_logs = [
         write_runtime_log(tmp_path / "rep-1.stderr.log"),
         write_runtime_log(tmp_path / "rep-2.stderr.log"),
@@ -87,6 +98,9 @@ def test_manifest_has_resource_and_result_fields(tmp_path: Path) -> None:
     assert manifest["cpu_quota"] == 400000
     assert manifest["cpu_period"] == 100000
     assert manifest["llama_commit"] == "360e134"
+    assert manifest["slim_arc_git_commit"] == "b" * 40
+    assert manifest["slim_arc_build_context_sha256"] == "c" * 64
+    assert manifest["patched_source_sha256"] == "d" * 64
     assert manifest["variant"] == "patched"
     assert manifest["outcome"] == "success"
     assert manifest["runtime_metrics"] == [
@@ -121,7 +135,7 @@ def test_patched_success_requires_one_runtime_line_per_repetition(tmp_path: Path
     cgroup_dir.mkdir()
     write_fixture(cgroup_dir)
     build_manifest = tmp_path / "build-manifest.env"
-    build_manifest.write_text("LLAMA_COMMIT=360e134\n", encoding="utf-8")
+    write_build_manifest(build_manifest)
     runtime_log = write_runtime_log(tmp_path / "rep-1.stderr.log")
 
     with pytest.raises(ValueError, match="runtime log count"):
@@ -179,7 +193,7 @@ def test_manifest_preserves_runtime_log_order_and_saturates_each_counter(tmp_pat
     cgroup_dir.mkdir()
     write_fixture(cgroup_dir)
     build_manifest = tmp_path / "build-manifest.env"
-    build_manifest.write_text("LLAMA_COMMIT=360e134\n", encoding="utf-8")
+    write_build_manifest(build_manifest)
     first = {
         name: run_manifest.UINT64_MAX - index
         for index, name in enumerate(run_manifest.RUNTIME_COUNTER_FIELDS)
@@ -218,7 +232,7 @@ def test_baseline_accepts_no_runtime_logs_with_zero_summary(tmp_path: Path) -> N
     cgroup_dir.mkdir()
     write_fixture(cgroup_dir)
     build_manifest = tmp_path / "build-manifest.env"
-    build_manifest.write_text("LLAMA_COMMIT=360e134\n", encoding="utf-8")
+    write_build_manifest(build_manifest)
 
     manifest = run_manifest.build_manifest(
         variant="baseline",
@@ -245,7 +259,7 @@ def test_baseline_rejects_runtime_metric_line(tmp_path: Path) -> None:
     cgroup_dir.mkdir()
     write_fixture(cgroup_dir)
     build_manifest = tmp_path / "build-manifest.env"
-    build_manifest.write_text("LLAMA_COMMIT=360e134\n", encoding="utf-8")
+    write_build_manifest(build_manifest)
     runtime_log = write_runtime_log(tmp_path / "rep-1.stderr.log")
 
     with pytest.raises(ValueError, match="baseline runtime log"):
@@ -269,7 +283,7 @@ def test_failed_patched_run_allows_absent_runtime_logs(tmp_path: Path) -> None:
     cgroup_dir.mkdir()
     write_fixture(cgroup_dir)
     build_manifest = tmp_path / "build-manifest.env"
-    build_manifest.write_text("LLAMA_COMMIT=360e134\n", encoding="utf-8")
+    write_build_manifest(build_manifest)
 
     manifest = run_manifest.build_manifest(
         variant="patched",
@@ -293,7 +307,7 @@ def test_manifest_records_pressure_admission_environment(tmp_path: Path) -> None
     cgroup_dir.mkdir()
     write_fixture(cgroup_dir)
     build_manifest = tmp_path / "build-manifest.env"
-    build_manifest.write_text("LLAMA_COMMIT=360e134\n", encoding="utf-8")
+    write_build_manifest(build_manifest)
     runtime_log = write_runtime_log(tmp_path / "rep-1.stderr.log")
 
     manifest = run_manifest.build_manifest(
@@ -358,11 +372,42 @@ def test_rejects_nonzero_swap_limit(tmp_path: Path) -> None:
     cgroup_dir.mkdir()
     write_fixture(cgroup_dir, swap_max="1024")
     build_manifest = tmp_path / "build-manifest.env"
-    build_manifest.write_text("LLAMA_COMMIT=360e134\n", encoding="utf-8")
+    write_build_manifest(build_manifest)
 
     with pytest.raises(ValueError, match="swap"):
         run_manifest.build_manifest(
             variant="patched",
+            outcome="success",
+            exit_code=0,
+            cgroup_dir=cgroup_dir,
+            build_manifest_path=build_manifest,
+            pp=4,
+            tg=1,
+            threads=2,
+            repetitions=1,
+            environment={},
+        )
+
+
+@pytest.mark.parametrize(
+    "identity",
+    [
+        "",
+        "SLIM_ARC_GIT_COMMIT=" + "b" * 39 + "\nSLIM_ARC_BUILD_CONTEXT_SHA256=" + "c" * 64 + "\n",
+        "SLIM_ARC_GIT_COMMIT=" + "B" * 40 + "\nSLIM_ARC_BUILD_CONTEXT_SHA256=" + "c" * 64 + "\n",
+        "SLIM_ARC_GIT_COMMIT=" + "b" * 40 + "\nSLIM_ARC_BUILD_CONTEXT_SHA256=" + "c" * 63 + "g\n",
+        "SLIM_ARC_GIT_COMMIT=" + "b" * 40 + "\nSLIM_ARC_BUILD_CONTEXT_SHA256=" + "c" * 64 + "\nPATCHED_SOURCE_SHA256=" + "d" * 63 + "g\n",
+    ],
+)
+def test_rejects_missing_or_malformed_build_identity(tmp_path: Path, identity: str) -> None:
+    cgroup_dir = tmp_path / "cgroup"
+    cgroup_dir.mkdir()
+    write_fixture(cgroup_dir)
+    build_manifest = write_build_manifest(tmp_path / "build-manifest.env", identity=identity)
+
+    with pytest.raises(ValueError, match="SLIM-ARC build identity"):
+        run_manifest.build_manifest(
+            variant="baseline",
             outcome="success",
             exit_code=0,
             cgroup_dir=cgroup_dir,
