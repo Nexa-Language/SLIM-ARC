@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "scope": "2026-08-12 isolated finals campaign; cache states are never pooled",
+  "input_sha256": {
+    "finals-results.json": "843b54ada66bfea0d52ec55efcbf8f91b592d588cbffb0204efc40400196c655",
+    "finals-decision.md": "974bf37afab1617a529b28272827eceb76afad001ef89defb93e94059fe348ca",
+    "build/build-evidence.json": "8ca0aea747fe4f7902b33fab568ff03d7a38df7edc5383b8556eae3805ade208",
+    "model-manifest.json": "0b1bd8d459021b9349433338ecb3c7d15c7e50d889cad189c865ae4e5ec41390",
+    "campaign-manifest.json": "650e6a9e63243f2306dddad8b2dedac5d1dc518a537e2a7b70bbfb3e3259d51c",
+    "campaign-state.json": "ffcd6f5ab9929e036a28672516db9b082af0f6edef70bef8fbb800e38089297d",
+    "matrix-state.json": "0c54e720295b495156a2fecd10ac120c1d2abd5cb3b1e639926b63de92ed928f",
+    "ablation-state.json": "d03d114b407f500135ad88e8580a3ec341b8355f22a0c85746c578b2c008b5ab"
+  },
+  "identity": {
+    "source_commit": "dbec00e8d25af93219dc0d70079ea08603f0e860",
+    "patched_source_sha256": "cef025d8d26fe9e357457ad787e7ca545442fc47f6c919d168202b272a94167c",
+    "build_context_sha256": "146d72290fd470f91a43b500371321706a411614d2bd46bf65e0b17076eb3a93",
+    "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+    "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+    "model": {"repo_id": "Qwen/Qwen3-Next-80B-A3B-Instruct-GGUF", "revision": "4c8630cf7af926a9c5095cb4bbbbc65d36e20f77", "filename": "Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf", "sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"}
+  },
+  "contract": {"memory_limit_bytes": 2147483648, "memory_swap_limit_bytes": 0, "cpus": 4, "pp": 64, "tg": 16, "rounds": 2, "cache_states": ["cold", "warm"], "n_prompt": 64, "n_gen": 16, "threads": 4, "offline": true, "no_warmup": true},
+  "terminal_outcomes": {"success": 20, "non_success": 0, "all_memory_peak_bytes": 2147483648},
+  "runs": [
+    {"id":"ablation-r1-baseline-cold-20260812t142422z-4f3c02","raw_dir":"runs/ablation-r1-baseline-cold-20260812t142422z-4f3c02","terminal":"success"},
+    {"id":"ablation-r1-baseline-warm-20260812t142533z-cc0e3a","raw_dir":"runs/ablation-r1-baseline-warm-20260812t142533z-cc0e3a","terminal":"success"},
+    {"id":"ablation-r1-patched-control-cold-20260812t142627z-2af570","raw_dir":"runs/ablation-r1-patched-control-cold-20260812t142627z-2af570","terminal":"success"},
+    {"id":"ablation-r1-patched-control-warm-20260812t142735z-be5369","raw_dir":"runs/ablation-r1-patched-control-warm-20260812t142735z-be5369","terminal":"success"},
+    {"id":"ablation-r1-patched-reclaim-cold-20260812t142831z-fe064c","raw_dir":"runs/ablation-r1-patched-reclaim-cold-20260812t142831z-fe064c","terminal":"success"},
+    {"id":"ablation-r1-patched-reclaim-warm-20260812t142934z-c74064","raw_dir":"runs/ablation-r1-patched-reclaim-warm-20260812t142934z-c74064","terminal":"success"},
+    {"id":"ablation-r1-patched-residency-cold-20260812t143034z-960fd8","raw_dir":"runs/ablation-r1-patched-residency-cold-20260812t143034z-960fd8","terminal":"success"},
+    {"id":"ablation-r1-patched-residency-warm-20260812t143141z-27a535","raw_dir":"runs/ablation-r1-patched-residency-warm-20260812t143141z-27a535","terminal":"success"},
+    {"id":"ablation-r1-patched-combined-cold-20260812t143243z-00a19a","raw_dir":"runs/ablation-r1-patched-combined-cold-20260812t143243z-00a19a","terminal":"success"},
+    {"id":"ablation-r1-patched-combined-warm-20260812t143351z-811320","raw_dir":"runs/ablation-r1-patched-combined-warm-20260812t143351z-811320","terminal":"success"},
+    {"id":"ablation-r2-baseline-cold-20260812t143449z-622899","raw_dir":"runs/ablation-r2-baseline-cold-20260812t143449z-622899","terminal":"success"},
+    {"id":"ablation-r2-baseline-warm-20260812t143602z-98eec9","raw_dir":"runs/ablation-r2-baseline-warm-20260812t143602z-98eec9","terminal":"success"},
+    {"id":"ablation-r2-patched-control-cold-20260812t143656z-4b1f50","raw_dir":"runs/ablation-r2-patched-control-cold-20260812t143656z-4b1f50","terminal":"success"},
+    {"id":"ablation-r2-patched-control-warm-20260812t143805z-8ff85f","raw_dir":"runs/ablation-r2-patched-control-warm-20260812t143805z-8ff85f","terminal":"success"},
+    {"id":"ablation-r2-patched-reclaim-cold-20260812t143911z-84c4c2","raw_dir":"runs/ablation-r2-patched-reclaim-cold-20260812t143911z-84c4c2","terminal":"success"},
+    {"id":"ablation-r2-patched-reclaim-warm-20260812t144018z-5b127e","raw_dir":"runs/ablation-r2-patched-reclaim-warm-20260812t144018z-5b127e","terminal":"success"},
+    {"id":"ablation-r2-patched-residency-cold-20260812t144118z-ac9b89","raw_dir":"runs/ablation-r2-patched-residency-cold-20260812t144118z-ac9b89","terminal":"success"},
+    {"id":"ablation-r2-patched-residency-warm-20260812t144227z-de70de","raw_dir":"runs/ablation-r2-patched-residency-warm-20260812t144227z-de70de","terminal":"success"},
+    {"id":"ablation-r2-patched-combined-cold-20260812t144333z-50f384","raw_dir":"runs/ablation-r2-patched-combined-cold-20260812t144333z-50f384","terminal":"success"},
+    {"id":"ablation-r2-patched-combined-warm-20260812t144508z-0fae77","raw_dir":"runs/ablation-r2-patched-combined-warm-20260812t144508z-0fae77","terminal":"success"}
+  ],
+  "activation_counters_across_enabled_runs": {
+    "reclaim": {"runs": 8, "reclaim_calls": 0, "reclaim_candidates": 0, "reclaimed_bytes": 0, "interpretation": "not activated; no performance difference is attributable to reclaim"},
+    "residency": {"runs": 8, "critical_samples": 6144, "residency_samples": 6144, "admitted_bytes": 0, "fallbacks": 0, "skipped_bytes": 111439773696, "per_run": {"critical_samples": 768, "skipped_bytes": 13929971712, "admitted_bytes": 0, "fallbacks": 0}, "interpretation": "2GiB pressure is fail-closed"}
+  },
+  "aggregated_metrics": {
+    "baseline:cold":{"wall_seconds":69.53,"decode_tps":0.6002415,"memory_peak_bytes":2147483648,"major_faults":250177.5,"read_blocks":228761104},
+    "patched-control:cold":{"wall_seconds":66.3,"decode_tps":0.688606,"memory_peak_bytes":2147483648,"major_faults":406601.5,"read_blocks":198797732},
+    "patched-reclaim:cold":{"wall_seconds":63.39,"decode_tps":0.7320295,"memory_peak_bytes":2147483648,"major_faults":403548,"read_blocks":198054964},
+    "patched-residency:cold":{"wall_seconds":66.16,"decode_tps":0.692031,"memory_peak_bytes":2147483648,"major_faults":403203,"read_blocks":198041756},
+    "patched-combined:cold":{"wall_seconds":79.525,"decode_tps":0.66754,"memory_peak_bytes":2147483648,"major_faults":399309,"read_blocks":198181084},
+    "baseline:warm":{"wall_seconds":53.535,"decode_tps":1.2317825,"memory_peak_bytes":2147483648,"major_faults":143727.5,"read_blocks":157350328},
+    "patched-control:warm":{"wall_seconds":60.3,"decode_tps":0.820575,"memory_peak_bytes":2147483648,"major_faults":331466.5,"read_blocks":175804720},
+    "patched-reclaim:warm":{"wall_seconds":58.08,"decode_tps":0.844204,"memory_peak_bytes":2147483648,"major_faults":347946,"read_blocks":179505948},
+    "patched-residency:warm":{"wall_seconds":63.19,"decode_tps":0.712126,"memory_peak_bytes":2147483648,"major_faults":350215.5,"read_blocks":180686768},
+    "patched-combined:warm":{"wall_seconds":63.265,"decode_tps":0.759589,"memory_peak_bytes":2147483648,"major_faults":344376.5,"read_blocks":180726952}
+  },
+  "decisions": {"overall":{"reclaim":"kept_opt_in","residency":"kept_opt_in","combined":"rejected"},"cold":{"reclaim":"kept_opt_in","residency":"kept_opt_in","combined":"rejected"},"warm":{"reclaim":"kept_opt_in","residency":"kept_opt_in","combined":"kept_opt_in"}},
+  "negative_results": {"combined_cold_wall_regression_vs_patched_control_pct":19.947209653092,"overall_combined":"rejected","historical_pre_linkage_rows":"invalid; excluded because device linkage is unavailable","prohibited_claims":["64.5x","850%"]}
+}
