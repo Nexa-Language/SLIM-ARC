@@ -418,3 +418,23 @@ def test_rejects_missing_or_malformed_build_identity(tmp_path: Path, identity: s
             repetitions=1,
             environment={},
         )
+
+
+@pytest.mark.parametrize(
+    "extra",
+    [
+        "SLIM_ARC_GIT_COMMIT=" + "d" * 40 + "\n",
+        "SLIM_ARC_BUILD_CONTEXT_SHA256=" + "d" * 64 + "\n",
+        "EMPTY=\n",
+    ],
+)
+def test_rejects_duplicate_or_empty_build_manifest_fields(
+    tmp_path: Path, extra: str
+) -> None:
+    build_manifest = write_build_manifest(tmp_path / "build-manifest.env")
+    build_manifest.write_text(
+        build_manifest.read_text(encoding="utf-8") + extra, encoding="utf-8"
+    )
+
+    with pytest.raises(ValueError, match="invalid field"):
+        run_manifest._read_build_manifest(build_manifest)

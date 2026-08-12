@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 022
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 source "${script_dir}/common.sh"
@@ -15,6 +16,7 @@ docker_context="colima-${profile}"
 repo_root="$(slim_arc_repo_root)"
 image_tag="slim-arc-llama:360e134"
 build_context="$(mktemp -d /tmp/slim-arc-llama-build.XXXXXX)"
+build_archive="${build_context}.tar"
 context_source_paths=(
     "scripts/macos/Dockerfile.llama"
     "scripts/apply-slim-arc.py"
@@ -24,13 +26,22 @@ cleanup() {
     if [[ -n "${build_context:-}" && "${build_context}" == /tmp/slim-arc-llama-build.* && -d "${build_context}" ]]; then
         rm -rf "${build_context}"
     fi
+    if [[ -n "${build_archive:-}" && "${build_archive}" == /tmp/slim-arc-llama-build.*.tar && -f "${build_archive}" ]]; then
+        rm -f "${build_archive}"
+    fi
 }
 trap cleanup EXIT
+
+slim_arc_git_commit="$(git -C "${repo_root}" rev-parse --verify HEAD^{commit})"
+if [[ ! "${slim_arc_git_commit}" =~ ^[0-9a-f]{40}$ ]]; then
+    printf 'Unable to resolve a full HEAD commit\n' >&2
+    exit 1
+fi
 
 while IFS= read -r -d '' source_path; do
     context_source_paths+=("${source_path}")
 done < <(
-    git -C "${repo_root}" ls-files -z -- \
+    git -C "${repo_root}" ls-tree -r --name-only -z "${slim_arc_git_commit}" -- \
         'patches/llama-upstream/**' \
         'scripts/macos/container/**'
 )
@@ -40,26 +51,22 @@ if ! git -C "${repo_root}" diff --quiet HEAD -- "${context_source_paths[@]}"; th
     exit 1
 fi
 
-slim_arc_git_commit="$(git -C "${repo_root}" rev-parse --verify HEAD^{commit})"
-if [[ ! "${slim_arc_git_commit}" =~ ^[0-9a-f]{40}$ ]]; then
-    printf 'Unable to resolve a full HEAD commit\n' >&2
+git -C "${repo_root}" archive \
+    --format=tar \
+    --output="${build_archive}" \
+    "${slim_arc_git_commit}" \
+    -- "${context_source_paths[@]}"
+tar -xf "${build_archive}" -C "${build_context}"
+if find "${build_context}" -type l -print -quit | grep -q .; then
+    printf 'Build context contains a forbidden symlink\n' >&2
     exit 1
 fi
-
-for source_path in "${context_source_paths[@]}"; do
-    if [[ "${source_path}" == "scripts/macos/Dockerfile.llama" ]]; then
-        destination_path="${build_context}/Dockerfile"
-    else
-        destination_path="${build_context}/${source_path}"
-    fi
-    install -d "$(dirname "${destination_path}")"
-    cp "${repo_root}/${source_path}" "${destination_path}"
-done
 
 build_context_sha256="$(python3 - "${build_context}" <<'PY'
 from __future__ import annotations
 
 import hashlib
+import stat
 import sys
 from pathlib import Path
 
@@ -68,7 +75,10 @@ digest = hashlib.sha256()
 for path in sorted(candidate for candidate in root.rglob("*") if candidate.is_file()):
     relative_path = path.relative_to(root).as_posix().encode("utf-8")
     content = path.read_bytes()
+    mode = b"755" if path.stat().st_mode & stat.S_IXUSR else b"644"
     digest.update(relative_path)
+    digest.update(b"\0")
+    digest.update(mode)
     digest.update(b"\0")
     digest.update(str(len(content)).encode("ascii"))
     digest.update(b"\0")
@@ -87,6 +97,7 @@ if find "${build_context}" -type f \( -name '*.pdf' -o -name '*.gguf' -o -name '
 fi
 
 DOCKER_CONTEXT="${docker_context}" docker build \
+    --file "${build_context}/scripts/macos/Dockerfile.llama" \
     --target runtime \
     --tag "${image_tag}" \
     --build-arg "SLIM_ARC_GIT_COMMIT=${slim_arc_git_commit}" \
@@ -94,6 +105,7 @@ DOCKER_CONTEXT="${docker_context}" docker build \
     "${build_context}"
 
 DOCKER_CONTEXT="${docker_context}" docker build \
+    --file "${build_context}/scripts/macos/Dockerfile.llama" \
     --target test \
     --tag "slim-arc-llama-test:360e134" \
     --build-arg "SLIM_ARC_GIT_COMMIT=${slim_arc_git_commit}" \
