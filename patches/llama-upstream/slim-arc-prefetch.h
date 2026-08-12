@@ -12,6 +12,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <mutex>
 #include <thread>
@@ -26,12 +27,6 @@ enum class compute_phase {
     PREFILL,
     DECODE,
 };
-
-// SLIM-ARC FIX 2026-08-07: 动态 MADV 阶段切换前置声明。
-// 供 prefetch_scheduler::set_phase() 内联调用（定义在 slim-arc-prefetch.cpp）。
-// PREFILL -> MADV_SEQUENTIAL（顺序预读）；DECODE -> MADV_RANDOM（按需分页）。
-// SLIM_ARC_DYNAMIC_MADV=0 禁用。
-void apply_dynamic_madv(compute_phase phase);
 
 struct tensor_prefetch_info {
     void *   addr;      // mmap address of tensor data
@@ -64,11 +59,15 @@ std::vector<size_t> select_prefetch_items(
 
 class prefetch_scheduler {
   public:
-    explicit prefetch_scheduler(int n_threads = 2, int window = 3);
+    explicit prefetch_scheduler(int n_threads = 2, int window = 3, std::function<void()> request_claim_hook = {});
     ~prefetch_scheduler();
+    prefetch_scheduler(const prefetch_scheduler &) = delete;
+    prefetch_scheduler & operator=(const prefetch_scheduler &) = delete;
+    void shutdown() noexcept;
 
     // Register a tensor for potential prefetch. Called during model load.
     void register_tensor(const char * name, void * addr, size_t size, int layer);
+    bool register_mapping(void * addr, size_t size);
 
     // Notify that we are about to compute layer `current_layer`.
     // This triggers async madvise(WILLNEED) for layers
@@ -85,10 +84,7 @@ class prefetch_scheduler {
     // ---- SLIM-ARC FIX 2026-08-05: 补齐 Pi5 端修复所需接口 ----
     // 设置计算阶段（prefill / decode）
     // SLIM-ARC FIX 2026-08-07: 触发动态 MADV 切换（PREFILL->SEQUENTIAL / DECODE->RANDOM）
-    void set_phase(compute_phase phase) {
-        phase_.store(phase);
-        apply_dynamic_madv(phase);
-    }
+    void set_phase(compute_phase phase);
     // 当前预取窗口大小（供 graph_compute 计算待预取层范围）
     int  effective_window() const { return window_; }
     // 内存预算（供 unified_io_scheduler 分配权重预取额度）
@@ -116,6 +112,10 @@ class prefetch_scheduler {
     size_t expert_hit_bytes()     const { return expert_hit_bytes_.load(); }
     size_t expert_waste_bytes()   const { return expert_waste_bytes_.load(); }
     size_t pending_expert_records(int layer) const;
+    size_t pending_request_count() const;
+    uint64_t dropped_request_count() const { return dropped_requests_.load(); }
+    bool confidence_gating_enabled() const { return conf_gating_; }
+    int popularity_k() const { return pop_k_; }
     // 统一 I/O 预算下发与每步重置（改进 3，供 unified_io_scheduler::tick 调用）
     void set_expert_budget(size_t bytes) {
         expert_budget_.store(bytes);
@@ -133,8 +133,6 @@ class prefetch_scheduler {
     std::atomic<size_t> memory_budget_{0};
     std::atomic<bool>       enabled_{true};
     std::atomic<bool>       stop_{false};
-    std::atomic<int>        current_layer_{-1};
-    std::atomic<uint64_t>   signature_{0};
     std::atomic<size_t>     total_bytes_{0};
     std::atomic<int>        total_calls_{0};
     std::atomic<uint64_t>   budget_requested_bytes_{0};
@@ -150,13 +148,22 @@ class prefetch_scheduler {
     std::atomic<int>        router_samples_{0};         // 统计采样数
 
     std::vector<std::thread>          workers_;
-    std::mutex                        mtx_;
+    std::function<void()>             request_claim_hook_;
+    std::mutex                        shutdown_mtx_;
+    mutable std::mutex                mtx_;
     std::condition_variable           cv_;
-    int                               target_layer_{-1};
-    uint64_t                          target_signature_{0};
+    struct prefetch_request {
+        uint64_t generation;
+        int layer;
+    };
+    std::deque<prefetch_request>      pending_requests_;
+    uint64_t                          next_request_generation_{0};
+    static constexpr size_t           max_pending_requests{64};
+    std::atomic<uint64_t>             dropped_requests_{0};
 
     // tensor registry indexed by layer
     std::vector<std::vector<tensor_prefetch_info>> tensors_by_layer_;
+    std::vector<std::pair<void *, size_t>>         mmap_regions_;
     // MoE expert registry indexed by layer
     std::vector<std::vector<expert_tensor_info>>   experts_by_layer_;
     // Guards the expert registry and router predictor/accounting state.
@@ -194,17 +201,7 @@ class prefetch_scheduler {
     std::vector<std::vector<int>>                  expert_pop_counts_;
 };
 
-// Global singleton (set by llama_context during init)
-prefetch_scheduler * get_global_prefetch_scheduler();
-void set_global_prefetch_scheduler(prefetch_scheduler * s);
-
 // Helper: extract layer index from tensor name (blk.%d.*)
 int tensor_layer_from_name(const char * name);
-
-// SLIM-ARC FIX 2026-08-05: mmap 区域注册表（供动态 MADV 切换）。
-// 在 init_mappings 中为 >6GB 模型设置 MADV 建议时调用。
-// SLIM-ARC FIX 2026-08-07: 初始建议由 register_mmap_region 改为 MADV_SEQUENTIAL，
-// 配合 apply_dynamic_madv() 在 prefill/decode 阶段动态切换。
-void register_mmap_region(void * addr, size_t size);
 
 } // namespace slim_arc

@@ -22,6 +22,23 @@ def write_fixture(root: Path) -> Path:
         "}\n",
         encoding="utf-8",
     )
+    (src / "llama-model.cpp").write_text(
+        '#include "llama-model.h"\n#include "llama-model-loader.h"\n'
+        "struct llama_model::impl {\n"
+        "    llama_mmaps mappings;\n"
+        "    std::vector<float> tensor_split_owned;\n"
+        "};\n"
+        "bool llama_model_base::load_tensors(llama_model_loader & ml) {\n"
+        "    const bool use_mmap_buffer = true;\n"
+        "    if (use_mmap_buffer) {\n"
+        "        for (auto & mapping : ml.mappings) {\n"
+        "            pimpl->mappings.emplace_back(std::move(mapping));\n"
+        "        }\n"
+        "    }\n"
+        "    return true;\n"
+        "}\n",
+        encoding="utf-8",
+    )
     (src / "llama-context.cpp").write_text(
         '#include "llama-ext.h"\n#include <limits>\n'
         "int graph_compute() {\n"

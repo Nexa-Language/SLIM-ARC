@@ -6,20 +6,18 @@
 #include "slim-arc-prefetch.h"
 
 #include <algorithm>
+#include <charconv>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <limits>
+#include <string_view>
 #include <sys/mman.h>
+#include <system_error>
 
 namespace slim_arc {
 
 namespace {
-prefetch_scheduler * g_scheduler = nullptr;
-
-// SLIM-ARC FIX 2026-08-05: mmap 区域注册表（供动态 MADV 切换；当前仅记录）。
-std::mutex g_mmap_mtx;
-std::vector<std::pair<void *, size_t>> g_mmap_regions;
-
 template <typename T>
 T saturating_add(T left, T right) noexcept {
     const T maximum = std::numeric_limits<T>::max();
@@ -37,6 +35,19 @@ void append_unique_nonnegative(std::vector<int> & ids, int id) {
     if (id >= 0 && std::find(ids.begin(), ids.end(), id) == ids.end()) {
         ids.push_back(id);
     }
+}
+
+int parse_popularity_k(const char * raw) noexcept {
+    if (raw == nullptr) return 0;
+    const std::string_view value{raw};
+    if (value.empty()) return 0;
+    int parsed{0};
+    const auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
+    if (result.ec != std::errc{} || result.ptr != value.data() + value.size() || parsed < 0 || parsed > 64) {
+        std::fprintf(stderr, "SLIM-ARC: invalid SLIM_ARC_EXPERT_POP; expected an integer in [0,64]\n");
+        return 0;
+    }
+    return parsed;
 }
 }
 
@@ -69,61 +80,31 @@ std::vector<size_t> select_prefetch_items(
     return selected;
 }
 
-prefetch_scheduler * get_global_prefetch_scheduler() { return g_scheduler; }
-void set_global_prefetch_scheduler(prefetch_scheduler * s) { g_scheduler = s; }
-
-// SLIM-ARC FIX 2026-08-05: 记录 mmap 区域，供动态 MADV 切换使用。
-// SLIM-ARC FIX 2026-08-07: 启用动态 MADV 阶段切换。
-//   加载时初始设为 MADV_SEQUENTIAL（保住 prefill 顺序预读，消除端侧负优化），
-//   后续由 set_phase() 在 decode 阶段切换到 MADV_RANDOM（按需加载 MoE 专家页）。
-//   通过环境变量 SLIM_ARC_DYNAMIC_MADV 控制（默认启用）；设 0 则回退到旧的
-//   静态全量 MADV_RANDOM 行为。
-void register_mmap_region(void * addr, size_t size) {
-    std::lock_guard<std::mutex> lk(g_mmap_mtx);
-    if (addr && size > 0) {
-        g_mmap_regions.emplace_back(addr, size);
-        const char * dyn = getenv("SLIM_ARC_DYNAMIC_MADV");
-        bool dynamic = dyn == nullptr || std::strcmp(dyn, "0") != 0;
-        // 动态模式：初始用 SEQUENTIAL（prefill 顺序访问受益）
-        if (dynamic) {
-            (void) posix_madvise(addr, size, POSIX_MADV_SEQUENTIAL);
-        }
-    }
-}
-
-// SLIM-ARC FIX 2026-08-07: 对所有已注册 mmap 区域设置指定 MADV 建议。
-// 供 set_phase() 在 prefill/decode 阶段切换时调用。
-static void apply_madvice_to_regions(int advice) {
-    std::lock_guard<std::mutex> lk(g_mmap_mtx);
-    for (const auto & r : g_mmap_regions) {
-        if (r.first && r.second > 0) {
-            (void) posix_madvise(r.first, r.second, advice);
-        }
-    }
-}
-
-// SLIM-ARC FIX 2026-08-07: 动态 MADV 阶段切换。
-//   PREFILL -> MADV_SEQUENTIAL（顺序预读，加速 prefill）
-//   DECODE  -> MADV_RANDOM（按需分页，MoE 专家随机访问）
-//   由 graph_compute 的 set_phase() 调用。SLIM_ARC_DYNAMIC_MADV=0 时禁用。
-void apply_dynamic_madv(compute_phase phase) {
+void prefetch_scheduler::set_phase(compute_phase phase) {
+    if (stop_.load()) return;
+    phase_.store(phase);
     const char * dyn = getenv("SLIM_ARC_DYNAMIC_MADV");
     if (dyn != nullptr && std::strcmp(dyn, "0") == 0) return;
-    if (phase == compute_phase::PREFILL) {
-        apply_madvice_to_regions(POSIX_MADV_SEQUENTIAL);
-    } else {
+    int advice = POSIX_MADV_SEQUENTIAL;
+    if (phase == compute_phase::DECODE) {
         // SLIM-ARC FIX 2026-08-07: decode 阶段建议可配置（消融实验结论：RK3588
         // 45GB/8GB 极端比例下 RANDOM 反而拖慢 decode 5.4x，故默认改为 SEQUENTIAL，
         // 保留内核顺序预读以利用 SSD 顺序带宽；SLIM_ARC_DECODE_MADV=RANDOM/NORMAL
         // 可覆盖。内存相对充足（模型可部分常驻）的场景才适合 RANDOM）。
         const char * dec = getenv("SLIM_ARC_DECODE_MADV");
-        int advice = POSIX_MADV_SEQUENTIAL;
         if (dec != nullptr && std::strcmp(dec, "RANDOM") == 0) {
             advice = POSIX_MADV_RANDOM;
         } else if (dec != nullptr && std::strcmp(dec, "NORMAL") == 0) {
             advice = POSIX_MADV_NORMAL;
         }
-        apply_madvice_to_regions(advice);
+    }
+    std::vector<std::pair<void *, size_t>> regions;
+    {
+        std::lock_guard<std::mutex> lock(mtx_);
+        regions = mmap_regions_;
+    }
+    for (const auto & region : regions) {
+        (void) posix_madvise(region.first, region.second, advice);
     }
 }
 
@@ -142,25 +123,32 @@ int tensor_layer_from_name(const char * name) {
     return layer;
 }
 
-prefetch_scheduler::prefetch_scheduler(int n_threads, int window)
-    : n_threads_(std::max(1, n_threads)), window_(std::max(1, window)) {
+prefetch_scheduler::prefetch_scheduler(int n_threads, int window, std::function<void()> request_claim_hook)
+    : n_threads_(std::max(1, n_threads))
+    , window_(std::max(1, window))
+    , request_claim_hook_(std::move(request_claim_hook)) {
+    const char * confidence = std::getenv("SLIM_ARC_EXPERT_CONF");
+    conf_gating_ = confidence != nullptr && std::strcmp(confidence, "1") == 0;
+    pop_k_ = parse_popularity_k(std::getenv("SLIM_ARC_EXPERT_POP"));
     workers_.reserve(n_threads_);
     for (int i = 0; i < n_threads_; ++i) {
         workers_.emplace_back([this] { worker_loop(); });
     }
-    // SLIM-ARC FIX 2026-08-09: 置信度门控开关（改进 2，文献 CommitMoE/DALI 思路）
-    conf_gating_ = getenv("SLIM_ARC_EXPERT_CONF") != nullptr;
-    // SLIM-ARC FIX 2026-08-09: 热门专家组合（改进 4，文献 ReMoE/DALI locality）
-    const char * pop = getenv("SLIM_ARC_EXPERT_POP");
-    if (pop != nullptr) pop_k_ = atoi(pop);
 }
 
 prefetch_scheduler::~prefetch_scheduler() {
-    // SLIM-ARC FIX 2026-08-09: 退出时输出专家预取指标（改进 1）
+    shutdown();
     dump_metrics();
+}
+
+void prefetch_scheduler::shutdown() noexcept {
+    std::lock_guard<std::mutex> shutdown_lock(shutdown_mtx_);
     {
         std::lock_guard<std::mutex> lk(mtx_);
-        stop_ = true;
+        if (stop_.load()) return;
+        enabled_.store(false);
+        stop_.store(true);
+        pending_requests_.clear();
     }
     cv_.notify_all();
     for (auto & t : workers_) {
@@ -170,20 +158,49 @@ prefetch_scheduler::~prefetch_scheduler() {
 
 void prefetch_scheduler::register_tensor(const char *, void * addr, size_t size, int layer) {
     if (layer < 0 || addr == nullptr || size == 0) return;
+    std::lock_guard<std::mutex> lock(mtx_);
+    if (stop_.load()) return;
     if ((size_t)layer >= tensors_by_layer_.size()) {
         tensors_by_layer_.resize(layer + 1);
     }
     tensors_by_layer_[layer].push_back({addr, size, layer, 0});
 }
 
+bool prefetch_scheduler::register_mapping(void * addr, size_t size) {
+    if (addr == nullptr || size == 0) return false;
+    {
+        std::lock_guard<std::mutex> lock(mtx_);
+        if (stop_.load()) return false;
+        mmap_regions_.emplace_back(addr, size);
+    }
+    const char * dyn = std::getenv("SLIM_ARC_DYNAMIC_MADV");
+    if (dyn == nullptr || std::strcmp(dyn, "0") != 0) {
+        (void) posix_madvise(addr, size, POSIX_MADV_SEQUENTIAL);
+    }
+    return true;
+}
+
 void prefetch_scheduler::notify_layer_compute(int current_layer) {
     if (!enabled_.load()) return;
     {
         std::lock_guard<std::mutex> lk(mtx_);
-        target_layer_     = current_layer;
-        target_signature_ = ++signature_;
+        if (stop_.load()) return;
+        if (pending_requests_.size() == max_pending_requests) {
+            pending_requests_.pop_front();
+            atomic_saturating_add(dropped_requests_, uint64_t{1});
+        }
+        if (next_request_generation_ == std::numeric_limits<uint64_t>::max()) {
+            atomic_saturating_add(dropped_requests_, uint64_t{1});
+            return;
+        }
+        pending_requests_.push_back({++next_request_generation_, current_layer});
     }
     cv_.notify_one();
+}
+
+size_t prefetch_scheduler::pending_request_count() const {
+    std::lock_guard<std::mutex> lock(mtx_);
+    return pending_requests_.size();
 }
 
 prefetch_budget_stats prefetch_scheduler::budget_stats() const {
@@ -198,31 +215,27 @@ prefetch_budget_stats prefetch_scheduler::budget_stats() const {
 
 void prefetch_scheduler::worker_loop() {
     while (true) {
-        int      target_layer;
-        uint64_t sig;
+        int target_layer;
+        std::vector<tensor_prefetch_info> items;
         {
             std::unique_lock<std::mutex> lk(mtx_);
-            cv_.wait(lk, [this] { return stop_ || target_layer_ != current_layer_.load(); });
+            cv_.wait(lk, [this] { return stop_.load() || !pending_requests_.empty(); });
             if (stop_) return;
-            target_layer = target_layer_;
-            sig          = target_signature_;
-        }
-
-        if (sig != signature_.load()) continue; // stale
-
-        current_layer_.store(target_layer);
-
-        std::vector<const tensor_prefetch_info *> items;
-        std::vector<size_t> item_sizes;
-        for (int w = 1; w <= window_; ++w) {
-            int layer = target_layer + w;
-            if (layer < 0 || (size_t)layer >= tensors_by_layer_.size()) continue;
-            for (const auto & t : tensors_by_layer_[layer]) {
-                if (t.addr == nullptr || t.size == 0) continue;
-                items.push_back(&t);
-                item_sizes.push_back(t.size);
+            const prefetch_request request = pending_requests_.front();
+            pending_requests_.pop_front();
+            target_layer = request.layer;
+            for (int w = 1; w <= window_; ++w) {
+                const int layer = target_layer + w;
+                if (layer < 0 || static_cast<size_t>(layer) >= tensors_by_layer_.size()) continue;
+                for (const auto & tensor : tensors_by_layer_[layer]) {
+                    if (tensor.addr != nullptr && tensor.size > 0) items.push_back(tensor);
+                }
             }
         }
+        if (request_claim_hook_) request_claim_hook_();
+        std::vector<size_t> item_sizes;
+        item_sizes.reserve(items.size());
+        for (const auto & item : items) item_sizes.push_back(item.size);
 
         uint64_t requested{0};
         uint64_t skipped{0};
@@ -231,7 +244,7 @@ void prefetch_scheduler::worker_loop() {
         uint64_t issued{0};
         uint64_t failures{0};
         for (const size_t index : selected) {
-            const tensor_prefetch_info & tensor = *items[index];
+            const tensor_prefetch_info & tensor = items[index];
             if (posix_madvise(tensor.addr, tensor.size, POSIX_MADV_WILLNEED) == 0) {
                 issued = saturating_add(issued, static_cast<uint64_t>(tensor.size));
             } else {

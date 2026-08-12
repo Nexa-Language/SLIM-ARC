@@ -4,6 +4,9 @@
 #include <chrono>
 #include <cstdint>
 #include <limits>
+#include <cstdlib>
+#include <future>
+#include <string>
 #include <sys/mman.h>
 #include <thread>
 #include <unistd.h>
@@ -52,6 +55,133 @@ void wait_for_rounds(const slim_arc::prefetch_scheduler & scheduler, uint64_t ex
         std::this_thread::sleep_for(std::chrono::milliseconds{5});
     }
     assert(false && "prefetch worker did not complete");
+}
+
+void test_two_workers_claim_identical_layer_requests_exactly_once_each() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(nullptr, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    {
+        slim_arc::prefetch_scheduler scheduler{2, 1};
+        scheduler.register_tensor("blk.1.weight", mapping, page_size, 1);
+        scheduler.set_memory_budget(page_size);
+        scheduler.notify_layer_compute(0);
+        scheduler.notify_layer_compute(0);
+        wait_for_rounds(scheduler, 2);
+        scheduler.shutdown();
+        assert(scheduler.total_prefetch_calls() == 2);
+        assert(scheduler.budget_stats().issued_bytes == 2 * page_size);
+    }
+    assert(munmap(mapping, page_size) == 0);
+}
+
+void test_two_workers_claim_distinguishable_layers_without_duplication() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(nullptr, 3 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    {
+        slim_arc::prefetch_scheduler scheduler{2, 1};
+        scheduler.register_tensor("blk.1.first", mapping, page_size, 1);
+        scheduler.register_tensor("blk.2.second", static_cast<uint8_t *>(mapping) + page_size, 2 * page_size, 2);
+        scheduler.set_memory_budget(3 * page_size);
+        scheduler.notify_layer_compute(0);
+        scheduler.notify_layer_compute(1);
+        wait_for_rounds(scheduler, 2);
+        scheduler.shutdown();
+        assert(scheduler.total_prefetch_calls() == 2);
+        assert(scheduler.budget_stats().requested_bytes == 3 * page_size);
+        assert(scheduler.budget_stats().issued_bytes == 3 * page_size);
+    }
+    assert(munmap(mapping, 3 * page_size) == 0);
+}
+
+void test_request_queue_is_bounded_and_drops_oldest_unclaimed() {
+    std::promise<void> claimed;
+    std::promise<void> release;
+    std::atomic<bool> first{true};
+    std::shared_future<void> release_gate = release.get_future().share();
+    slim_arc::prefetch_scheduler scheduler{1, 1, [&] {
+        if (first.exchange(false)) {
+            claimed.set_value();
+            release_gate.wait();
+        }
+    }};
+    scheduler.set_memory_budget(0);
+    for (int layer = 1; layer <= 66; ++layer) {
+        scheduler.register_tensor("weight", reinterpret_cast<void *>(1), static_cast<size_t>(layer), layer);
+    }
+    scheduler.notify_layer_compute(0);
+    claimed.get_future().wait();
+    for (int layer = 1; layer <= 65; ++layer) {
+        scheduler.notify_layer_compute(layer);
+    }
+    assert(scheduler.pending_request_count() == 64);
+    assert(scheduler.dropped_request_count() == 1);
+    release.set_value();
+    wait_for_rounds(scheduler, 65);
+    scheduler.shutdown();
+    // Claimed target 0 issues size 1. Of queued targets 1..65, target 1
+    // (size 2) is the oldest and must be the sole dropped request.
+    assert(scheduler.budget_stats().requested_bytes == 1 + (3 + 66) * 64 / 2);
+}
+
+void test_concurrent_shutdown_callers_return_only_after_join() {
+    slim_arc::prefetch_scheduler scheduler{2, 1};
+    std::promise<void> start;
+    std::shared_future<void> gate = start.get_future().share();
+    auto shutdown = [&] {
+        gate.wait();
+        scheduler.shutdown();
+        assert(scheduler.pending_request_count() == 0);
+    };
+    std::thread first{shutdown};
+    std::thread second{shutdown};
+    start.set_value();
+    first.join();
+    second.join();
+}
+
+class scoped_env {
+  public:
+    scoped_env(const char * name, const char * value) : name_(name) {
+        const char * old = std::getenv(name);
+        if (old != nullptr) {
+            had_previous_ = true;
+            previous_ = old;
+        }
+        if (value == nullptr) unsetenv(name); else setenv(name, value, 1);
+    }
+    ~scoped_env() {
+        if (!had_previous_) unsetenv(name_.c_str()); else setenv(name_.c_str(), previous_.c_str(), 1);
+    }
+  private:
+    std::string name_;
+    std::string previous_;
+    bool had_previous_{false};
+};
+
+void test_confidence_flag_requires_exact_one() {
+    for (const char * value : {"0", "", "false", "invalid"}) {
+        scoped_env env{"SLIM_ARC_EXPERT_CONF", value};
+        slim_arc::prefetch_scheduler scheduler{1, 1};
+        assert(!scheduler.confidence_gating_enabled());
+    }
+    scoped_env env{"SLIM_ARC_EXPERT_CONF", "1"};
+    slim_arc::prefetch_scheduler scheduler{1, 1};
+    assert(scheduler.confidence_gating_enabled());
+}
+
+void test_popularity_accepts_only_complete_range_zero_to_sixty_four() {
+    for (const auto & item : std::vector<std::pair<const char *, int>>{{"0", 0}, {"64", 64}, {"17", 17}}) {
+        scoped_env env{"SLIM_ARC_EXPERT_POP", item.first};
+        slim_arc::prefetch_scheduler scheduler{1, 1};
+        assert(scheduler.popularity_k() == item.second);
+    }
+    for (const char * value : {"-1", "65", "", "7tail", "18446744073709551616"}) {
+        scoped_env env{"SLIM_ARC_EXPERT_POP", value};
+        slim_arc::prefetch_scheduler scheduler{1, 1};
+        assert(scheduler.popularity_k() == 0);
+    }
 }
 
 void test_scheduler_enforces_budget_and_counts_success() {
@@ -290,6 +420,12 @@ int main() {
     test_selection_skips_items_that_do_not_fit();
     test_zero_and_exact_budgets();
     test_totals_saturate_near_uint64_max();
+    test_two_workers_claim_identical_layer_requests_exactly_once_each();
+    test_two_workers_claim_distinguishable_layers_without_duplication();
+    test_request_queue_is_bounded_and_drops_oldest_unclaimed();
+    test_concurrent_shutdown_callers_return_only_after_join();
+    test_confidence_flag_requires_exact_one();
+    test_popularity_accepts_only_complete_range_zero_to_sixty_four();
     test_scheduler_enforces_budget_and_counts_success();
     test_scheduler_counts_madvise_failure_without_issuing_bytes();
     test_zero_expert_budget_disables_expert_prefetch();
