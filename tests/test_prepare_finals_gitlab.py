@@ -124,6 +124,61 @@ def test_secret_content_is_rejected(tmp_path: Path, content: str) -> None:
         prepare.build_source_manifest(source, 1024)
 
 
+def test_publisher_environment_lookup_is_not_a_secret_assignment(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    publisher = source / "scripts" / "release" / "publish-finals-gitlab.py"
+    publisher.parent.mkdir(parents=True, exist_ok=True)
+    publisher.write_bytes(
+        (
+            Path(__file__).parents[1]
+            / "scripts"
+            / "release"
+            / "publish-finals-gitlab.py"
+        ).read_bytes()
+    )
+
+    manifest = prepare.build_source_manifest(source, 1024 * 1024)
+
+    assert [item["path"] for item in manifest["files"]] == [
+        "scripts/release/publish-finals-gitlab.py"
+    ]
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "token = get_" + "secret(\"fake-" + "token-value-12345\")\n",
+        "token = (\n  \"fake-" + "token-value-12345\"\n)\n",
+        "# token = \"fake-" + "token-value-12345\"\n",
+    ],
+)
+def test_python_secret_literal_forms_are_rejected(
+    tmp_path: Path, content: str
+) -> None:
+    source = tmp_path / "source"
+    _write(source / "scripts" / "release.py", content)
+
+    with pytest.raises(prepare.ReleaseError, match="secret-like content"):
+        prepare.build_source_manifest(source, 1024)
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "token = os.getenv(\"TOKEN_ENV\", \"fake-" + "token-value-12345\")\n",
+        "token = os.environ.get(\"TOKEN_ENV\", \"fake-" + "token-value-12345\")\n",
+    ],
+)
+def test_environment_lookup_with_secret_fallback_is_rejected(
+    tmp_path: Path, content: str
+) -> None:
+    source = tmp_path / "source"
+    _write(source / "scripts" / "release.py", "import os\n" + content)
+
+    with pytest.raises(prepare.ReleaseError, match="secret-like content"):
+        prepare.build_source_manifest(source, 1024)
+
+
 def test_pptx_zip_bomb_and_embedded_payload_are_rejected(tmp_path: Path) -> None:
     source = tmp_path / "source"
     _write(source / "README.md", "safe\n")

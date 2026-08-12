@@ -9,6 +9,7 @@ belongs exclusively to ``publish-finals-gitlab.py``.
 from __future__ import annotations
 
 import argparse
+import ast
 import hashlib
 import json
 import os
@@ -39,7 +40,22 @@ FINAL_DOCS = {"docs/moe_cpu_memory_limited_survey.pdf", "docs/macos_test_notes/2
 DENIED_COMPONENTS = {".cache", ".git", ".svn", ".venv", "__pycache__", "build", "cache", "dist", "downloads", "models", "node_modules", "target"}
 DENIED_SUFFIXES = {".a", ".bin", ".bz2", ".class", ".dll", ".dmg", ".dylib", ".exe", ".gguf", ".gz", ".iso", ".o", ".obj", ".onnx", ".pt", ".pth", ".pyc", ".rar", ".safetensors", ".so", ".tar", ".tgz", ".xz", ".zip", ".7z"}
 MACHO_MAGICS = {b"\xce\xfa\xed\xfe", b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xce", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca", b"\xca\xfe\xba\xbf", b"\xbf\xba\xfe\xca"}
-SECRET_PATTERNS = (re.compile(r"-----BEGIN(?: [A-Z0-9]+)? PRIVATE KEY-----"), re.compile(r"gh[pousr]_[A-Za-z0-9_]{20,}"), re.compile(r"glpat-[A-Za-z0-9_-]{20,}"), re.compile(r"hf_[A-Za-z0-9]{20,}"), re.compile(r"AKIA[0-9A-Z]{16}"), re.compile(r"(?im)^\s*['\"]?(?:api[_-]?key|aws[_-]?secret(?:[_-]?access[_-]?key)?|token|password)['\"]?\s*[:=]\s*['\"]?[^\s'\"]{8,}"), re.compile(r"(?i)[{,]\s*['\"]?(?:api[_-]?key|aws[_-]?secret(?:[_-]?access[_-]?key)?|token|password)['\"]?\s*:\s*['\"]?[^\s'\"]{8,}"))
+SECRET_PATTERNS = (
+    re.compile(r"-----BEGIN(?: [A-Z0-9]+)? PRIVATE KEY-----"),
+    re.compile(r"gh[pousr]_[A-Za-z0-9_]{20,}"),
+    re.compile(r"glpat-[A-Za-z0-9_-]{20,}"),
+    re.compile(r"hf_[A-Za-z0-9]{20,}"),
+    re.compile(r"AKIA[0-9A-Z]{16}"),
+    re.compile(
+        r"(?im)^\s*['\"]?(?:api[_-]?key|aws[_-]?secret(?:[_-]?access[_-]?key)?|token|password)['\"]?\s*[:=]\s*(?:['\"][^'\"\r\n]{8,}['\"]|[A-Za-z0-9_./+=:-]{20,})\s*[,;]?\s*$"
+    ),
+    re.compile(
+        r"(?i)[{,]\s*['\"]?(?:api[_-]?key|aws[_-]?secret(?:[_-]?access[_-]?key)?|token|password)['\"]?\s*:\s*['\"][^'\"\r\n]{8,}['\"]"
+    ),
+)
+COMMENT_SECRET_PATTERN = re.compile(
+    r"(?im)#.*?\b(?:api[_-]?key|aws[_-]?secret(?:[_-]?access[_-]?key)?|token|password|secret)\b\s*[:=]\s*(?:['\"][^'\"\r\n]{8,}['\"]|[A-Za-z0-9_./+=:-]{20,})"
+)
 
 
 class ReleaseError(ValueError):
@@ -184,9 +200,84 @@ def _content_fragments(path: Path) -> Iterable[str]:
             raise ReleaseError(f"non-text payload is not permitted: {path}") from error
 
 
+def _sensitive_identifier(value: str) -> bool:
+    normalized = re.sub(r"[^a-z0-9]+", "_", value.lower()).strip("_")
+    return normalized in {"api_key", "aws_secret", "aws_secret_access_key", "password", "secret", "token"} or normalized.endswith(
+        ("_api_key", "_password", "_secret", "_token")
+    )
+
+
+def _environment_lookup(node: ast.AST) -> bool:
+    if isinstance(node, ast.Subscript):
+        return (
+            isinstance(node.value, ast.Attribute)
+            and isinstance(node.value.value, ast.Name)
+            and node.value.value.id == "os"
+            and node.value.attr == "environ"
+        )
+    if not isinstance(node, ast.Call):
+        return False
+    function = node.func
+    if isinstance(function, ast.Attribute) and isinstance(function.value, ast.Name):
+        return (
+            function.value.id == "os"
+            and function.attr == "getenv"
+            and len(node.args) == 1
+            and not node.keywords
+        )
+    return (
+        isinstance(function, ast.Attribute)
+        and function.attr == "get"
+        and isinstance(function.value, ast.Attribute)
+        and isinstance(function.value.value, ast.Name)
+        and function.value.value.id == "os"
+        and function.value.attr == "environ"
+        and len(node.args) == 1
+        and not node.keywords
+    )
+
+
+def _target_names(node: ast.AST) -> Iterable[str]:
+    if isinstance(node, ast.Name):
+        yield node.id
+    elif isinstance(node, ast.Attribute):
+        yield node.attr
+    elif isinstance(node, (ast.List, ast.Tuple)):
+        for item in node.elts:
+            yield from _target_names(item)
+    elif isinstance(node, ast.Subscript) and isinstance(node.slice, ast.Constant) and isinstance(node.slice.value, str):
+        yield node.slice.value
+
+
+def _contains_secret_literal(node: ast.AST) -> bool:
+    if _environment_lookup(node):
+        return False
+    return any(isinstance(item, ast.Constant) and isinstance(item.value, str) and len(item.value) >= 8 for item in ast.walk(node))
+
+
+def _python_has_secret_literal(text: str) -> bool:
+    try:
+        tree = ast.parse(text)
+    except SyntaxError as error:
+        raise ReleaseError("Python source cannot be parsed for secret scanning") from error
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Assign, ast.AnnAssign, ast.NamedExpr)):
+            targets = node.targets if isinstance(node, ast.Assign) else [node.target]
+            if any(_sensitive_identifier(name) for target in targets for name in _target_names(target)) and _contains_secret_literal(node.value):
+                return True
+        elif isinstance(node, ast.Dict):
+            for key, value in zip(node.keys, node.values):
+                if isinstance(key, ast.Constant) and isinstance(key.value, str) and _sensitive_identifier(key.value) and _contains_secret_literal(value):
+                    return True
+        elif isinstance(node, ast.keyword) and node.arg is not None and _sensitive_identifier(node.arg) and _contains_secret_literal(node.value):
+            return True
+    return False
+
+
 def _scan_secrets(path: Path, relative: PurePosixPath) -> None:
     for fragment in _content_fragments(path):
-        if any(pattern.search(fragment) for pattern in SECRET_PATTERNS):
+        python_literal = relative.suffix.lower() == ".py" and _python_has_secret_literal(fragment)
+        if python_literal or COMMENT_SECRET_PATTERN.search(fragment) or any(pattern.search(fragment) for pattern in SECRET_PATTERNS):
             raise ReleaseError(f"secret-like content is denied: {relative.as_posix()}")
 
 
