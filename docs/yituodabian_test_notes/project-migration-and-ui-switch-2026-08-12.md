@@ -208,3 +208,64 @@ SWITCH_STATE = {
 | `scripts/demo/monitor.py` | 新增 `/api/switch-model`、`/api/switch-status`；切换状态机；快速失败检测；`/api/health` 附 switch 状态 |
 | `scripts/demo/index.html` | 顶栏模型切换按钮组；确认对话框；加载遮罩；轮询与错误显示；当前模型高亮 |
 | `docs/yituodabian_test_notes/project-migration-and-ui-switch-2026-08-12.md` | 本文档 |
+
+---
+
+## 七、二次修订：反向迁移与性能诊断（2026-08-12）
+
+### 7.1 反向迁移背景
+首次迁移后实测发现 **USB 口读速太慢**（移动硬盘 `/dev/sda1`），项目在 USB 上运行缓慢。故执行反向迁移：
+- **项目移回 microSD 原位置**：`/home/yituodabian/data/SLIM-ARC/` → `/home/yituodabian/SLIM-ARC/`（rsync -a，3.47GB，1分12秒，内容校验 0 差异）
+- **80B 模型移出到移动硬盘**：`Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf`（46GB）移到 `/home/yituodabian/data/`
+- **4B 模型保留**在项目 `data/models/` 内
+- **80B 软链接**：项目 `data/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf` → `/home/yituodabian/data/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf`（绝对路径，跨文件系统有效）
+- 删除源目录 `data/SLIM-ARC/`，验证 llama-server 可执行、软链接目标可读
+
+**最终布局**：
+```
+/home/yituodabian/SLIM-ARC/              (microSD，项目 3.3G)
+└── data/models/
+    ├── Qwen3-4B-Q4_K_M.gguf             (2.4G，物理文件)
+    └── Qwen3-Next-80B-...Q4_K_M.gguf    (软链接 → /home/yituodabian/data/...)
+/home/yituodabian/data/                  (移动硬盘 /dev/sda1)
+└── Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf  (46G，物理文件)
+```
+
+### 7.2 启动后 4B 推理变慢诊断
+**现象**：4B 推理从之前的 ~4 t/s 降至 0.09-0.4 t/s，模型加载 59s（之前 ~20s）。
+**诊断过程**：
+1. llama-server `/health` 正常、三服务 200，但推理请求 90s 超时
+2. vmstat：推理时 `wa`（I/O 等待）80%，`us` 仅 2-6%；`MAJFLT` 达 10.6 万 → **大量缺页**
+3. 推理时 `bi`（块读入）持续 50-59 MB/s → **模型页不在内存，持续从磁盘读**
+4. microSD 读速实测 1.5GB/s（正常，非磁盘硬件问题）
+5. 内存分析：llama-server 2.3GB + VSCode server ~0.8GB ≈ 3.9GB，4GB 内存几乎占满，swap 2GB 满 → **模型页被逐出、无法常驻**
+
+**根因结论**：**非 SLIM-ARC/UI 代码 bug**，而是系统内存压力。SLIM-ARC 补丁确认生效（`libllama.so` 含 `slim_arc::apply_dynamic_madv` 等符号），参数 `-t 4 -c 2048 -np 1` 合理。之前 ~4 t/s 是模型页 warm 在 page cache 的热窗口。
+
+### 7.3 内存释放方案与效果
+执行：
+1. 停止非核心 VSCode 扩展进程（pylance 124MB、cpptools、markdown、json 共 ~181MB），保留主进程保持连接
+2. 重置 zram swap（`swapoff/swapon /dev/zram0`）
+
+**效果**（连续推理实测）：
+| 次数 | 耗时 | 速度 |
+|------|------|------|
+| 第 1 次 | 21.8s / 20 tok | 1.74 t/s |
+| 第 2 次 | 8.8s / 20 tok | 3.85 t/s |
+| 第 3 次 | 4.5s / 20 tok | **4.73 t/s** ✅ |
+
+推理速度完全恢复（模型页 warm 后回到 ~4.7 t/s）。
+
+### 7.4 git 大量待提交处理
+反向迁移后 `git status` 显示 **1082 个变更文件**。根因：**NTFS 迁移使所有文件权限变为可执行（100644→100755）**，git 将模式变化标记为 modified（1071 个权限变更 + 少量真实修改）。
+
+**处理**：用 Python 基于 `git diff --raw -z` 批量恢复 252 个误加可执行位的文件为 100644 → git 状态降至 **3 个真实修改 + 10 个未跟踪**。
+
+**提交推送**（2 个 commit 已推送 `origin/main`）：
+- `e17e55c2` feat(demo): UI 模型切换 + 就绪检测修复 + 80B 文件名修正（3 文件，567 插入）
+- `4a6abc72` docs(notes): 项目迁移留痕、UI 切换文档与 80B 测试日志（12 文件）
+
+### 7.5 已知限制补充
+1. **4GB 设备推理速度依赖内存状态**：模型页 warm 时 ~4.7 t/s；系统内存被大量后台进程占用时会降速。改善手段：释放 VSCode 扩展/后台进程内存、重置 swap。
+2. **80B 模型在移动硬盘**：`start-demo.sh 80b` / UI 切换 80B 通过软链接读取移动硬盘上的 46GB 模型；4GB 设备上仍会因内存不足失败（预期），需 ≥32GB 设备。
+3. **软链接依赖移动硬盘挂载**：若 `/home/yituodabian/data` 未挂载，80B 软链接失效（4B 不受影响）。
