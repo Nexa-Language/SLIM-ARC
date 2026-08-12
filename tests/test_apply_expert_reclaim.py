@@ -108,6 +108,7 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert "cancel_expert_prefetch" in context
     assert context.index("status == GGML_STATUS_SUCCESS") < context.index("cancel_expert_prefetch")
     assert "get_cached_experts" not in context
+    assert "tensor->name == nullptr" not in context
     assert "auto slim_arc_runtime = slim_arc::acquire_runtime();" in context
     assert context.index("if (slim_arc_runtime) {") < context.index("ggml_graph_n_nodes(gf)")
     assert "get_global_prefetch_scheduler" not in context

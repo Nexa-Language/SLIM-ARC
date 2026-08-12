@@ -188,7 +188,7 @@ def patch_context(filepath: str) -> None:
         const int n_nodes = ggml_graph_n_nodes(gf);
         for (int i = 0; i < n_nodes; ++i) {
             struct ggml_tensor * tensor = ggml_graph_node(gf, i);
-            if (tensor == nullptr || tensor->name == nullptr) continue;
+            if (tensor == nullptr) continue;
             int layer = slim_arc::tensor_layer_from_name(tensor->name);
             if (layer < 0) {
                 const char * dash = strrchr(tensor->name, '-');
@@ -228,7 +228,7 @@ def patch_context(filepath: str) -> None:
         const int n_nodes = ggml_graph_n_nodes(gf);
         for (int i = 0; i < n_nodes; ++i) {
             struct ggml_tensor * tensor = ggml_graph_node(gf, i);
-            if (tensor == nullptr || tensor->name == nullptr || tensor->data == nullptr ||
+            if (tensor == nullptr || tensor->data == nullptr ||
                 strstr(tensor->name, "ffn_moe_topk") == nullptr) continue;
             int layer = slim_arc::tensor_layer_from_name(tensor->name);
             if (layer < 0) {
