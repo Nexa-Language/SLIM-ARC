@@ -2,6 +2,14 @@
 % finals-results.json SHA-256: 843b54ada66bfea0d52ec55efcbf8f91b592d588cbffb0204efc40400196c655
 \newcommand{\FinalsResultsJsonSha}{843b54ada66bfea0d52ec55efcbf8f91b592d588cbffb0204efc40400196c655}
 \newcommand{\FinalsResultsRunCount}{20}
+\newcommand{\FinalsControlColdWall}{66.300}
+\newcommand{\FinalsBaselineColdWall}{69.530}
+\newcommand{\FinalsReclaimColdWall}{63.390}
+\newcommand{\FinalsResidencyColdWall}{66.160}
+\newcommand{\FinalsCombinedColdWall}{79.525}
+\newcommand{\FinalsCombinedColdRegressionPercent}{19.947}
+\newcommand{\FinalsPeakMinimumGiB}{2.000}
+\newcommand{\FinalsPeakMaximumGiB}{2.000}
 \newcommand{\FinalsResultsTable}{%
 \begin{table}[H]
 \centering
@@ -31,13 +39,13 @@ patched-combined & warm & 2.000 & 63.265 & 0.760 & 0 \\
 \centering
 \caption{由两轮 cache-separated promotion gate 聚合的功能分类（由 finals-results.json 派生）。}
 \label{tab:finals-decisions}
-\begin{tabular}{ll}
+\begin{tabular}{llll}
 \toprule
-机制 & 分类 \\
+机制 & cold & warm & 总体 \\
 \midrule
-错误专家回收 & kept\_opt\_in \\
-专家驻留 & kept\_opt\_in \\
-组合策略 & rejected \\
+错误专家回收 & kept\_opt\_in & kept\_opt\_in & kept\_opt\_in \\
+专家驻留 & kept\_opt\_in & kept\_opt\_in & kept\_opt\_in \\
+组合策略 & rejected & kept\_opt\_in & rejected \\
 \bottomrule
 \end{tabular}
 \end{table}

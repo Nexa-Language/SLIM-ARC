@@ -69,6 +69,9 @@ class FinalsResultImporterTests(unittest.TestCase):
             rendered = IMPORTER.build_from_path(source)
         self.assertIn("\\FinalsResultsJsonSha", rendered)
         self.assertIn("\\FinalsResultsRunCount}{20}", rendered)
+        self.assertIn("\\FinalsControlColdWall}{3.500}", rendered)
+        self.assertIn("\\FinalsCombinedColdRegressionPercent}{0.000}", rendered)
+        self.assertIn("机制 & cold & warm & 总体", rendered)
         self.assertIn("\\FinalsResultsTable", rendered)
 
     def test_missing_fixture_fails_closed(self) -> None:
