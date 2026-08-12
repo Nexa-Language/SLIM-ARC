@@ -2,6 +2,25 @@
 
 ---
 
+## 2026-08-12 决赛科研闭环设计与发布边界确认
+
+### 变更描述
+- 将决赛阶段收敛为 `predict -> admit -> prefetch -> observe -> reclaim` 的 MoE expert residency 闭环，优先实现可在 Mac 80A3B 上形成 A/B 证据的 Safe Expert Waste Reclamation 与 Pressure/Accuracy-Aware Expert Residency。
+- 明确先修复 router snapshot 裸指针、expert 状态并发、无界 popularity、指标重复计数与失效实验口径，再决定新策略是否进入最终演示配置。
+- 固化精简重复的 Mac 限内存/限核实验、晋级阈值、PPT/决赛报告增量规则、初赛材料冻结规则和单一数据源。
+- GitLab 决赛发布保留官方初赛 88 个提交，使用 fresh clone、allowlist、manifest、secret/size/test/report gate 和 fast-forward push；废弃伪造日期及全历史回放流程。
+
+### 涉及文件
+- `plan/25-v1-finals-research-closure.md`
+- `ROADMAP.md`
+
+### 决策原因
+- 调研和现有 corrected Mac 数据已经证明 expert prefetch 有约 2.41 GiB waste，但训练期路由、INT2/3、GPU/NVMe KV 和分布式 placement 今晚缺少校准或目标硬件，无法形成可信实验闭环。
+- 比赛评审强调系统完成度与可演示性；把 correctness、可复现数据、退化边界和材料口径统一起来，比堆叠无法验证的 feature flag 更有利于答辩与论文化。
+- 用户确认 23:00 只提交最佳已验证版本、保留官方 GitLab 历史、Mac 新实验结合仓库内已有设备数据、视频只引用原 B 站 P2，并于 2026-08-12 明确确认整体设计。
+
+---
+
 ## 2026-08-12 pressure admission Task 5：80B A/B 决策为 kept_opt_in
 
 ### 变更描述
