@@ -15,6 +15,10 @@ LLAMA_DIR="$PROJECT_ROOT/src/llama-upstream"
 if [ ! -x "$LLAMA_DIR/build/bin/llama-server" ] && [ -x "$(dirname "$PROJECT_ROOT")/src/llama-upstream/build/bin/llama-server" ]; then
     LLAMA_DIR="$(dirname "$PROJECT_ROOT")/src/llama-upstream"
 fi
+# SLIM-ARC FIX 2026-08-12: 项目迁移到 data/ 后，llama-server 二进制内嵌 RUNPATH
+# 仍指向旧路径（/home/yituodabian/SLIM-ARC/...），运行时找不到 libllama-server-impl.so。
+# 用 LD_LIBRARY_PATH 显式指向 build/bin 解决（不修改二进制，不动 SLIM-ARC 核心）。
+export LD_LIBRARY_PATH="$LLAMA_DIR/build/bin${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 DEMO_DIR="$PROJECT_ROOT/scripts/demo"
 
 MODEL_CHOICE="${1:-4b}"
@@ -25,13 +29,25 @@ case "$MODEL_CHOICE" in
         MODEL_SIZE="2.4 GB"
         EXPERTS_TOTAL=0
         EXPERTS_ACTIVE=0
+        MODEL_THREADS=4
+        MODEL_CTX=2048
+        MODEL_PARALLEL=1
         ;;
     80b)
-        MODEL="$PROJECT_ROOT/data/models/Qwen3-Next-80B-A3B-Instruct-IQ4_XS.gguf"
-        MODEL_NAME="Qwen3-Next-80B-IQ4_XS"
-        MODEL_SIZE="38 GB"
+        # SLIM-ARC FIX 2026-08-12: 修正 80B 模型文件名。
+        # 迁移后实际文件为 Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf（约 46GB），
+        # 原引用 Qwen3-Next-80B-A3B-Instruct-IQ4_XS.gguf（38GB）已不存在。
+        MODEL="$PROJECT_ROOT/data/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf"
+        MODEL_NAME="Qwen3-Next-80B-Q4_K_M"
+        MODEL_SIZE="46 GB"
         EXPERTS_TOTAL=512
         EXPERTS_ACTIVE=10
+        # SLIM-ARC FIX 2026-08-12: 80B MoE 在 4GB 端侧设备上 KV cache 需更小。
+        # 原统一参数 -t 4 -c 2048 -np 1 仍可能吃满内存，改用更小 context，
+        # 尽量给 mmap+MADV_RANDOM 的按需加载留出空间（4GB 上 OOM 仍属预期）。
+        MODEL_THREADS=4
+        MODEL_CTX=1024
+        MODEL_PARALLEL=1
         ;;
     *)
         echo "用法: $0 [4b|80b]"
@@ -95,8 +111,14 @@ export SLIM_ARC_TIER="32GB warm"
 
 # 1. 启动 llama-server（后台，日志到文件）
 echo "[1/3] 启动 llama-server..."
+# SLIM-ARC FIX 2026-08-12: 参数适配 4GB 端侧设备（yituodabian/RK3588 实测）。
+# 原 -t 8 -c 8192（隐含 4 slots）在 4GB/4 核设备上导致 KV cache 内存爆掉、
+# 疯狂 swap、推理 <0.3 t/s。调整为 -t 4（4 核）、-c 2048、-np 1 显著降低内存。
+# 保留 mmap/MADV 相关开关（--no-repack 等），不破坏 SLIM-ARC 优化链。
+# 可通过环境变量 SLIM_ARC_CTX 覆盖 context（如 SLIM_ARC_CTX=8192 切回大上下文）。
 nohup "$LLAMA_DIR/build/bin/llama-server" \
-    -m "$MODEL" -t 8 -c 8192 --host 0.0.0.0 --port 8080 \
+    -m "$MODEL" -t "${MODEL_THREADS:-4}" -c "${SLIM_ARC_CTX:-$MODEL_CTX}" -np "${MODEL_PARALLEL:-1}" \
+    --host 0.0.0.0 --port 8080 \
     -fa auto -ctk q4_0 -ctv q4_0 --no-repack --no-context-shift \
     > "$PROJECT_ROOT/logs/demo-llama-server.log" 2>&1 &
 LLAMA_PID=$!
@@ -124,9 +146,13 @@ if [ "$MODEL_CHOICE" = "80b" ]; then
     MAX_WAIT=36  # 36 * 5s = 180s = 3 分钟
 fi
 # 检查 llama-server
+# SLIM-ARC FIX 2026-08-12: 就绪检测必须检查 HTTP 200 状态码。
+# 原实现 `curl -s .../health` 对 HTTP 503（模型仍在加载）仍返回退出码 0，
+# 会把 503 误判为就绪，导致 UI 在 server 未加载完成时就交互并收到 503。
 for i in $(seq 1 $MAX_WAIT); do
-    if curl -s http://127.0.0.1:8080/health > /dev/null 2>&1; then
-        echo "  llama-server 就绪 ✓"
+    code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/health 2>/dev/null || echo 000)
+    if [ "$code" = "200" ]; then
+        echo "  llama-server 就绪 ✓ (HTTP 200)"
         break
     fi
     # 检查进程是否还活着
@@ -135,7 +161,7 @@ for i in $(seq 1 $MAX_WAIT); do
         tail -5 "$PROJECT_ROOT/logs/demo-llama-server.log" 2>/dev/null
         exit 1
     fi
-    echo "  等待 llama-server ($i/$MAX_WAIT)..."
+    echo "  等待 llama-server ($i/$MAX_WAIT) 当前 HTTP $code ..."
     sleep 5
 done
 
