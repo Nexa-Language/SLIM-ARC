@@ -596,7 +596,7 @@ Commit subject:
 - Consumes: pressure state, budget, stable IDs, temporal IDs, hot scores, hit/waste EWMA.
 - Produces: deterministic `expert_residency_decision` with ordered admitted IDs and reason counters.
 
-- [ ] **Step 1: Write value types and failing policy tests**
+- [x] **Step 1: Write value types and failing policy tests**
 
 Use explicit enums and value inputs:
 
@@ -663,7 +663,7 @@ Use these fixed parameters:
 
 Tests must cover critical pressure returns no speculative targets, high pressure admits stable-only, normal pressure orders stable then temporal then hot, missing pressure returns deterministic compatibility fallback, zero budget, max count, duplicate/invalid IDs, overflow, tie ordering, and waste-ratio boundaries. Pressure sequence assertions are: `7000 -> normal`, `8600 -> high`, `9600 -> critical`, `8900, 8900 -> high`, and `7400, 7400 -> normal`.
 
-- [ ] **Step 2: Register target and verify RED**
+- [x] **Step 2: Register target and verify RED**
 
 Run:
 
@@ -673,11 +673,11 @@ bash tests/run-cpp-unit.sh test-slim-arc-expert-residency
 
 Expected: compilation or assertion failure before implementation.
 
-- [ ] **Step 3: Implement minimal deterministic policy**
+- [x] **Step 3: Implement minimal deterministic policy**
 
 Use stable sorting by category and original order, not an unordered container. Admit a whole expert only when both byte budget and count allow it. Treat zero-byte/negative IDs as invalid skipped candidates. Use saturating requested/skipped accounting.
 
-- [ ] **Step 4: Verify GREEN and sanitizers**
+- [x] **Step 4: Verify GREEN and sanitizers**
 
 Run:
 
@@ -687,7 +687,7 @@ SLIM_ARC_TEST_SANITIZE=1 bash tests/run-cpp-unit.sh test-slim-arc-expert-residen
 git diff --check
 ```
 
-- [ ] **Step 5: Commit the policy**
+- [x] **Step 5: Commit the policy**
 
 Commit subject:
 
