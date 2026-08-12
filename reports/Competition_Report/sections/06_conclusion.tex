@@ -18,6 +18,8 @@
     \item \textbf{通过标准 benchmark 验证了精度边界}：遵循综述~\cite{survey2026}的 ALEM 协议，在 GSM8K 上测量了不同量化配置的推理精度，发现 IQ4\_XS 虽保持语言流畅性但数学推理崩溃（0\%），而 Q4\_K\_M 保持 50\% 精度，为端侧模型选择提供了量化指导。
 
     \item \textbf{在真实端侧（RK3588）完成真机验证并消除负优化}：在 8\,GB ARM 端侧设备上确认 80B 模型可运行不 OOM（RSS 约 6.3\,GB），发现并修复静态 MADV\_RANDOM 造成的 4--6$\times$ 负优化——通过动态 MADV 阶段切换使端侧解码与禁用持平、prefill 提升 10--15\%，并验证长上下文不 OOM 与专家预取置信度门控（命中率 31\%$\to$55\%）的收益，确立了"按内存比例选择 MADV 策略"的适用域边界。
+
+    \item \textbf{在更受限的树莓派 5（4GB）完成补丁首次编译修复与可行性验证}：修复 SLIM-ARC 补丁与最新 upstream 的编译问题（prefetch 接口缺失 + INT\_MAX + 重复大括号，5 次尝试后编译成功），验证 Qwen3-4B 在 4\,GB 端侧可运行不 OOM（RSS 峰值 2.42\,GiB），并确认 SLIM-ARC 核心机制在 $<$6GB 模型上不触发的适用域边界，为后续在更合适端侧开发板上的测试奠定基础。
 \end{enumerate}
 
 \subsection{局限性}

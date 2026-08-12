@@ -203,7 +203,7 @@
 \newlabel{fig:volatility}{{11}{28}{(a) 数据波动箱线图（示意性数据，基于实测观察的 80B 16\,GB tg8 波动范围 0.28--1.03）。(b) 多维度优化评估雷达图。}{figure.caption.52}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {12}{\ignorespaces 优化技术渐进提升（分组柱状图）。三档环境从 baseline 到 Full 的完整优化链。}}{28}{figure.caption.53}\protected@file@percent }
 \newlabel{fig:opt_dumbbell}{{12}{28}{优化技术渐进提升（分组柱状图）。三档环境从 baseline 到 Full 的完整优化链。}{figure.caption.53}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}端侧真机验证（RK3588）}{29}{subsection.5.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.5}RK3588真机验证}{29}{subsection.5.5}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.1}端侧实验环境}{29}{subsubsection.5.5.1}\protected@file@percent }
 \@writefile{lot}{\contentsline {table}{\numberline {19}{\ignorespaces RK3588 端侧实验环境}}{29}{table.caption.54}\protected@file@percent }
 \newlabel{tab:edge_env}{{19}{29}{RK3588 端侧实验环境}{table.caption.54}{}}
@@ -230,30 +230,53 @@
 \newlabel{fig:edge_expert}{{16}{33}{RK3588 专家预取改进对比。置信度门控（CONF=1）将预取字节从 27.8\,GB 降至 12.1\,GB（-56\%）、命中率从 31.1\% 提升至 55.4\%（+24 个百分点）且解码速度无损；统一 I/O 预算（BUDGET=1）机制正确但端侧非 I/O 受限、收益有限；热门专家并集（POP=16）为诚实负结果（默认关闭）。}{figure.caption.62}{}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.7}小模型端侧基线}{33}{subsubsection.5.5.7}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {5.5.8}端侧瓶颈分析与诚实边界}{34}{subsubsection.5.5.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {5.6}树莓派 5（4GB）真机验证}{34}{subsection.5.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.1}端侧实验环境}{34}{subsubsection.5.6.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {24}{\ignorespaces 树莓派 5（4GB）端侧实验环境}}{34}{table.caption.63}\protected@file@percent }
+\newlabel{tab:pi5_env}{{24}{34}{树莓派 5（4GB）端侧实验环境}{table.caption.63}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.2}补丁编译修复}{34}{subsubsection.5.6.2}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {25}{\ignorespaces Pi5 补丁编译过程（5 次尝试）}}{35}{table.caption.64}\protected@file@percent }
+\newlabel{tab:pi5_build}{{25}{35}{Pi5 补丁编译过程（5 次尝试）}{table.caption.64}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.3}完整测试矩阵（Qwen3-4B）}{35}{subsubsection.5.6.3}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {26}{\ignorespaces Pi5（4GB）Qwen3-4B 测试矩阵（llama-cli，--single-turn，热缓存）}}{35}{table.caption.65}\protected@file@percent }
+\newlabel{tab:pi5_matrix}{{26}{35}{Pi5（4GB）Qwen3-4B 测试矩阵（llama-cli，--single-turn，热缓存）}{table.caption.65}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {17}{\ignorespaces Pi5（4GB）Qwen3-4B 测试矩阵吞吐（llama-cli，--single-turn，热缓存）。所有用例 EXIT=0、无 OOM。}}{36}{figure.caption.66}\protected@file@percent }
+\newlabel{fig:pi5_matrix}{{17}{36}{Pi5（4GB）Qwen3-4B 测试矩阵吞吐（llama-cli，--single-turn，热缓存）。所有用例 EXIT=0、无 OOM。}{figure.caption.66}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {27}{\ignorespaces Pi5（4GB）llama-bench 稳态吞吐（Qwen3-4B Q4\_K\_M，-t 4）}}{36}{table.caption.67}\protected@file@percent }
+\newlabel{tab:pi5_bench}{{27}{36}{Pi5（4GB）llama-bench 稳态吞吐（Qwen3-4B Q4\_K\_M，-t 4）}{table.caption.67}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {18}{\ignorespaces Pi5（4GB）llama-bench 稳态吞吐。短上下文热缓存下 prefill 10.16、decode 3.48 t/s。}}{37}{figure.caption.68}\protected@file@percent }
+\newlabel{fig:pi5_bench}{{18}{37}{Pi5（4GB）llama-bench 稳态吞吐。短上下文热缓存下 prefill 10.16、decode 3.48 t/s。}{figure.caption.68}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.4}内存与存储瓶颈}{37}{subsubsection.5.6.4}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {19}{\ignorespaces Pi5（4GB）内存占用与存储瓶颈。(a) Qwen3-4B 推理 RSS 峰值 2.42\,GiB（小于 4\,GB，未 OOM）；(b) 冷启动 prefill 0.3 t/s vs 热缓存 3.96 t/s（约 13$\times $），microSD 是冷启动最大瓶颈。}}{37}{figure.caption.69}\protected@file@percent }
+\newlabel{fig:pi5_memory}{{19}{37}{Pi5（4GB）内存占用与存储瓶颈。(a) Qwen3-4B 推理 RSS 峰值 2.42\,GiB（小于 4\,GB，未 OOM）；(b) 冷启动 prefill 0.3 t/s vs 热缓存 3.96 t/s（约 13$\times $），microSD 是冷启动最大瓶颈。}{figure.caption.69}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.5}SLIM-ARC 专属项负面验证（适用域边界）}{38}{subsubsection.5.6.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {28}{\ignorespaces Pi5（4GB）SLIM-ARC 专属项负面验证}}{38}{table.caption.70}\protected@file@percent }
+\newlabel{tab:pi5_neg}{{28}{38}{Pi5（4GB）SLIM-ARC 专属项负面验证}{table.caption.70}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {5.6.6}诚实结论与后续方向}{38}{subsubsection.5.6.6}\protected@file@percent }
 \citation{survey2026}
+\@writefile{toc}{\contentsline {section}{\numberline {6}总结与未来展望}{39}{section.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}工作总结}{39}{subsection.6.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}局限性}{39}{subsection.6.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{prefetch\_scheduler 的冗余与 OS 底层绕开思路}{39}{section*.71}\protected@file@percent }
 \citation{cgroupsv2}
-\@writefile{toc}{\contentsline {section}{\numberline {6}总结与未来展望}{35}{section.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.1}工作总结}{35}{subsection.6.1}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.2}局限性}{35}{subsection.6.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{prefetch\_scheduler 的冗余与 OS 底层绕开思路}{35}{section*.63}\protected@file@percent }
 \citation{solidattention2026}
 \citation{survey2026}
-\@writefile{toc}{\contentsline {paragraph}{数据波动问题}{36}{section*.64}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Speculative Decoding 的不适用}{36}{section*.65}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{KV Eviction 与 FlashAttention 的冲突}{36}{section*.66}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}未来展望}{36}{subsection.6.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {7}附录：赛事声明}{37}{section.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}开发计划}{37}{subsection.7.1}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {24}{\ignorespaces 开发计划与实际完成情况}}{37}{table.caption.67}\protected@file@percent }
-\newlabel{tab:dev_plan}{{24}{37}{开发计划与实际完成情况}{table.caption.67}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}比赛过程中的重要进展}{37}{subsection.7.2}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}遇到的主要问题与解决方法}{38}{subsection.7.3}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}分工与协作}{38}{subsection.7.4}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {25}{\ignorespaces 团队分工}}{38}{table.caption.68}\protected@file@percent }
-\newlabel{tab:team}{{25}{38}{团队分工}{table.caption.68}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.5}提交仓库目录与文件描述}{38}{subsection.7.5}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.6}比赛收获}{39}{subsection.7.6}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {7.7}AI 工具使用声明}{39}{subsection.7.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{数据波动问题}{40}{section*.72}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Speculative Decoding 的不适用}{40}{section*.73}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{KV Eviction 与 FlashAttention 的冲突}{40}{section*.74}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {6.3}未来展望}{40}{subsection.6.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {7}附录：赛事声明}{41}{section.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.1}开发计划}{41}{subsection.7.1}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {29}{\ignorespaces 开发计划与实际完成情况}}{41}{table.caption.75}\protected@file@percent }
+\newlabel{tab:dev_plan}{{29}{41}{开发计划与实际完成情况}{table.caption.75}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.2}比赛过程中的重要进展}{41}{subsection.7.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.3}遇到的主要问题与解决方法}{42}{subsection.7.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.4}分工与协作}{42}{subsection.7.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {30}{\ignorespaces 团队分工}}{42}{table.caption.76}\protected@file@percent }
+\newlabel{tab:team}{{30}{42}{团队分工}{table.caption.76}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.5}提交仓库目录与文件描述}{42}{subsection.7.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.6}比赛收获}{43}{subsection.7.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {7.7}AI 工具使用声明}{43}{subsection.7.7}\protected@file@percent }
 \bibstyle{IEEEtran}
 \bibdata{reference}
 \bibcite{flexinfer2025}{1}
@@ -286,7 +309,7 @@
 \bibcite{gsm8k2021}{28}
 \bibcite{wikitext2016}{29}
 \bibcite{cgroupsv2}{30}
-\newlabel{LastPage}{{7.7}{43}{AI 工具使用声明}{page.43}{}}
-\gdef\lastpage@lastpage{43}
-\gdef\lastpage@lastpageHy{43}
-\gdef \@abspage@last{44}
+\newlabel{LastPage}{{7.7}{47}{AI 工具使用声明}{page.47}{}}
+\gdef\lastpage@lastpage{47}
+\gdef\lastpage@lastpageHy{47}
+\gdef \@abspage@last{48}

@@ -339,7 +339,7 @@
 
 图\ref{fig:volatility}的数据波动分析揭示了 80B 受限推理的固有挑战。同一配置下 tg8 从 0.28 到 1.03 的 3.7$\times$ 波动源于 45\,GB 模型与物理内存的巨大差距——每次推理的 page cache 命中率高度依赖系统状态，包括其他进程的活动、内核回收策略和 SSD GC 行为。右侧雷达图从速度、内存、精度、稳定性四个维度综合评估 SLIM-ARC，可以看出速度和内存优化显著，但稳定性仍有提升空间，这指向了决赛阶段通过更激进量化（Q2\_K）使模型全量驻留内存以消除波动的方向。
 
-\subsection{端侧真机验证（RK3588）}
+\subsection{RK3588真机验证}
 
 初赛评估在 WSL 环境通过 cgroups 模拟受限内存完成。为验证 SLIM-ARC 在真实端侧硬件上的表现，决赛阶段我们将 SLIM-ARC 部署到 RK3588 开发板（Orange Pi 5 Plus）上开展真机验证。端侧测试确认了 80B 模型在 8\,GB 真实硬件上可运行不 OOM，同时暴露并修复了模拟环境中被掩盖的负优化问题——由此形成动态 MADV 阶段切换这一关键改进。
 
@@ -440,7 +440,7 @@ decode 阶段消融（\texttt{SLIM\_ARC\_DECODE\_MADV}）进一步证明：RANDO
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=0.9\textwidth]{figures/fig_edge_dynmadv.png}
+    \includegraphics[width=0.82\textwidth]{figures/fig_edge_dynmadv.png}
     \caption{RK3588 动态 MADV 改进。静态 MADV\_RANDOM 造成 4--6$\times$ 负优化（0.44/0.26\,t/s）；动态 MADV（prefill=SEQUENTIAL、decode=SEQUENTIAL）使短上下文解码 0.26$\to$1.40\,t/s（+438\%）、追平禁用（1.41\,t/s），prefill 也同步提升（0.44$\to$2.84\,t/s）。}
     \label{fig:edge_dynmadv}
 \end{figure}
@@ -448,10 +448,9 @@ decode 阶段消融（\texttt{SLIM\_ARC\_DECODE\_MADV}）进一步证明：RANDO
 \subsubsection{长上下文能力（KV Eviction）}
 
 在 45\,GB/8\,GB 极端比例下，长上下文（-c 8192$\sim$16384）推理不 OOM（RSS 峰值约 6.5\,GiB）。KV eviction 专项验证（-c 8192、长 prompt）中，\texttt{SLIM\_ARC\_KV\_EVICT=1} 在窗口 256/1024 下分别产生 105/255 条驱逐日志，RSS 峰值 6.34/6.44\,GiB，均不崩溃；无 eviction 时 RSS 6.49\,GiB。这说明 SLIM-ARC 的 KV eviction 在端侧提供\textbf{长上下文能力收益}（内存受限下不 OOM），而非速度收益。
-
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\textwidth]{figures/fig_edge_longctx.png}
+    \includegraphics[width=0.82\textwidth]{figures/fig_edge_longctx.png}
     \caption{RK3588 长上下文能力。(a) 45\,GB/8\,GB 极端比例下不同上下文长度的 decode 对比（默认 vs 禁用）；(b) KV eviction 三种配置的 RSS 峰值（6.34--6.49\,GiB，均低于 8\,GB 物理内存，不 OOM）。}
     \label{fig:edge_longctx}
 \end{figure}
@@ -494,3 +493,147 @@ decode 阶段消融（\texttt{SLIM\_ARC\_DECODE\_MADV}）进一步证明：RANDO
 瓶颈分析（08-08）表明，RK3588 的 80B 解码\textbf{并非 SSD I/O 受限}，而是受计算吞吐/并行度/内存带宽共同限制：线程消融 t4/t6/t8 的解码吞吐为 1.9/1.8/1.3\,t/s（加线程反而变慢）；vmstat 显示解码期 SSD 读约 500--560\,MB/s（容量 2.1\,GB/s 未饱和）、I/O 等待 9--13\%、CPU 空闲 40--45\%。因此 I/O 预取类机制（层预取 + 专家预取 + WILLNEED）对端侧解码提速存在物理上限。
 
 综合来看，SLIM-ARC 在 RK3588 端侧的真实价值为：(1) 消除静态 MADV\_RANDOM 造成的 4--6$\times$ 负优化（动态 MADV 追平禁用）；(2) prefill 提速 10--15\%；(3) 长上下文不 OOM 的能力收益；(4) 专家预取机制经修复后正确触发，置信度门控为明确收益。这与初赛 WSL 环境（MADV\_RANDOM 带来 3.6--5.4$\times$ decode 加速）形成对照，说明 SLIM-ARC 的策略需按"内存比例"而非仅按"是否 MoE"选择——这一发现已沉淀为动态 MADV 与可配置开关，是本项目在真实端侧验证中获得的重要结论。
+
+\subsection{树莓派 5（4GB）真机验证}
+
+在 RK3588（8GB）之外，我们还在更受限的树莓派 5（4GB）上开展了端侧验证。该设备物理内存仅 4\,GB、存储为 microSD（读写约 8\,MB/s），是 SLIM-ARC 适用域的更极端边界。本次测试同时完成了 SLIM-ARC 补丁在最新 upstream 上的\textbf{首次编译修复}，并验证了 Qwen3-4B 在 4\,GB 环境下的可行性。需要强调的是，该环境下测试模型为 Qwen3-4B，80B 模型因内存与存储不足未成功运行。
+
+\subsubsection{端侧实验环境}
+
+\begin{table}[H]
+    \centering
+    \caption{树莓派 5（4GB）端侧实验环境}
+    \label{tab:pi5_env}
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{配置项} & \textbf{规格} \\
+        \midrule
+        CPU & 树莓派 5：4 核 Cortex-A76，aarch64 \\
+        指令集 & crc32 / crypto / dotprod（asimddp）；无 AVX2/i8mm/SVE \\
+        RAM & 4\,GB（原生物理内存，swap 2.0\,GiB zram） \\
+        存储 & microSD（29G，读写约 8\,MB/s） \\
+        OS & Debian 13 (trixie)，gcc 14.2.0 / cmake 3.31.6 \\
+        内存限制 & cgroup memory 控制器不可用（内核无 CONFIG\_MEMCG） \\
+        推理框架 & upstream llama.cpp（commit 1c3c967）+ SLIM-ARC 补丁 \\
+        测试模型 & Qwen3-4B Q4\_K\_M（2.33\,GB）；80B 因内存/存储不足未运行 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+树莓派 5 覆盖了"更小内存 + 慢速存储"的极端端侧场景，与 RK3588（8GB + SSD）互为补充。
+
+\subsubsection{补丁编译修复}
+
+首次运行 \texttt{apply-slim-arc.py} 后编译失败，根因分为三类：(A) 脚本与补丁源码接口版本不同步（主因，`\texttt{compute\_phase}`/`\texttt{set\_phase}`/`\texttt{effective\_window}`/`\texttt{get\_cached\_experts}`/`\texttt{prefetch\_experts}`/`\texttt{cache\_router\_experts}`/`\texttt{register\_mmap\_region}` 等未实现）；(B) 缺 `<climits>` 致 `\texttt{INT\_MAX}` 解析失败并级联引发 `\texttt{max\_layer}` 未声明；(C) `\texttt{prefetch\_block}` 末尾多余 `\}` 与 `\texttt{init\_mappings}` 原有 `\}` 重复。经最小外科手术式修复（补齐 `\texttt{prefetch\_scheduler}` 缺失接口、增加 `<climits>`、修正重复大括号），编译在 5 次尝试后成功，与 RK3588 端侧同批修复相互印证。
+
+\begin{table}[H]
+    \centering
+    \caption{Pi5 补丁编译过程（5 次尝试）}
+    \label{tab:pi5_build}
+    \begin{tabular}{ll}
+        \toprule
+        \textbf{尝试} & \textbf{结果} \\
+        \midrule
+        1 & 失败：prefetch\_scheduler 接口缺失 + INT\_MAX \\
+        2 & 失败：init\_mappings 重复大括号 \\
+        3 & 失败：UI assets 外网下载卡死（LLAMA\_BUILD\_UI=ON） \\
+        4 & 失败：UI embed 校验资产不完整 \\
+        5 & \textbf{成功（EXIT=0）} \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+构建以 \texttt{-DGGML\_CPU\_REPACK=OFF -DLLAMA\_BUILD\_UI=OFF} 规避 UI 资产下载，产物 `\texttt{llama-cli}` / `\texttt{llama-bench}` 生成，`\texttt{libllama.so}` 确认 `\texttt{prefetch\_scheduler::*}` 与 `\texttt{kv\_eviction\_manager::*}` 符号注入。
+
+\subsubsection{完整测试矩阵（Qwen3-4B）}
+
+在 4\,GB 环境对 Qwen3-4B 执行全部可行测试，所有用例 EXIT=0、无 OOM、无 SLIM-ARC 异常输出。
+
+\begin{table}[H]
+    \centering
+    \caption{Pi5（4GB）Qwen3-4B 测试矩阵（llama-cli，--single-turn，热缓存）}
+    \label{tab:pi5_matrix}
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{用例} & \textbf{Prompt (t/s)} & \textbf{Generation (t/s)} & \textbf{结论} \\
+        \midrule
+        冒烟（默认） & 11.6 & 3.8--4.9 & 正常 \\
+        冒烟（禁用） & 11.1 & 4.5 & 基线正常 \\
+        冷启动 & 9.6 & 4.1 & mmap 正常 \\
+        热缓存 & 11.8 & 4.3 & 热缓存略快 \\
+        KV q4\_0 & 7.8 & 3.3 & 省内存、略降速 \\
+        FlashAttention auto & 6.7 & 3.1 & 短上下文差异小 \\
+        FlashAttention off & 6.3 & 3.1 & 对照 \\
+        上下文 512 & 7.6 & 3.0 & 正常 \\
+        上下文 1024 & 7.8 & 2.6 & 正常，未 OOM \\
+        KV eviction & 8.1 & 3.4 & ENABLED，短上下文不触发 \\
+        NO\_MADV & 6.7 & 3.2 & 无 MADV（<6GB），不崩溃 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{figures/fig_pi5_matrix.png}
+    \caption{Pi5（4GB）Qwen3-4B 测试矩阵吞吐（llama-cli，--single-turn，热缓存）。所有用例 EXIT=0、无 OOM。}
+    \label{fig:pi5_matrix}
+\end{figure}
+
+llama-bench 稳态指标（-t 4，热缓存）：pp64 达 \textbf{10.16 $\pm$ 0.23 t/s}、tg32 达 \textbf{3.48 $\pm$ 0.13 t/s}；较长负载 pp128 6.88 / tg64 2.93 t/s。
+
+\begin{table}[H]
+    \centering
+    \caption{Pi5（4GB）llama-bench 稳态吞吐（Qwen3-4B Q4\_K\_M，-t 4）}
+    \label{tab:pi5_bench}
+    \begin{tabular}{lcc}
+        \toprule
+        \textbf{测试} & \textbf{吞吐 (t/s)} & \textbf{说明} \\
+        \midrule
+        pp64 & \textbf{10.16 $\pm$ 0.23} & prefill 64 tokens \\
+        tg32 & \textbf{3.48 $\pm$ 0.13} & decode 32 tokens \\
+        pp128 & 6.88 & prefill 128 tokens \\
+        tg64 & 2.93 & decode 64 tokens \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{figures/fig_pi5_bench.png}
+    \caption{Pi5（4GB）llama-bench 稳态吞吐。短上下文热缓存下 prefill 10.16、decode 3.48 t/s。}
+    \label{fig:pi5_bench}
+\end{figure}
+
+\subsubsection{内存与存储瓶颈}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_pi5_memory.png}
+    \caption{Pi5（4GB）内存占用与存储瓶颈。(a) Qwen3-4B 推理 RSS 峰值 2.42\,GiB（小于 4\,GB，未 OOM）；(b) 冷启动 prefill 0.3 t/s vs 热缓存 3.96 t/s（约 13$\times$），microSD 是冷启动最大瓶颈。}
+    \label{fig:pi5_memory}
+\end{figure}
+
+推理 RSS 峰值约 2.42\,GiB（模型 2.33\,GB + KV Cache），低于 4\,GB 物理内存、不 OOM；冷启动 prefill 仅 0.3\,t/s，热缓存后提升至 3.96\,t/s（约 13$\times$）——microSD 存储带宽（约 8\,MB/s）是冷启动的最大瓶颈。
+
+\subsubsection{SLIM-ARC 专属项负面验证（适用域边界）}
+
+\begin{table}[H]
+    \centering
+    \caption{Pi5（4GB）SLIM-ARC 专属项负面验证}
+    \label{tab:pi5_neg}
+    \begin{tabular}{lccc}
+        \toprule
+        \textbf{项} & \textbf{预期} & \textbf{实测} & \textbf{结论} \\
+        \midrule
+        MADV\_RANDOM & $>$6GB 才触发，2.33GB 不生效 & 无 MADV 输出，NO\_MADV 无差异 & 符合预期 \\
+        MoE 预取 & Dense 模型不适用 & 无 \texttt{\_exps} 3D 张量，不触发 & 符合预期 \\
+        KV eviction & 短上下文不触发且不崩溃 & ENABLED，无驱逐（seq\_len$\approx$34），EXIT 0 & 符合预期 \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Qwen3-4B（2.33\,GB）小于 6\,GB 阈值，SLIM-ARC 核心机制（MADV\_RANDOM 按需加载 / MoE 预取 / 统一调度）均不触发，本次测试实际等价 vanilla llama.cpp 路径。这再次印证了 SLIM-ARC 的适用域边界（$>$6GB 的 MoE 模型 + 内存受限），与 RK3588 上 80B 触发机制的结论一致。
+
+\subsubsection{诚实结论与后续方向}
+
+需要说明的是，任务基线 0.3/0.4\,t/s 对应冷缓存与更长上下文；本次短上下文 + 热缓存下 Generation 达 2.6--4.9\,t/s、llama-bench 稳态 tg32 为 3.48\,t/s，数值偏高并不代表 SLIM-ARC 带来数量级加速——Qwen3-4B 在 4\,GB 下判定为 model\_fits，SLIM-ARC 未激活。树莓派 5（4GB）的定位为\textbf{补丁修复里程碑 + 4GB 极限小模型可行性验证}，其价值在于确认 SLIM-ARC 补丁在最新 upstream 上可编译、Qwen3-4B 在 4\,GB 端侧可运行不 OOM，并为后续在更合适端侧开发板上的测试奠定基础。该方向仍存在进一步开发空间（如补丁修复后的更深层集成、更完整的参数与长上下文矩阵），团队将继续寻求新开发板开展端侧测试。
