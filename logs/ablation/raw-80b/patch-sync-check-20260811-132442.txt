@@ -1,0 +1,47 @@
+=== SLIM-ARC Patch Sync Check ===
+Timestamp: 2026-08-11T13:24:42+08:00
+
+=== Source Files ===
+✓ src/llama-upstream/src/slim-arc-kv-eviction.cpp - 5453 bytes
+✓ src/llama-upstream/src/slim-arc-on-demand.cpp - 7919 bytes
+✓ src/llama-upstream/src/slim-arc-prefetch.cpp - 5849 bytes
+✓ src/llama-upstream/src/slim-arc-unified-scheduler.cpp - 4745 bytes
+✓ src/llama-upstream/src/slim-arc-kv-eviction.h - 3011 bytes
+✓ src/llama-upstream/src/slim-arc-on-demand.h - 4054 bytes
+✓ src/llama-upstream/src/slim-arc-prefetch.h - 4918 bytes
+✓ src/llama-upstream/src/slim-arc-unified-scheduler.h - 3802 bytes
+
+=== Build Artifacts ===
+total 17308
+drwxrwxr-x  2 yituodabian yituodabian    4096 Aug 11 13:24 .
+drwxrwxr-x 14 yituodabian yituodabian    4096 Aug 11 13:24 ..
+lrwxrwxrwx  1 yituodabian yituodabian      17 Aug  4 23:19 libggml-base.so -> libggml-base.so.0
+lrwxrwxrwx  1 yituodabian yituodabian      22 Aug  4 23:19 libggml-base.so.0 -> libggml-base.so.0.18.1
+-rwxrwxr-x  1 yituodabian yituodabian  798656 Aug  4 23:19 libggml-base.so.0.18.1
+lrwxrwxrwx  1 yituodabian yituodabian      16 Aug  4 23:20 libggml-cpu.so -> libggml-cpu.so.0
+lrwxrwxrwx  1 yituodabian yituodabian      21 Aug  4 23:20 libggml-cpu.so.0 -> libggml-cpu.so.0.18.1
+-rwxrwxr-x  1 yituodabian yituodabian  929800 Aug  4 23:20 libggml-cpu.so.0.18.1
+lrwxrwxrwx  1 yituodabian yituodabian      12 Aug  4 23:20 libggml.so -> libggml.so.0
+lrwxrwxrwx  1 yituodabian yituodabian      17 Aug  4 23:20 libggml.so.0 -> libggml.so.0.18.1
+-rwxrwxr-x  1 yituodabian yituodabian   77448 Aug  4 23:20 libggml.so.0.18.1
+-rwxrwxr-x  1 yituodabian yituodabian  403136 Aug  5 01:08 libllama-bench-impl.so
+-rwxrwxr-x  1 yituodabian yituodabian  403720 Aug  5 01:08 libllama-cli-impl.so
+lrwxrwxrwx  1 yituodabian yituodabian      20 Aug  5 01:03 libllama-common.so -> libllama-common.so.0
+lrwxrwxrwx  1 yituodabian yituodabian      24 Aug  5 01:03 libllama-common.so.0 -> libllama-common.so.0.0.1
+-rwxrwxr-x  1 yituodabian yituodabian 5032744 Aug  5 01:03 libllama-common.so.0.0.1
+-rwxrwxr-x  1 yituodabian yituodabian 3635488 Aug  5 01:08 libllama-server-impl.so
+lrwxrwxrwx  1 yituodabian yituodabian      13 Aug  5 01:03 libllama.so -> libllama.so.0
+lrwxrwxrwx  1 yituodabian yituodabian      17 Aug  5 01:03 libllama.so.0 -> libllama.so.0.0.1
+-rwxrwxr-x  1 yituodabian yituodabian 3926720 Aug  5 01:03 libllama.so.0.0.1
+lrwxrwxrwx  1 yituodabian yituodabian      12 Aug  5 01:03 libmtmd.so -> libmtmd.so.0
+lrwxrwxrwx  1 yituodabian yituodabian      16 Aug  5 01:03 libmtmd.so.0 -> libmtmd.so.0.0.1
+-rwxrwxr-x  1 yituodabian yituodabian 1389248 Aug  5 01:03 libmtmd.so.0.0.1
+-rwxrwxr-x  1 yituodabian yituodabian   72608 Aug  5 01:08 llama-bench
+-rwxrwxr-x  1 yituodabian yituodabian 1057936 Aug  5 01:08 llama-cli
+-rwxrwxr-x  1 yituodabian yituodabian   71528 Aug  4 23:19 llama-gemma3-cli
+-rwxrwxr-x  1 yituodabian yituodabian   75408 Aug  4 23:20 llama-gguf
+-rwxrwxr-x  1 yituodabian yituodabian  145616 Aug  4 23:20 llama-gguf-hash
+-rwxrwxr-x  1 yituodabian yituodabian   71528 Aug  4 23:19 llama-llava-cli
+-rwxrwxr-x  1 yituodabian yituodabian   71528 Aug  4 23:19 llama-minicpmv-cli
+-rwxrwxr-x  1 yituodabian yituodabian   71528 Aug  4 23:19 llama-qwen2vl-cli
+-rwxrwxr-x  1 yituodabian yituodabian   72608 Aug 11 13:24 llama-server

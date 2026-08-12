@@ -1,0 +1,27 @@
+=== date ===
+2026-08-11T13:26:12+08:00
+=== uname ===
+Linux yituodabian 6.18.34+rpt-rpi-2712 #1 SMP PREEMPT Debian 1:6.18.34-1+rpt1 (2026-06-09) aarch64 GNU/Linux
+=== cpu ===
+Architecture:                            aarch64
+CPU(s):                                  4
+Model name:                              Cortex-A76
+Thread(s) per core:                      1
+CPU(s) scaling MHz:                      100%
+CPU max MHz:                             2400.0000
+CPU min MHz:                             1500.0000
+=== mem ===
+               total        used        free      shared  buff/cache   available
+Mem:           4.0Gi       1.5Gi       2.1Gi        34Mi       422Mi       2.4Gi
+Swap:          2.0Gi          0B       2.0Gi
+=== disk ===
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/mmcblk0p2   29G   15G   13G  54% /
+=== cgroups ===
+no slim-arc cgroups
+=== os release ===
+PRETTY_NAME="Debian GNU/Linux 13 (trixie)"
+NAME="Debian GNU/Linux"
+VERSION_ID="13"
+=== kernel wsl ===
+6.18.34+rpt-rpi-2712

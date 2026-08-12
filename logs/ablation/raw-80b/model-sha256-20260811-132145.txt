@@ -1,0 +1,1 @@
+69095668e5530b9a94b6d2e5184a10dc6984d0f2b570410a6db25cb218ecef22  /home/yituodabian/data/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf
