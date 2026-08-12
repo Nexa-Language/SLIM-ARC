@@ -32,6 +32,13 @@ case "$target" in
         readonly test_source="$test_root/test-slim-arc-page-range.cpp"
         readonly module_sources=("$source_root/slim-arc-page-range.cpp")
         ;;
+    test-slim-arc-expert-reclaim)
+        readonly test_source="$test_root/test-slim-arc-expert-reclaim.cpp"
+        readonly module_sources=(
+            "$source_root/slim-arc-page-range.cpp"
+            "$source_root/slim-arc-expert-reclaim.cpp"
+        )
+        ;;
     test-slim-arc-unified-pressure)
         readonly test_source="$test_root/test-slim-arc-unified-pressure.cpp"
         readonly module_sources=(
