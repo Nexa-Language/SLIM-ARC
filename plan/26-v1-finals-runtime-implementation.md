@@ -713,7 +713,7 @@ Commit subject:
 - Consumes: Task 7 pure policy and an injectable cgroup pressure snapshot provider.
 - Produces: opt-in `SLIM_ARC_EXPERT_RESIDENCY=1`, bounded decay, hysteresis, structured metrics.
 
-- [ ] **Step 1: Write failing integration tests**
+- [x] **Step 1: Write failing integration tests**
 
 Tests must prove:
 
@@ -726,7 +726,7 @@ Tests must prove:
 - popularity decays at the configured bounded interval and never overflows;
 - flag-off behavior matches the previous target-selection path.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -737,7 +737,7 @@ bash tests/run-cpp-unit.sh test-slim-arc-unified-pressure
 
 Expected: missing flag/policy integration assertions fail.
 
-- [ ] **Step 3: Inject deterministic pressure snapshots**
+- [x] **Step 3: Inject deterministic pressure snapshots**
 
 Add to `unified_io_scheduler`:
 
@@ -753,17 +753,17 @@ explicit unified_io_scheduler(
 
 The empty provider installs the production reader for `/sys/fs/cgroup`; tests inject a deterministic lambda or finite sequence. Convert each valid cgroup snapshot to `expert_pressure_sample` and pass the resulting state to the prefetch scheduler once per tick. An invalid snapshot explicitly passes `missing`; it must not accidentally become critical.
 
-- [ ] **Step 4: Integrate pure decisions from snapshots**
+- [x] **Step 4: Integrate pure decisions from snapshots**
 
 Construct candidates under `expert_state_mtx_`, including stable/temporal flags and bounded popularity. Snapshot pressure, waste EWMA, and byte budget once per scheduling tick. Call the pure policy outside the state lock, issue advice, and update success state/counters under the lock.
 
 Use only the fixed Task 7 thresholds and two-sample recovery; no environment variable may silently change the experiment policy.
 
-- [ ] **Step 5: Bound/decay popularity**
+- [x] **Step 5: Bound/decay popularity**
 
 Use saturating `uint32_t` counts. Every 64 valid router samples, halve every count and retain vector capacity. Ensure the decay occurs once for the global sample boundary, not independently for each candidate.
 
-- [ ] **Step 6: Verify GREEN**
+- [x] **Step 6: Verify GREEN**
 
 Run:
 
@@ -776,7 +776,7 @@ uv run --with pytest pytest -q tests/test_apply_expert_reclaim.py tests/test_app
 git diff --check
 ```
 
-- [ ] **Step 7: Commit adaptive integration**
+- [x] **Step 7: Commit adaptive integration**
 
 Commit subject:
 
@@ -803,7 +803,7 @@ Commit subject:
 - Consumes: `SLIM_ARC_EXPERT_RECLAIM_WASTE`, `SLIM_ARC_EXPERT_RESIDENCY`, runtime metric lines.
 - Produces: safe allowlisted Docker env arguments and frozen structured run manifests.
 
-- [ ] **Step 1: Write failing allowlist and strict metric-parser tests**
+- [x] **Step 1: Write failing allowlist and strict metric-parser tests**
 
 Require both new flags to pass validation only with value `1`. Unknown `SLIM_ARC_*` variables must still fail closed.
 
@@ -817,7 +817,7 @@ All 18 fields after the prefix are required exactly once and contain unsigned de
 
 `run-benchmark.sh` accumulates one `--runtime-log <rep-N.stderr.log>` pair for each executed repetition and passes the array to `run_manifest.py`. The fake patched benchmark writes the exact fixture line to stderr. `test-runtime-metrics-smoke.sh` runs the test image with a small read-only bind-mounted fixture model, finite cgroup/no-swap limits, and the fake benchmark override, then asserts schema 1 and one parsed row without using 80A3B weights.
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run:
 
@@ -827,7 +827,7 @@ uv run --with pytest pytest -q tests/macos/test_run_constrained.py tests/macos/t
 
 Expected: tests fail because the flags, metrics parser, and new finalist order are absent.
 
-- [ ] **Step 3: Add strict flags and five exact comparison configs**
+- [x] **Step 3: Add strict flags and five exact comparison configs**
 
 Add:
 
@@ -843,7 +843,7 @@ Add:
 
 `patched-control` explicitly freezes current dynamic-MADV and decode-SEQUENTIAL behavior. None of the four patched configurations enables legacy `SLIM_ARC_EXPERT_CONF`, `SLIM_ARC_EXPERT_POP`, `SLIM_ARC_EXPERT_BUDGET`, or `SLIM_ARC_PRESSURE_ADMISSION`.
 
-- [ ] **Step 4: Verify GREEN**
+- [x] **Step 4: Verify GREEN**
 
 Run:
 
@@ -863,7 +863,7 @@ bash tests/macos/test-runtime-metrics-smoke.sh slim-arc-llama-test:360e134
 
 Expected: the fake patched process produces one strict runtime row and the generated manifest contains the same counters.
 
-- [ ] **Step 6: Commit harness support**
+- [x] **Step 6: Commit harness support**
 
 Commit subject:
 

@@ -1,0 +1,20 @@
+\section{受限 Mac 实验协议与结果导入}
+% chktex 24 is a false positive: this section label belongs after the heading.
+\label{sec:protocol} % chktex 24
+
+\subsection{固定实验矩阵}
+
+正式性能证据将在固定 Mac/Colima 环境中取得：cgroup v2 \texttt{memory.max}=2\,GiB、四个 benchmark vCPU、\texttt{memory.swap.max}=0、\texttt{pp64}、\texttt{tg16}、相同 prompt、seed 和上下文。冻结模型为 Qwen3-Next-80B-A3B-Instruct-Q4\_K\_M.gguf，冻结 llama.cpp revision 为 \texttt{360e134}。比较顺序固定为 baseline、patched-control、patched-reclaim、patched-residency、patched-combined；\textbf{恰好执行两轮}，每轮中每个配置各有一次 cold 和一次 warm，共 20 次运行。失败行保留原始 outcome，不以重试成功覆盖。
+
+\subsection{记录与推广门槛}
+
+每个接受行必须绑定本地 commit、完整 patched source hash、模型 SHA-256、镜像 ID 与变体链接、资源限制、缓存标签、wall time、吞吐、cgroup peak、OOM/swap/fault/I/O 计数、运行时指标和原始运行目录。回收仅在降低稳定档位，或将 \texttt{memory.peak} 降低至少 10\% 且 wall regression 不超过 15\%、major faults 与 read bytes 不超过 control 的两倍时，才可能 promoted。驻留需在浪费、storage reads 或 decode throughput 中至少一项改善 10\%，并满足相同稳定档位与 wall regression 约束。combined 还必须优于 control 和至少一个单项最终候选。否则分类为 \texttt{kept\_opt\_in}、\texttt{rejected} 或 \texttt{insufficient\_evidence}。
+
+\subsection{结果状态}
+
+本次材料准备时，满足上述身份绑定和两轮完整 20 次运行要求的 \texttt{finals-results.json} 尚未生成。因此本节不展示吞吐、加速、峰值内存或推广结论；这不是零结果，也不是未验证的正面结果。
+
+JSON 的生成、核验和填表步骤记录于 \texttt{RESULTS\_IMPORT.md}。正式构建驱动每次都会读取固定路径的 JSON、重新生成并逐字节核验 hash 绑定的 \texttt{generated\_finals\_results.tex}，然后才调用 XeLaTeX/BibTeX。第\ref{tab:finals-results}表和第\ref{tab:finals-decisions}表仅来自该导入文件。
+
+\FinalsResultsTable
+\FinalsDecisionSummary

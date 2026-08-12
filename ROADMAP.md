@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-08-12 决赛证据、材料与双远端发布阶段启动
+
+### 变更描述
+- 在整体设计确认后，将运行时 GREEN 之后的执行顺序固化为：pinned image/linkage/packaged metrics 门禁、2 GiB 80A3B 精简对照、机器生成晋级结论、22:00 后冻结初赛材料并增量生成决赛材料、GitHub 发布、23:00 官方 GitLab fast-forward 发布与 fresh-clone 复核。
+- 决赛实验固定为 `baseline`、`patched-control`、`patched-reclaim`、`patched-residency`、`patched-combined` 五组；执行恰好两轮完整矩阵，每轮每组各一次 cold 和 warm，共 20 次，不允许第三轮或非对称追跑。
+- GitLab 发布工具只负责确定性 allowlist、路径规范化、manifest-owned 删除和 SHA-256 manifest；token、clone、commit、push 与远端校验保留在 23:00 发布门禁中，旧的历史回放/伪造日期/force push 路径继续禁用。
+
+### 涉及文件
+- `plan/27-v1-finals-evidence-material-release.md`
+- `ROADMAP.md`
+
+### 决策原因
+- 代码正确性、镜像打包真实性、低内存实验可比性、材料口径和正式提交历史必须共享同一冻结 commit 与单一结果源；若并行推进而不固定依赖顺序，容易再次出现动态库串用、无效数据进入报告或 GitLab 历史被重写的问题。
+- 当前距离 22:00/23:00 时间门禁有限，精简且对称的实验可以优先完成可信闭环；未满足晋级阈值的优化保留为 opt-in 或负结果，不以主观挑选数据进入默认配置。
+
+---
+
 ## 2026-08-12 决赛科研闭环设计与发布边界确认
 
 ### 变更描述
