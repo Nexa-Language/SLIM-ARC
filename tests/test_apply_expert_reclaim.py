@@ -178,3 +178,61 @@ def test_partial_runtime_setup_state_fails_without_writing_any_fixture_file(tmp_
     assert "mmap transfer" in result.stderr
     assert snapshot_tree(src) == before
     assert "slim-arc-runtime.cpp" not in before
+
+
+def test_generated_member_with_pristine_transfer_is_rejected_as_hybrid(tmp_path: Path) -> None:
+    seed = write_fixture(tmp_path / "seed")
+    run_apply(seed.parent)
+    generated = (seed / "llama-model.cpp").read_text(encoding="utf-8")
+    runtime_member = "    std::unique_ptr<slim_arc::runtime_owner> slim_arc_runtime;"
+
+    src = write_fixture(tmp_path / "llama")
+    model_path = src / "llama-model.cpp"
+    pristine = model_path.read_text(encoding="utf-8")
+    model_path.write_text(
+        pristine.replace(
+            "    std::vector<float> tensor_split_owned;",
+            "    std::vector<float> tensor_split_owned;\n\n" + runtime_member,
+            1,
+        ),
+        encoding="utf-8",
+    )
+    assert runtime_member in generated
+    before = snapshot_tree(src)
+
+    result = run_apply_failure(src.parent)
+
+    assert result.returncode != 0
+    assert "RuntimeError" in result.stderr
+    assert "hybrid" in result.stderr
+    assert snapshot_tree(src) == before
+    assert "slim-arc-runtime.cpp" not in before
+
+
+def test_pristine_member_with_generated_setup_is_rejected_as_hybrid(tmp_path: Path) -> None:
+    seed = write_fixture(tmp_path / "seed")
+    run_apply(seed.parent)
+    generated = (seed / "llama-model.cpp").read_text(encoding="utf-8")
+    transfer = """    if (use_mmap_buffer) {
+        for (auto & mapping : ml.mappings) {
+            pimpl->mappings.emplace_back(std::move(mapping));
+        }
+    }"""
+    setup_start = generated.index(transfer) + len(transfer)
+    setup_end = generated.index("\n    return true;", setup_start)
+    generated_setup = generated[setup_start:setup_end]
+
+    src = write_fixture(tmp_path / "llama")
+    model_path = src / "llama-model.cpp"
+    pristine = model_path.read_text(encoding="utf-8")
+    transfer_end = pristine.index("\n    return true;")
+    model_path.write_text(pristine[:transfer_end] + generated_setup + pristine[transfer_end:], encoding="utf-8")
+    before = snapshot_tree(src)
+
+    result = run_apply_failure(src.parent)
+
+    assert result.returncode != 0
+    assert "RuntimeError" in result.stderr
+    assert "hybrid" in result.stderr
+    assert snapshot_tree(src) == before
+    assert "slim-arc-runtime.cpp" not in before

@@ -52,10 +52,9 @@ def transform_model(content: str) -> str:
     unpatched_members = final_member + "\n};"
     patched_members = final_member + "\n\n" + runtime_member + "\n};"
     if runtime_member in content:
-        if content.count(runtime_member) != 1 or patched_members not in content:
-            raise RuntimeError("required llama_model::impl final member anchor is incomplete")
-    elif unpatched_members not in content:
-        raise RuntimeError("required llama_model::impl final member anchor not found")
+        member_state = "generated" if content.count(runtime_member) == 1 and patched_members in content else "corrupt"
+    else:
+        member_state = "pristine" if unpatched_members in content else "corrupt"
 
     transfer = """    if (use_mmap_buffer) {
         for (auto & mapping : ml.mappings) {
@@ -129,10 +128,16 @@ def transform_model(content: str) -> str:
         }
     }'''
     if marker in content:
-        if content.count(marker) != 1 or transfer + setup not in content:
-            raise RuntimeError("required mmap transfer runtime block is incomplete")
-    elif transfer not in content:
-        raise RuntimeError("required mmap transfer anchor not found")
+        setup_state = "generated" if content.count(marker) == 1 and transfer + setup in content else "corrupt"
+    else:
+        setup_state = "pristine" if transfer in content else "corrupt"
+
+    if member_state == "corrupt":
+        raise RuntimeError("required llama_model::impl final member anchor is incomplete")
+    if setup_state == "corrupt":
+        raise RuntimeError("required mmap transfer runtime block is incomplete")
+    if member_state != setup_state:
+        raise RuntimeError("hybrid runtime patch state: member and setup must be paired")
 
     if '#include "slim-arc-runtime.h"' not in content:
         content = replace_required(
