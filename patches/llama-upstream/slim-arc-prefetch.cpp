@@ -60,6 +60,25 @@ int system_advice(void * address, size_t length, int advice) {
 long system_page_size() {
     return sysconf(_SC_PAGESIZE);
 }
+
+uint32_t ratio_permille(uint64_t numerator, uint64_t denominator) noexcept {
+    if (denominator == 0 || numerator == 0) return 0;
+    if (numerator >= denominator) return 1000;
+    uint32_t low = 0;
+    uint32_t high = 1000;
+    while (low < high) {
+        const uint32_t middle = low + (high - low + 1) / 2;
+        const uint64_t whole = (denominator / 1000) * middle;
+        const uint64_t remainder_product = (denominator % 1000) * middle;
+        const uint64_t threshold = whole + (remainder_product + 999) / 1000;
+        if (numerator >= threshold) {
+            low = middle;
+        } else {
+            high = middle - 1;
+        }
+    }
+    return low;
+}
 }
 
 std::vector<size_t> select_prefetch_items(
@@ -147,6 +166,10 @@ prefetch_scheduler::prefetch_scheduler(
     , page_size_query_(page_size_query ? std::move(page_size_query) : page_size_query_fn{system_page_size})
     , reclaim_waste_enabled_([] {
         const char * const value = std::getenv("SLIM_ARC_EXPERT_RECLAIM_WASTE");
+        return value != nullptr && std::strcmp(value, "1") == 0;
+    }())
+    , expert_residency_enabled_([] {
+        const char * const value = std::getenv("SLIM_ARC_EXPERT_RESIDENCY");
         return value != nullptr && std::strcmp(value, "1") == 0;
     }()) {
     const char * confidence = std::getenv("SLIM_ARC_EXPERT_CONF");
@@ -342,6 +365,16 @@ void prefetch_scheduler::cache_router_experts(
                 }
                 atomic_saturating_add(expert_hit_bytes_, hit_bytes);
                 atomic_saturating_add(expert_waste_bytes_, waste_bytes);
+                const uint64_t accounted = saturating_add(
+                    static_cast<uint64_t>(hit_bytes), static_cast<uint64_t>(waste_bytes));
+                if (accounted > 0) {
+                    const uint32_t sample_milli = ratio_permille(static_cast<uint64_t>(waste_bytes), accounted);
+                    expert_waste_ewma_milli_ = update_waste_ewma_milli(
+                        expert_waste_ewma_milli_, sample_milli, expert_waste_ewma_initialized_);
+                    expert_waste_ewma_initialized_ = true;
+                    expert_waste_samples_ = saturating_add(expert_waste_samples_, uint64_t{1});
+                    expert_waste_restricted_ = expert_waste_controller_.update(sample_milli);
+                }
                 pending.erase(it);
             } else {
                 atomic_saturating_add(expert_unmatched_generations_, uint64_t{1});
@@ -349,7 +382,7 @@ void prefetch_scheduler::cache_router_experts(
         } else if (generation != 0) {
             atomic_saturating_add(expert_unmatched_generations_, uint64_t{1});
         }
-        ++router_samples_;
+        atomic_saturating_add(router_samples_, uint64_t{1});
         // SLIM-ARC FIX 2026-08-09: 2-token 历史滑动（改进 2 门控用）
         // prev = 旧 cached（t-2），cached = 新路由（t-1）
         if ((size_t)layer >= prev_router_experts_.size()) {
@@ -371,8 +404,16 @@ void prefetch_scheduler::cache_router_experts(
         }
         for (int eid : current) {
             if (eid >= 0 && eid < (int)expert_pop_counts_[layer].size()) {
-                expert_pop_counts_[layer][eid]++;
+                expert_pop_counts_[layer][eid] = saturating_increment_popularity(expert_pop_counts_[layer][eid]);
             }
+        }
+        if (expert_residency_enabled_ && !current.empty()) ++popularity_samples_since_decay_;
+        if (expert_residency_enabled_ && popularity_samples_since_decay_ == 64) {
+            popularity_samples_since_decay_ = 0;
+            for (auto & layer_counts : expert_pop_counts_) {
+                for (uint32_t & count : layer_counts) count /= 2;
+            }
+            atomic_saturating_add(popularity_decay_count_, uint64_t{1});
         }
         cached_router_experts_[layer] = current;
     }
@@ -435,6 +476,64 @@ expert_reclaim_stats prefetch_scheduler::expert_reclaim_statistics() const {
     };
 }
 
+void prefetch_scheduler::set_expert_residency_pressure(
+    expert_pressure_state pressure, size_t budget_bytes) {
+    if (!expert_residency_enabled_) return;
+    std::lock_guard<std::mutex> lock(expert_state_mtx_);
+    expert_residency_budget_ = budget_bytes;
+    expert_pressure_ = pressure;
+    expert_residency_snapshot_set_ = true;
+}
+
+expert_pressure_state prefetch_scheduler::current_expert_pressure() const {
+    std::lock_guard<std::mutex> lock(expert_state_mtx_);
+    return expert_pressure_;
+}
+
+expert_residency_runtime_stats prefetch_scheduler::expert_residency_statistics() const noexcept {
+    return {
+        residency_samples_.load(),
+        residency_admitted_experts_.load(),
+        residency_admitted_bytes_.load(),
+        residency_skipped_bytes_.load(),
+        residency_fallbacks_.load(),
+        residency_pressure_missing_.load(),
+        residency_pressure_normal_.load(),
+        residency_pressure_high_.load(),
+        residency_pressure_critical_.load(),
+    };
+}
+
+expert_runtime_metrics prefetch_scheduler::expert_runtime_statistics() const noexcept {
+    return {
+        router_samples_.load(),
+        static_cast<uint64_t>(expert_prefetch_bytes_.load()),
+        static_cast<uint64_t>(expert_hit_bytes_.load()),
+        static_cast<uint64_t>(expert_waste_bytes_.load()),
+    };
+}
+
+std::vector<uint32_t> prefetch_scheduler::expert_popularity_snapshot(int layer) const {
+    std::lock_guard<std::mutex> lock(expert_state_mtx_);
+    if (layer < 0 || static_cast<size_t>(layer) >= expert_pop_counts_.size()) return {};
+    return expert_pop_counts_[layer];
+}
+
+uint32_t prefetch_scheduler::expert_waste_ewma_milli() const {
+    std::lock_guard<std::mutex> lock(expert_state_mtx_);
+    return expert_waste_ewma_milli_;
+}
+
+uint64_t prefetch_scheduler::expert_waste_sample_count() const {
+    std::lock_guard<std::mutex> lock(expert_state_mtx_);
+    return expert_waste_samples_;
+}
+
+bool prefetch_scheduler::expert_waste_restricted() const {
+    std::lock_guard<std::mutex> lock(expert_state_mtx_);
+    return expert_waste_restricted_;
+}
+
 void prefetch_scheduler::reclaim_wrong_expert_pages(
     const std::vector<int> & prefetched,
     const std::vector<int> & selected,
@@ -491,7 +590,12 @@ uint64_t prefetch_scheduler::issue_expert_willneed(int layer, const int * expert
 
     std::vector<expert_tensor_info> exps;
     std::vector<int> prev;
-    std::vector<int> population;
+    std::vector<uint32_t> population;
+    expert_pressure_state pressure = expert_pressure_state::missing;
+    uint64_t policy_budget = std::numeric_limits<uint64_t>::max();
+    bool residency_snapshot_set = false;
+    uint32_t waste_ewma = 0;
+    bool waste_restricted = false;
     {
         std::lock_guard<std::mutex> lock(expert_state_mtx_);
         if (static_cast<size_t>(layer) >= experts_by_layer_.size()) return 0;
@@ -502,6 +606,11 @@ uint64_t prefetch_scheduler::issue_expert_willneed(int layer, const int * expert
         if (static_cast<size_t>(layer) < expert_pop_counts_.size()) {
             population = expert_pop_counts_[layer];
         }
+        pressure = expert_pressure_;
+        residency_snapshot_set = expert_residency_snapshot_set_;
+        if (residency_snapshot_set) policy_budget = expert_residency_budget_;
+        waste_ewma = expert_waste_ewma_milli_;
+        waste_restricted = expert_waste_restricted_;
     }
     if (exps.empty()) return 0;
 
@@ -525,12 +634,12 @@ uint64_t prefetch_scheduler::issue_expert_willneed(int layer, const int * expert
     // SLIM-ARC FIX 2026-08-09: 改进 4——并集 top-K 热门专家（文献 ReMoE/DALI locality）。
     // 提高覆盖面，减少 miss；SLIM_ARC_EXPERT_POP=K 启用。
     if (pop_k_ > 0 && !population.empty()) {
-        std::vector<std::pair<int, int>> rank;
+        std::vector<std::pair<int, uint32_t>> rank;
         for (int eid = 0; eid < static_cast<int>(population.size()); ++eid) {
             if (population[eid] > 0) rank.emplace_back(eid, population[eid]);
         }
         std::sort(rank.begin(), rank.end(),
-                  [](const std::pair<int, int> & a, const std::pair<int, int> & b) { return a.second > b.second; });
+                  [](const auto & a, const auto & b) { return a.second > b.second; });
         int added = 0;
         for (const auto & pr : rank) {
             if (added >= pop_k_) break;
@@ -548,6 +657,99 @@ uint64_t prefetch_scheduler::issue_expert_willneed(int layer, const int * expert
                    eid < expert.n_experts && expert.size / static_cast<size_t>(expert.n_experts) > 0;
         });
     }), target.end());
+
+    if (expert_residency_enabled_) {
+        if (!residency_snapshot_set && expert_budget_enabled_.load()) {
+            policy_budget = expert_budget_.load();
+        }
+
+        std::vector<int> candidate_ids = target;
+        if (pressure != expert_pressure_state::missing) {
+            candidate_ids = requested;
+            std::vector<std::pair<int, uint32_t>> rank;
+            for (int eid = 0; eid < static_cast<int>(population.size()); ++eid) {
+                if (population[eid] > 0) rank.emplace_back(eid, population[eid]);
+            }
+            std::stable_sort(rank.begin(), rank.end(), [](const auto & left, const auto & right) {
+                return left.second > right.second;
+            });
+            for (const auto & [eid, unused] : rank) {
+                (void) unused;
+                append_unique_nonnegative(candidate_ids, eid);
+            }
+        }
+
+        size_t available_experts = 0;
+        std::vector<expert_candidate> candidates;
+        candidates.reserve(candidate_ids.size());
+        uint64_t minimum_bytes = std::numeric_limits<uint64_t>::max();
+        for (const expert_tensor_info & expert : exps) {
+            if (expert.addr != nullptr && expert.n_experts > 0 &&
+                expert.size % static_cast<size_t>(expert.n_experts) == 0) {
+                available_experts = std::max(available_experts, static_cast<size_t>(expert.n_experts));
+            }
+        }
+        for (const int eid : candidate_ids) {
+            uint64_t bytes = 0;
+            for (const expert_tensor_info & expert : exps) {
+                if (expert.addr == nullptr || expert.n_experts <= 0 || eid >= expert.n_experts ||
+                    expert.size % static_cast<size_t>(expert.n_experts) != 0) continue;
+                bytes = saturating_add(bytes, static_cast<uint64_t>(
+                    expert.size / static_cast<size_t>(expert.n_experts)));
+            }
+            if (bytes > 0) minimum_bytes = std::min(minimum_bytes, bytes);
+            const uint32_t popularity = eid >= 0 && static_cast<size_t>(eid) < population.size()
+                ? population[static_cast<size_t>(eid)] : 0;
+            candidates.push_back({
+                eid,
+                bytes,
+                popularity,
+                std::find(requested.begin(), requested.end(), eid) != requested.end() &&
+                    std::find(prev.begin(), prev.end(), eid) != prev.end(),
+                std::find(requested.begin(), requested.end(), eid) != requested.end(),
+            });
+        }
+
+        size_t max_experts = pressure == expert_pressure_state::missing ? target.size() : candidates.size();
+        max_experts = std::min(max_experts, available_experts);
+        max_experts = std::min(max_experts, candidates.size());
+        if (minimum_bytes == std::numeric_limits<uint64_t>::max() || minimum_bytes == 0) {
+            max_experts = 0;
+        } else {
+            const uint64_t budget_count = policy_budget / minimum_bytes;
+            max_experts = std::min<uint64_t>(max_experts, budget_count);
+        }
+
+        const expert_residency_decision decision = select_resident_experts({
+            pressure,
+            policy_budget,
+            max_experts,
+            waste_ewma,
+            std::move(candidates),
+            waste_restricted,
+        });
+        atomic_saturating_add(residency_samples_, uint64_t{1});
+        atomic_saturating_add(residency_admitted_experts_, static_cast<uint64_t>(decision.expert_ids.size()));
+        atomic_saturating_add(residency_admitted_bytes_, decision.admitted_bytes);
+        atomic_saturating_add(residency_skipped_bytes_, decision.skipped_bytes);
+        if (decision.fallback) atomic_saturating_add(residency_fallbacks_, uint64_t{1});
+        switch (pressure) {
+            case expert_pressure_state::missing:
+                atomic_saturating_add(residency_pressure_missing_, uint64_t{1});
+                break;
+            case expert_pressure_state::normal:
+                atomic_saturating_add(residency_pressure_normal_, uint64_t{1});
+                break;
+            case expert_pressure_state::high:
+                atomic_saturating_add(residency_pressure_high_, uint64_t{1});
+                break;
+            case expert_pressure_state::critical:
+                atomic_saturating_add(residency_pressure_critical_, uint64_t{1});
+                break;
+        }
+        target = std::move(decision.expert_ids);
+    }
+    if (target.empty()) return 0;
     uint64_t generation = 0;
     {
         std::lock_guard<std::mutex> lock(expert_state_mtx_);
@@ -658,9 +860,9 @@ void prefetch_scheduler::dump_metrics() const {
     size_t total  = saturating_add(hit, waste);
     double hr = total > 0 ? 100.0 * (double) hit / (double) total : 0.0;
     fprintf(stderr,
-            "[SLIM-ARC-METRICS] expert prefetch: samples=%d issued=%.1fMB "
+            "[SLIM-ARC-METRICS] expert prefetch: samples=%llu issued=%.1fMB "
             "hit=%.1fMB waste=%.1fMB hit_rate=%.2f%% (accounted %.1fMB)\n",
-            router_samples_.load(),
+            static_cast<unsigned long long>(router_samples_.load()),
             issued / 1048576.0, hit / 1048576.0, waste / 1048576.0, hr,
             total / 1048576.0);
 }

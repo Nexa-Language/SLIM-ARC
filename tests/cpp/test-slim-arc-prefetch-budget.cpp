@@ -725,6 +725,243 @@ void test_reclaim_never_advises_after_shutdown() {
     assert(munmap(mapping, 2 * page_size) == 0);
 }
 
+void test_residency_flag_requires_exact_one_and_disabled_stats_stay_zero() {
+    const char * values[] = {nullptr, "0", "", "false", "invalid"};
+    for (const char * value : values) {
+        scoped_env residency{"SLIM_ARC_EXPERT_RESIDENCY", value};
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [](void *, size_t, int) { return 0; }};
+        assert(!scheduler.expert_residency_enabled());
+        scheduler.set_expert_residency_pressure(slim_arc::expert_pressure_state::critical, 4096);
+        const auto stats = scheduler.expert_residency_statistics();
+        assert(stats.samples == 0);
+        assert(stats.admitted_experts == 0);
+        assert(stats.admitted_bytes == 0);
+        assert(stats.skipped_bytes == 0);
+        assert(stats.fallbacks == 0);
+        assert(stats.pressure_normal == 0);
+        assert(stats.pressure_high == 0);
+        assert(stats.pressure_critical == 0);
+    }
+    scoped_env residency{"SLIM_ARC_EXPERT_RESIDENCY", "1"};
+    slim_arc::prefetch_scheduler scheduler{1, 1};
+    assert(scheduler.expert_residency_enabled());
+}
+
+void test_residency_pressure_selects_stable_then_temporal_and_accounts_once() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(nullptr, 4 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    scoped_env residency{"SLIM_ARC_EXPERT_RESIDENCY", "1"};
+    std::vector<int> advised;
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void * addr, size_t, int advice) {
+            if (advice == POSIX_MADV_WILLNEED) {
+                advised.push_back(static_cast<int>((static_cast<uint8_t *>(addr) - static_cast<uint8_t *>(mapping)) / page_size));
+            }
+            return 0;
+        }};
+        scheduler.register_expert_tensor("blk.18.exps", mapping, 4 * page_size, 18, 4);
+        const int first[] = {1, 3};
+        const int second[] = {1, 2};
+        scheduler.cache_router_experts(18, first, 2);
+        scheduler.cache_router_experts(18, second, 2);
+
+        scheduler.set_expert_residency_pressure(slim_arc::expert_pressure_state::critical, 2 * page_size);
+        assert(scheduler.prefetch_experts(18, second, 2) == 0);
+        assert(advised.empty());
+
+        scheduler.set_expert_residency_pressure(slim_arc::expert_pressure_state::high, 2 * page_size);
+        const uint64_t high = scheduler.prefetch_experts(18, second, 2);
+        assert(high != 0);
+        assert((advised == std::vector<int>{1}));
+        scheduler.cancel_expert_prefetch(18, high);
+
+        advised.clear();
+        scheduler.set_expert_residency_pressure(slim_arc::expert_pressure_state::normal, 2 * page_size);
+        const uint64_t normal = scheduler.prefetch_experts(18, second, 2);
+        assert(normal != 0);
+        assert((advised == std::vector<int>{1, 2}));
+        scheduler.cancel_expert_prefetch(18, normal);
+
+        const auto stats = scheduler.expert_residency_statistics();
+        assert(stats.samples == 3);
+        assert(stats.admitted_experts == 3);
+        assert(stats.admitted_bytes == 3 * page_size);
+        assert(stats.pressure_critical == 1);
+        assert(stats.pressure_high == 1);
+        assert(stats.pressure_normal == 1);
+    }
+    assert(munmap(mapping, 4 * page_size) == 0);
+}
+
+void test_missing_pressure_preserves_legacy_order_and_counts_fallback() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(nullptr, 4 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    scoped_env residency{"SLIM_ARC_EXPERT_RESIDENCY", "1"};
+    std::vector<int> advised;
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void * addr, size_t, int advice) {
+            if (advice == POSIX_MADV_WILLNEED) advised.push_back(static_cast<int>(
+                (static_cast<uint8_t *>(addr) - static_cast<uint8_t *>(mapping)) / page_size));
+            return 0;
+        }};
+        scheduler.register_expert_tensor("blk.19.exps", mapping, 4 * page_size, 19, 4);
+        const int requested[] = {2, 1};
+        scheduler.set_expert_budget(2 * page_size);
+        scheduler.set_expert_residency_pressure(slim_arc::expert_pressure_state::missing, 2 * page_size);
+        const uint64_t generation = scheduler.prefetch_experts(19, requested, 2);
+        assert(generation != 0);
+        assert((advised == std::vector<int>{2, 1}));
+        const auto stats = scheduler.expert_residency_statistics();
+        assert(stats.samples == 1);
+        assert(stats.fallbacks == 1);
+        assert(stats.pressure_missing == 1);
+    }
+    assert(munmap(mapping, 4 * page_size) == 0);
+}
+
+void test_popularity_saturates_and_decays_once_at_global_sixty_fourth_sample() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(nullptr, 4 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    scoped_env residency{"SLIM_ARC_EXPERT_RESIDENCY", "1"};
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1};
+        scheduler.register_expert_tensor("blk.20.exps", mapping, 2 * page_size, 20, 2);
+        scheduler.register_expert_tensor("blk.21.exps", static_cast<uint8_t *>(mapping) + 2 * page_size, 2 * page_size, 21, 2);
+        const int zero = 0;
+        for (int sample = 0; sample < 63; ++sample) {
+            scheduler.cache_router_experts(sample % 2 == 0 ? 20 : 21, &zero, 1);
+        }
+        const int invalid = -1;
+        scheduler.cache_router_experts(20, &invalid, 1);
+        const auto before20 = scheduler.expert_popularity_snapshot(20);
+        const auto before21 = scheduler.expert_popularity_snapshot(21);
+        assert(before20[0] == 32);
+        assert(before21[0] == 31);
+        scheduler.cache_router_experts(21, &zero, 1);
+        const auto after20 = scheduler.expert_popularity_snapshot(20);
+        const auto after21 = scheduler.expert_popularity_snapshot(21);
+        assert(after20[0] == 16);
+        assert(after21[0] == 16);
+        assert(scheduler.popularity_decay_count() == 1);
+    }
+    assert(munmap(mapping, 4 * page_size) == 0);
+}
+
+void test_successful_generation_settlement_updates_waste_ewma_once() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(nullptr, 10 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    scoped_env residency{"SLIM_ARC_EXPERT_RESIDENCY", "1"};
+    {
+        size_t advice_calls{0};
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void *, size_t, int advice) {
+            if (advice == POSIX_MADV_WILLNEED) ++advice_calls;
+            return 0;
+        }};
+        scheduler.register_expert_tensor("blk.22.exps", mapping, 10 * page_size, 22, 10);
+        const int predicted[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        scheduler.cache_router_experts(22, predicted, 10);
+        struct sample_expectation {
+            int hits;
+            uint32_t ewma;
+            bool restricted;
+        };
+        const std::vector<sample_expectation> samples{
+            {2, 800, true}, {2, 800, true}, {7, 675, true}, {7, 581, false},
+        };
+        const std::vector<size_t> expected_normal_advice{2, 2, 2, 10};
+        for (size_t index = 0; index < samples.size(); ++index) {
+            const sample_expectation & sample = samples[index];
+            scheduler.set_expert_residency_pressure(slim_arc::expert_pressure_state::missing, 10 * page_size);
+            const uint64_t generation = scheduler.prefetch_experts(22, predicted, 10);
+            assert(generation != 0);
+            scheduler.cache_router_experts(22, predicted, sample.hits, generation);
+            assert(scheduler.expert_waste_ewma_milli() == sample.ewma);
+            assert(scheduler.expert_waste_restricted() == sample.restricted);
+            advice_calls = 0;
+            scheduler.set_expert_residency_pressure(slim_arc::expert_pressure_state::normal, 10 * page_size);
+            const uint64_t selection = scheduler.prefetch_experts(22, predicted, sample.hits);
+            assert(selection != 0);
+            assert(advice_calls == expected_normal_advice[index]);
+            scheduler.cancel_expert_prefetch(22, selection);
+        }
+        assert(scheduler.expert_waste_sample_count() == 4);
+    }
+    assert(munmap(mapping, 10 * page_size) == 0);
+}
+
+std::vector<int> capture_legacy_target(const char * residency_value) {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(nullptr, 4 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    scoped_env residency{"SLIM_ARC_EXPERT_RESIDENCY", residency_value};
+    scoped_env popularity{"SLIM_ARC_EXPERT_POP", "1"};
+    std::vector<int> advised;
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void * addr, size_t, int advice) {
+            if (advice == POSIX_MADV_WILLNEED) advised.push_back(static_cast<int>(
+                (static_cast<uint8_t *>(addr) - static_cast<uint8_t *>(mapping)) / page_size));
+            return 0;
+        }};
+        scheduler.register_expert_tensor("blk.23.exps", mapping, 4 * page_size, 23, 4);
+        const int hot = 3;
+        scheduler.cache_router_experts(23, &hot, 1);
+        const int requested[] = {2, 1};
+        if (residency_value != nullptr && std::string{residency_value} == "1") {
+            scheduler.set_expert_residency_pressure(slim_arc::expert_pressure_state::missing, 3 * page_size);
+        }
+        const uint64_t generation = scheduler.prefetch_experts(23, requested, 2);
+        assert(generation != 0);
+    }
+    assert(munmap(mapping, 4 * page_size) == 0);
+    return advised;
+}
+
+void test_flag_off_target_and_advice_order_equal_legacy_path() {
+    const std::vector<int> legacy = capture_legacy_target(nullptr);
+    assert((legacy == std::vector<int>{2, 1, 3}));
+    for (const char * value : {"0", "", "false"}) {
+        assert(capture_legacy_target(value) == legacy);
+    }
+    assert(capture_legacy_target("1") == legacy);
+}
+
+void test_residency_advice_callback_can_read_expert_state_without_deadlock() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(nullptr, 2 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    scoped_env residency{"SLIM_ARC_EXPERT_RESIDENCY", "1"};
+    slim_arc::prefetch_scheduler * scheduler_ptr{nullptr};
+    bool callback_read_state{false};
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void *, size_t, int advice) {
+            if (advice == POSIX_MADV_WILLNEED) {
+                assert(scheduler_ptr != nullptr);
+                assert(scheduler_ptr->current_expert_pressure() == slim_arc::expert_pressure_state::normal);
+                assert(!scheduler_ptr->expert_popularity_snapshot(24).empty());
+                assert(scheduler_ptr->expert_residency_statistics().samples == 1);
+                callback_read_state = true;
+            }
+            return 0;
+        }};
+        scheduler_ptr = &scheduler;
+        scheduler.register_expert_tensor("blk.24.exps", mapping, 2 * page_size, 24, 2);
+        const int selected = 1;
+        scheduler.cache_router_experts(24, &selected, 1);
+        scheduler.set_expert_residency_pressure(slim_arc::expert_pressure_state::normal, page_size);
+        auto prefetch = std::async(std::launch::async, [&] {
+            return scheduler.prefetch_experts(24, &selected, 1);
+        });
+        assert(prefetch.wait_for(std::chrono::seconds{2}) == std::future_status::ready);
+        assert(prefetch.get() != 0);
+        assert(callback_read_state);
+    }
+    assert(munmap(mapping, 2 * page_size) == 0);
+}
+
 } // namespace
 
 int main() {
@@ -757,5 +994,12 @@ int main() {
     test_reclaim_consumes_only_exact_successful_generation_once();
     test_reclaim_skips_subpage_unaligned_ranges_and_rejects_invalid_page_size();
     test_reclaim_never_advises_after_shutdown();
+    test_residency_flag_requires_exact_one_and_disabled_stats_stay_zero();
+    test_residency_pressure_selects_stable_then_temporal_and_accounts_once();
+    test_missing_pressure_preserves_legacy_order_and_counts_fallback();
+    test_popularity_saturates_and_decays_once_at_global_sixty_fourth_sample();
+    test_successful_generation_settlement_updates_waste_ewma_once();
+    test_flag_off_target_and_advice_order_equal_legacy_path();
+    test_residency_advice_callback_can_read_expert_state_without_deadlock();
     return 0;
 }

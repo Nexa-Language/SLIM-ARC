@@ -11,11 +11,22 @@
 #include <limits>
 #include <system_error>
 #include <string_view>
+#include <utility>
 
 namespace slim_arc {
 
 namespace {
 constexpr uint32_t default_reserve_basis_points{1000};
+
+template <typename T>
+void atomic_saturating_add(std::atomic<T> & target, T increment) noexcept {
+    T current = target.load();
+    const T maximum = std::numeric_limits<T>::max();
+    while (true) {
+        const T updated = increment > maximum - current ? maximum : current + increment;
+        if (target.compare_exchange_weak(current, updated)) return;
+    }
+}
 
 bool parse_mebibytes(const char * raw, uint64_t & bytes) noexcept {
     if (raw == nullptr) {
@@ -44,12 +55,18 @@ constexpr double unified_io_scheduler::WEIGHT_RATIOS[5][3];
 
 unified_io_scheduler::unified_io_scheduler(size_t total_budget_bytes,
                                             prefetch_scheduler * weight_prefetcher,
-                                            kv_eviction_manager * kv_manager)
+                                            kv_eviction_manager * kv_manager,
+                                            pressure_snapshot_provider pressure_provider)
     : total_budget_bytes_(total_budget_bytes)
     , weight_prefetcher_(weight_prefetcher)
-    , kv_manager_(kv_manager) {
+    , kv_manager_(kv_manager)
+    , pressure_provider_(pressure_provider ? std::move(pressure_provider) : pressure_snapshot_provider{[] {
+        return read_cgroup_memory("/sys/fs/cgroup");
+    }}) {
     current_budget_.total_bytes = total_budget_bytes;
     pressure_effective_bytes_.store(total_budget_bytes);
+    const char * const residency = std::getenv("SLIM_ARC_EXPERT_RESIDENCY");
+    expert_residency_enabled_ = residency != nullptr && std::strcmp(residency, "1") == 0;
     const char * const enabled = std::getenv("SLIM_ARC_PRESSURE_ADMISSION");
     if (enabled == nullptr) {
         return;
@@ -67,6 +84,31 @@ unified_io_scheduler::unified_io_scheduler(size_t total_budget_bytes,
 }
 
 unified_io_scheduler::~unified_io_scheduler() {
+    if (weight_prefetcher_ != nullptr) {
+        const expert_runtime_metrics expert = weight_prefetcher_->expert_runtime_statistics();
+        const expert_reclaim_stats reclaim = weight_prefetcher_->expert_reclaim_statistics();
+        const expert_residency_runtime_stats residency = weight_prefetcher_->expert_residency_statistics();
+        std::fprintf(
+            stderr,
+            "[SLIM-ARC-RUNTIME] schema=1 expert_samples=%llu expert_issued_bytes=%llu expert_hit_bytes=%llu expert_waste_bytes=%llu reclaim_candidates=%llu reclaim_calls=%llu reclaimed_bytes=%llu reclaim_skipped_bytes=%llu reclaim_failures=%llu residency_samples=%llu residency_admitted_experts=%llu residency_admitted_bytes=%llu residency_skipped_bytes=%llu residency_fallbacks=%llu pressure_normal=%llu pressure_high=%llu pressure_critical=%llu\n",
+            static_cast<unsigned long long>(expert.samples),
+            static_cast<unsigned long long>(expert.issued_bytes),
+            static_cast<unsigned long long>(expert.hit_bytes),
+            static_cast<unsigned long long>(expert.waste_bytes),
+            static_cast<unsigned long long>(reclaim.candidate_experts),
+            static_cast<unsigned long long>(reclaim.calls),
+            static_cast<unsigned long long>(reclaim.reclaimed_bytes),
+            static_cast<unsigned long long>(reclaim.skipped_bytes),
+            static_cast<unsigned long long>(reclaim.madvise_failures),
+            static_cast<unsigned long long>(residency.samples),
+            static_cast<unsigned long long>(residency.admitted_experts),
+            static_cast<unsigned long long>(residency.admitted_bytes),
+            static_cast<unsigned long long>(residency.skipped_bytes),
+            static_cast<unsigned long long>(residency.fallbacks),
+            static_cast<unsigned long long>(residency.pressure_normal),
+            static_cast<unsigned long long>(residency.pressure_high),
+            static_cast<unsigned long long>(residency.pressure_critical));
+    }
     if (!pressure_admission_enabled_) {
         return;
     }
@@ -135,18 +177,22 @@ io_budget unified_io_scheduler::allocate_budget() {
 
 void unified_io_scheduler::tick(int current_layer, int lookahead) {
     size_t effective_total = total_budget_bytes_;
+    cgroup_memory_snapshot snapshot;
+    const bool sample_pressure = pressure_admission_enabled_ || expert_residency_enabled_;
+    if (sample_pressure) {
+        snapshot = pressure_provider_();
+    }
     if (pressure_admission_enabled_) {
-        const cgroup_memory_snapshot snapshot = read_cgroup_memory("/sys/fs/cgroup");
         const pressure_budget_result pressure = compute_pressure_budget(
             total_budget_bytes_, snapshot, pressure_minimum_reserve_bytes_, default_reserve_basis_points);
         effective_total = static_cast<size_t>(pressure.effective_budget_bytes);
-        pressure_samples_.fetch_add(1);
+        atomic_saturating_add(pressure_samples_, uint64_t{1});
         pressure_effective_bytes_.store(pressure.effective_budget_bytes);
         if (!pressure.pressure_data_valid) {
-            pressure_fallback_samples_.fetch_add(1);
+            atomic_saturating_add(pressure_fallback_samples_, uint64_t{1});
         }
         if (pressure.throttled) {
-            pressure_throttled_samples_.fetch_add(1);
+            atomic_saturating_add(pressure_throttled_samples_, uint64_t{1});
         }
     }
     auto budget = allocate_budget_for_total(effective_total);
@@ -154,11 +200,24 @@ void unified_io_scheduler::tick(int current_layer, int lookahead) {
     // 2. Issue prefetch requests within budget
     if (weight_prefetcher_) {
         weight_prefetcher_->set_memory_budget(budget.weight_bytes);
+        if (expert_residency_enabled_) {
+            const expert_pressure_sample sample{
+                snapshot.status == cgroup_memory_status::ok,
+                snapshot.current_bytes,
+                snapshot.max_bytes,
+            };
+            expert_pressure_state pressure;
+            {
+                std::lock_guard<std::mutex> lock(pressure_controller_mtx_);
+                pressure = expert_pressure_controller_.update(sample);
+            }
+            weight_prefetcher_->set_expert_residency_pressure(pressure, budget.expert_bytes);
+        }
         // SLIM-ARC FIX 2026-08-09: 改进 3——把统一 I/O 预算的专家额度下发到 prefetch
         // scheduler（文献 admission control：按 expert budget 限流，防止 ~959MB 全层
         // 突发抢占 I/O）。SLIM_ARC_EXPERT_BUDGET=1 时启用（MOE_DECODE 专家占比 60%）。
-        static const bool expert_budget_on = getenv("SLIM_ARC_EXPERT_BUDGET") != nullptr;
-        if (pressure_admission_enabled_ || expert_budget_on) {
+        const bool expert_budget_on = getenv("SLIM_ARC_EXPERT_BUDGET") != nullptr;
+        if (pressure_admission_enabled_ || expert_budget_on || expert_residency_enabled_) {
             weight_prefetcher_->set_expert_budget(budget.expert_bytes);
             weight_prefetcher_->reset_expert_budget_usage();  // 每 step 重置累计用量
         }

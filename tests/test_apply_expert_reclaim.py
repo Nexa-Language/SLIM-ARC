@@ -132,12 +132,15 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert cmake.count("slim-arc-runtime.cpp") == 1
     assert cmake.count("slim-arc-page-range.cpp") == 1
     assert cmake.count("slim-arc-expert-reclaim.cpp") == 1
+    assert cmake.count("slim-arc-expert-residency.cpp") == 1
     assert "slim-arc-runtime.h" in second
     assert "slim-arc-runtime.cpp" in second
     assert "slim-arc-page-range.h" in second
     assert "slim-arc-page-range.cpp" in second
     assert "slim-arc-expert-reclaim.h" in second
     assert "slim-arc-expert-reclaim.cpp" in second
+    assert "slim-arc-expert-residency.h" in second
+    assert "slim-arc-expert-residency.cpp" in second
     assert "slim-arc-on-demand.h" not in second
     assert "slim-arc-on-demand.cpp" not in second
 

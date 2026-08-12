@@ -30,6 +30,7 @@ case "$target" in
             "$source_root/slim-arc-prefetch.cpp"
             "$source_root/slim-arc-page-range.cpp"
             "$source_root/slim-arc-expert-reclaim.cpp"
+            "$source_root/slim-arc-expert-residency.cpp"
         )
         ;;
     test-slim-arc-runtime)
@@ -39,6 +40,7 @@ case "$target" in
             "$source_root/slim-arc-prefetch.cpp"
             "$source_root/slim-arc-page-range.cpp"
             "$source_root/slim-arc-expert-reclaim.cpp"
+            "$source_root/slim-arc-expert-residency.cpp"
             "$source_root/slim-arc-pressure-budget.cpp"
             "$source_root/slim-arc-unified-scheduler.cpp"
             "$source_root/slim-arc-runtime.cpp"
@@ -66,6 +68,7 @@ case "$target" in
             "$source_root/slim-arc-prefetch.cpp"
             "$source_root/slim-arc-page-range.cpp"
             "$source_root/slim-arc-expert-reclaim.cpp"
+            "$source_root/slim-arc-expert-residency.cpp"
             "$source_root/slim-arc-pressure-budget.cpp"
             "$source_root/slim-arc-unified-scheduler.cpp"
         )

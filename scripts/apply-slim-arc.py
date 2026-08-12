@@ -11,6 +11,7 @@ SLIM_ARC_FILES = (
     "slim-arc-prefetch.h", "slim-arc-prefetch.cpp",
     "slim-arc-page-range.h", "slim-arc-page-range.cpp",
     "slim-arc-expert-reclaim.h", "slim-arc-expert-reclaim.cpp",
+    "slim-arc-expert-residency.h", "slim-arc-expert-residency.cpp",
     "slim-arc-runtime.h", "slim-arc-runtime.cpp",
     "slim-arc-unified-scheduler.h", "slim-arc-unified-scheduler.cpp",
     "slim-arc-kv-eviction.h", "slim-arc-kv-eviction.cpp",
@@ -294,6 +295,7 @@ def patch_cmakelists(filepath: str) -> None:
         "slim-arc-prefetch.cpp", "slim-arc-runtime.cpp", "slim-arc-kv-eviction.cpp",
         "slim-arc-unified-scheduler.cpp", "slim-arc-cgroup-memory.cpp", "slim-arc-pressure-budget.cpp",
         "slim-arc-page-range.cpp", "slim-arc-expert-reclaim.cpp",
+        "slim-arc-expert-residency.cpp",
     )
     if all(name in content for name in required):
         return
@@ -305,7 +307,8 @@ def patch_cmakelists(filepath: str) -> None:
             slim-arc-cgroup-memory.cpp
             slim-arc-pressure-budget.cpp
             slim-arc-page-range.cpp
-            slim-arc-expert-reclaim.cpp"""
+            slim-arc-expert-reclaim.cpp
+            slim-arc-expert-residency.cpp"""
     if "slim-arc-prefetch.cpp" not in content:
         content = replace_required(content, "llama-vocab.cpp", files, "CMake llama-vocab.cpp")
     else:
@@ -313,6 +316,7 @@ def patch_cmakelists(filepath: str) -> None:
         for name in (
             "slim-arc-runtime.cpp", "slim-arc-cgroup-memory.cpp", "slim-arc-pressure-budget.cpp",
             "slim-arc-page-range.cpp", "slim-arc-expert-reclaim.cpp",
+            "slim-arc-expert-residency.cpp",
         ):
             if name not in content:
                 content = replace_required(content, anchor, f"{anchor}\n            {name}", "CMake source")

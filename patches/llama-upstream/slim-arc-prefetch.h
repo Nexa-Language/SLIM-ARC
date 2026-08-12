@@ -1,5 +1,7 @@
 #pragma once
 
+#include "slim-arc-expert-residency.h"
+
 // SLIM-ARC: Tensor-level asynchronous prefetch scheduler
 //
 // This module implements layer-ahead prefetch on top of upstream llama.cpp's
@@ -59,6 +61,25 @@ struct expert_reclaim_stats {
     uint64_t madvise_failures{0};
     uint64_t invalid_layouts{0};
     uint64_t invalid_ids{0};
+};
+
+struct expert_residency_runtime_stats {
+    uint64_t samples{0};
+    uint64_t admitted_experts{0};
+    uint64_t admitted_bytes{0};
+    uint64_t skipped_bytes{0};
+    uint64_t fallbacks{0};
+    uint64_t pressure_missing{0};
+    uint64_t pressure_normal{0};
+    uint64_t pressure_high{0};
+    uint64_t pressure_critical{0};
+};
+
+struct expert_runtime_metrics {
+    uint64_t samples{0};
+    uint64_t issued_bytes{0};
+    uint64_t hit_bytes{0};
+    uint64_t waste_bytes{0};
 };
 
 std::vector<size_t> select_prefetch_items(
@@ -131,6 +152,16 @@ class prefetch_scheduler {
     size_t expert_waste_bytes()   const { return expert_waste_bytes_.load(); }
     size_t pending_expert_records(int layer) const;
     expert_reclaim_stats expert_reclaim_statistics() const;
+    bool expert_residency_enabled() const noexcept { return expert_residency_enabled_; }
+    void set_expert_residency_pressure(expert_pressure_state pressure, size_t budget_bytes);
+    expert_pressure_state current_expert_pressure() const;
+    expert_residency_runtime_stats expert_residency_statistics() const noexcept;
+    expert_runtime_metrics expert_runtime_statistics() const noexcept;
+    std::vector<uint32_t> expert_popularity_snapshot(int layer) const;
+    uint64_t popularity_decay_count() const noexcept { return popularity_decay_count_.load(); }
+    uint32_t expert_waste_ewma_milli() const;
+    uint64_t expert_waste_sample_count() const;
+    bool expert_waste_restricted() const;
     size_t pending_request_count() const;
     uint64_t dropped_request_count() const { return dropped_requests_.load(); }
     bool confidence_gating_enabled() const { return conf_gating_; }
@@ -168,13 +199,14 @@ class prefetch_scheduler {
     std::atomic<size_t>     expert_prefetch_bytes_{0};  // 实际 WILLNEED 下发字节
     std::atomic<size_t>     expert_hit_bytes_{0};       // 预取且下一 token 使用的字节
     std::atomic<size_t>     expert_waste_bytes_{0};     // 预取但未使用的字节
-    std::atomic<int>        router_samples_{0};         // 统计采样数
+    std::atomic<uint64_t>   router_samples_{0};         // 统计采样数
 
     std::vector<std::thread>          workers_;
     std::function<void()>             request_claim_hook_;
     const advice_fn                   advice_;
     const page_size_query_fn          page_size_query_;
     const bool                        reclaim_waste_enabled_;
+    const bool                        expert_residency_enabled_;
     std::mutex                        shutdown_mtx_;
     mutable std::mutex                mtx_;
     std::condition_variable           cv_;
@@ -231,7 +263,26 @@ class prefetch_scheduler {
     // SLIM_ARC_EXPERT_POP=K：预取 temporal 并集 top-K 热门专家
     int                                            pop_k_ = 0;
     // 每层专家激活频次计数（近窗口）
-    std::vector<std::vector<int>>                  expert_pop_counts_;
+    std::vector<std::vector<uint32_t>>             expert_pop_counts_;
+    uint8_t                                         popularity_samples_since_decay_{0};
+    std::atomic<uint64_t>                           popularity_decay_count_{0};
+    uint32_t                                        expert_waste_ewma_milli_{0};
+    bool                                            expert_waste_ewma_initialized_{false};
+    uint64_t                                        expert_waste_samples_{0};
+    expert_pressure_state                           expert_pressure_{expert_pressure_state::missing};
+    size_t                                          expert_residency_budget_{0};
+    bool                                            expert_residency_snapshot_set_{false};
+    expert_waste_controller                         expert_waste_controller_;
+    bool                                            expert_waste_restricted_{false};
+    std::atomic<uint64_t>                           residency_samples_{0};
+    std::atomic<uint64_t>                           residency_admitted_experts_{0};
+    std::atomic<uint64_t>                           residency_admitted_bytes_{0};
+    std::atomic<uint64_t>                           residency_skipped_bytes_{0};
+    std::atomic<uint64_t>                           residency_fallbacks_{0};
+    std::atomic<uint64_t>                           residency_pressure_missing_{0};
+    std::atomic<uint64_t>                           residency_pressure_normal_{0};
+    std::atomic<uint64_t>                           residency_pressure_high_{0};
+    std::atomic<uint64_t>                           residency_pressure_critical_{0};
 };
 
 // Helper: extract layer index from tensor name (blk.%d.*)
