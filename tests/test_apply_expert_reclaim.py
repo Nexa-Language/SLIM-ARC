@@ -72,6 +72,24 @@ def run_apply(root: Path) -> None:
     )
 
 
+def snapshot_tree(src: Path) -> dict[str, bytes]:
+    return {
+        str(path.relative_to(src)): path.read_bytes()
+        for path in sorted(src.rglob("*"))
+        if path.is_file()
+    }
+
+
+def run_apply_failure(root: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, str(APPLY_SCRIPT), str(root)],
+        cwd=REPO_ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+
+
 def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: Path) -> None:
     src = write_fixture(tmp_path / "llama")
 
@@ -100,6 +118,11 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert impl.rstrip().endswith("std::unique_ptr<slim_arc::runtime_owner> slim_arc_runtime;")
     assert model.index("pimpl->mappings.emplace_back(std::move(mapping));") < model.index("std::make_unique<slim_arc::runtime_owner>")
     assert "runtime->activate();" in model
+    assert '#include <cstring>' in model
+    admission = "if (slim_arc::model_runtime_admitted(use_mmap_buffer, pimpl->mappings.size(), ml.size_data, slim_arc_enabled))"
+    assert admission in model
+    assert model.index(admission) < model.index("for (const auto & item : ml.weights_map)")
+    assert model.index("for (const auto & item : ml.weights_map)") < model.index("std::make_unique<slim_arc::runtime_owner>")
 
     loader = second["llama-model-loader.cpp"].decode(encoding="utf-8")
     for forbidden in ("slim-arc-prefetch.h", "register_mmap_region", "set_global_prefetch_scheduler", "static slim_arc::"):
@@ -109,3 +132,49 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert cmake.count("slim-arc-runtime.cpp") == 1
     assert "slim-arc-runtime.h" in second
     assert "slim-arc-runtime.cpp" in second
+
+
+def test_partial_runtime_member_state_fails_without_writing_any_fixture_file(tmp_path: Path) -> None:
+    seed = write_fixture(tmp_path / "seed")
+    run_apply(seed.parent)
+    patched_model = (seed / "llama-model.cpp").read_text(encoding="utf-8")
+    src = write_fixture(tmp_path / "llama")
+    model_path = src / "llama-model.cpp"
+    model_path.write_text(
+        patched_model.replace("    std::vector<float> tensor_split_owned;", "    std::vector<float> renamed_tensor_split;", 1),
+        encoding="utf-8",
+    )
+    before = snapshot_tree(src)
+
+    result = run_apply_failure(src.parent)
+
+    assert result.returncode != 0
+    assert "RuntimeError" in result.stderr
+    assert "final member" in result.stderr
+    assert snapshot_tree(src) == before
+    assert "slim-arc-runtime.cpp" not in before
+
+
+def test_partial_runtime_setup_state_fails_without_writing_any_fixture_file(tmp_path: Path) -> None:
+    seed = write_fixture(tmp_path / "seed")
+    run_apply(seed.parent)
+    patched_model = (seed / "llama-model.cpp").read_text(encoding="utf-8")
+    src = write_fixture(tmp_path / "llama")
+    model_path = src / "llama-model.cpp"
+    model_path.write_text(
+        patched_model.replace(
+            "            pimpl->mappings.emplace_back(std::move(mapping));",
+            "            pimpl->mappings.push_back(std::move(mapping));",
+            1,
+        ),
+        encoding="utf-8",
+    )
+    before = snapshot_tree(src)
+
+    result = run_apply_failure(src.parent)
+
+    assert result.returncode != 0
+    assert "RuntimeError" in result.stderr
+    assert "mmap transfer" in result.stderr
+    assert snapshot_tree(src) == before
+    assert "slim-arc-runtime.cpp" not in before

@@ -14,6 +14,16 @@ int slim_arc::kv_eviction_manager::prefetch_cold_blocks(int32_t, int32_t) { retu
 
 namespace {
 
+void test_model_runtime_admission_is_fail_closed_and_constant_time() {
+    constexpr uint64_t threshold = 6ULL << 30;
+    assert(!slim_arc::model_runtime_admitted(false, 1, threshold + 1, true));
+    assert(!slim_arc::model_runtime_admitted(true, 0, threshold + 1, true));
+    assert(!slim_arc::model_runtime_admitted(true, 1, threshold, true));
+    assert(!slim_arc::model_runtime_admitted(true, 1, threshold - 1, true));
+    assert(!slim_arc::model_runtime_admitted(true, 1, threshold + 1, false));
+    assert(slim_arc::model_runtime_admitted(true, 1, threshold + 1, true));
+}
+
 void test_deactivate_waits_for_live_lease_and_rejects_new_acquires() {
     slim_arc::runtime_owner owner{1ULL << 20};
     assert(!slim_arc::acquire_runtime());
@@ -112,6 +122,7 @@ void test_mapping_and_tensor_registration_are_owner_lifetime_bound() {
 } // namespace
 
 int main() {
+    test_model_runtime_admission_is_fail_closed_and_constant_time();
     test_deactivate_waits_for_live_lease_and_rejects_new_acquires();
     test_lease_moves_release_each_owner_once();
     test_conflicting_owner_cannot_take_over_active_registry();

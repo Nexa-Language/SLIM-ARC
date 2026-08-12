@@ -9,6 +9,11 @@
 
 namespace slim_arc {
 
+constexpr bool model_runtime_admitted(
+    bool use_mmap_buffer, size_t mapping_count, uint64_t size_data, bool enabled) noexcept {
+    return use_mmap_buffer && mapping_count > 0 && size_data > (6ULL << 30) && enabled;
+}
+
 class runtime_owner;
 
 class runtime_lease {

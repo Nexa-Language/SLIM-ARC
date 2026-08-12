@@ -45,24 +45,17 @@ def patch_model_loader(filepath: str) -> None:
             destination.write(content)
 
 
-def patch_model(filepath: str) -> None:
-    """Install the final model-owned runtime after mmap ownership transfer."""
-    with open(filepath, encoding="utf-8") as source:
-        content = source.read()
-    if '#include "slim-arc-runtime.h"' not in content:
-        content = replace_required(
-            content, '#include "llama-model-loader.h"',
-            '#include "llama-model-loader.h"\n#include "slim-arc-runtime.h"', "llama-model include")
-    for header in ("<limits>", "<cstdlib>"):
-        if f"#include {header}" not in content:
-            content = replace_required(content, '#include "slim-arc-runtime.h"',
-                                       f'#include "slim-arc-runtime.h"\n#include {header}', f"{header} include")
-
+def transform_model(content: str) -> str:
+    """Validate the complete pinned state, then return the installed source."""
+    final_member = "    std::vector<float> tensor_split_owned;"
     runtime_member = "    std::unique_ptr<slim_arc::runtime_owner> slim_arc_runtime;"
-    if runtime_member not in content:
-        final_member = "    std::vector<float> tensor_split_owned;"
-        content = replace_required(content, final_member, final_member + "\n\n" + runtime_member,
-                                   "llama_model::impl final member")
+    unpatched_members = final_member + "\n};"
+    patched_members = final_member + "\n\n" + runtime_member + "\n};"
+    if runtime_member in content:
+        if content.count(runtime_member) != 1 or patched_members not in content:
+            raise RuntimeError("required llama_model::impl final member anchor is incomplete")
+    elif unpatched_members not in content:
+        raise RuntimeError("required llama_model::impl final member anchor not found")
 
     transfer = """    if (use_mmap_buffer) {
         for (auto & mapping : ml.mappings) {
@@ -73,69 +66,96 @@ def patch_model(filepath: str) -> None:
     setup = r'''
 
     // SLIM-ARC: model-owned runtime begins after mmap ownership transfer.
-    uint64_t slim_arc_weight_bytes = 0;
-    bool slim_arc_weights_valid = true;
-    for (const auto & item : ml.weights_map) {
-        if (item.second.tensor == nullptr) {
-            slim_arc_weights_valid = false;
-            break;
-        }
-        const size_t bytes = ggml_nbytes(item.second.tensor);
-        if (bytes > std::numeric_limits<uint64_t>::max() - slim_arc_weight_bytes) {
-            slim_arc_weights_valid = false;
-            break;
-        }
-        slim_arc_weight_bytes += bytes;
-    }
     const char * disabled = std::getenv("SLIM_ARC_DISABLE");
     const char * no_prefetch = std::getenv("SLIM_ARC_NO_PREFETCH");
     const bool slim_arc_enabled = (disabled == nullptr || std::strcmp(disabled, "1") != 0) &&
                                   (no_prefetch == nullptr || std::strcmp(no_prefetch, "1") != 0);
-    if (use_mmap_buffer && !pimpl->mappings.empty() && slim_arc_enabled &&
-        slim_arc_weights_valid && slim_arc_weight_bytes > (6ULL << 30)) {
-        auto runtime = std::make_unique<slim_arc::runtime_owner>(1ULL << 30);
-        for (const auto & mapping : pimpl->mappings) {
-            if (mapping == nullptr || !runtime->register_mapping(mapping->addr(), mapping->size())) {
-                slim_arc_weights_valid = false;
-                break;
-            }
-        }
+    if (slim_arc::model_runtime_admitted(use_mmap_buffer, pimpl->mappings.size(), ml.size_data, slim_arc_enabled)) {
+        uint64_t slim_arc_weight_bytes = 0;
+        bool slim_arc_weights_valid = true;
         for (const auto & item : ml.weights_map) {
-            const auto & weight = item.second;
-            if (!slim_arc_weights_valid || weight.idx >= pimpl->mappings.size() || weight.tensor == nullptr) {
+            if (item.second.tensor == nullptr) {
                 slim_arc_weights_valid = false;
                 break;
             }
-            const auto & mapping = pimpl->mappings[weight.idx];
-            const size_t mapping_size = mapping->size();
-            const size_t tensor_size = ggml_nbytes(weight.tensor);
-            const uintptr_t base = reinterpret_cast<uintptr_t>(mapping->addr());
-            if (base == 0 || weight.offs > mapping_size || tensor_size > mapping_size - weight.offs ||
-                weight.offs > std::numeric_limits<uintptr_t>::max() - base) {
+            const size_t bytes = ggml_nbytes(item.second.tensor);
+            if (bytes > std::numeric_limits<uint64_t>::max() - slim_arc_weight_bytes) {
                 slim_arc_weights_valid = false;
                 break;
             }
-            const uintptr_t start = base + weight.offs;
-            if (tensor_size > std::numeric_limits<uintptr_t>::max() - start) {
-                slim_arc_weights_valid = false;
-                break;
-            }
-            void * const tensor_addr = reinterpret_cast<void *>(start);
-            const int layer = slim_arc::tensor_layer_from_name(item.first.c_str());
-            runtime->prefetch().register_tensor(item.first.c_str(), tensor_addr, tensor_size, layer);
-            if (item.first.find("_exps") != std::string::npos && ggml_n_dims(weight.tensor) == 3 &&
-                weight.tensor->ne[2] > 1 && weight.tensor->ne[2] <= std::numeric_limits<int>::max()) {
-                runtime->prefetch().register_expert_tensor(
-                    item.first.c_str(), tensor_addr, tensor_size, layer, static_cast<int>(weight.tensor->ne[2]));
-            }
+            slim_arc_weight_bytes += bytes;
         }
-        if (slim_arc_weights_valid) {
-            runtime->activate();
-            pimpl->slim_arc_runtime = std::move(runtime);
+        if (slim_arc_weights_valid && slim_arc_weight_bytes > (6ULL << 30)) {
+            auto runtime = std::make_unique<slim_arc::runtime_owner>(1ULL << 30);
+            for (const auto & mapping : pimpl->mappings) {
+                if (mapping == nullptr || !runtime->register_mapping(mapping->addr(), mapping->size())) {
+                    slim_arc_weights_valid = false;
+                    break;
+                }
+            }
+            for (const auto & item : ml.weights_map) {
+                const auto & weight = item.second;
+                if (!slim_arc_weights_valid || weight.idx >= pimpl->mappings.size() || weight.tensor == nullptr) {
+                    slim_arc_weights_valid = false;
+                    break;
+                }
+                const auto & mapping = pimpl->mappings[weight.idx];
+                const size_t mapping_size = mapping->size();
+                const size_t tensor_size = ggml_nbytes(weight.tensor);
+                const uintptr_t base = reinterpret_cast<uintptr_t>(mapping->addr());
+                if (base == 0 || weight.offs > mapping_size || tensor_size > mapping_size - weight.offs ||
+                    weight.offs > std::numeric_limits<uintptr_t>::max() - base) {
+                    slim_arc_weights_valid = false;
+                    break;
+                }
+                const uintptr_t start = base + weight.offs;
+                if (tensor_size > std::numeric_limits<uintptr_t>::max() - start) {
+                    slim_arc_weights_valid = false;
+                    break;
+                }
+                void * const tensor_addr = reinterpret_cast<void *>(start);
+                const int layer = slim_arc::tensor_layer_from_name(item.first.c_str());
+                runtime->prefetch().register_tensor(item.first.c_str(), tensor_addr, tensor_size, layer);
+                if (item.first.find("_exps") != std::string::npos && ggml_n_dims(weight.tensor) == 3 &&
+                    weight.tensor->ne[2] > 1 && weight.tensor->ne[2] <= std::numeric_limits<int>::max()) {
+                    runtime->prefetch().register_expert_tensor(
+                        item.first.c_str(), tensor_addr, tensor_size, layer, static_cast<int>(weight.tensor->ne[2]));
+                }
+            }
+            if (slim_arc_weights_valid) {
+                runtime->activate();
+                pimpl->slim_arc_runtime = std::move(runtime);
+            }
         }
     }'''
+    if marker in content:
+        if content.count(marker) != 1 or transfer + setup not in content:
+            raise RuntimeError("required mmap transfer runtime block is incomplete")
+    elif transfer not in content:
+        raise RuntimeError("required mmap transfer anchor not found")
+
+    if '#include "slim-arc-runtime.h"' not in content:
+        content = replace_required(
+            content, '#include "llama-model-loader.h"',
+            '#include "llama-model-loader.h"\n#include "slim-arc-runtime.h"', "llama-model include")
+    for header in ("<limits>", "<cstdlib>", "<cstring>"):
+        if f"#include {header}" not in content:
+            content = replace_required(content, '#include "slim-arc-runtime.h"',
+                                       f'#include "slim-arc-runtime.h"\n#include {header}', f"{header} include")
+
+    if runtime_member not in content:
+        content = replace_required(content, final_member, final_member + "\n\n" + runtime_member,
+                                   "llama_model::impl final member")
     if marker not in content:
         content = replace_required(content, transfer, transfer + setup, "mmap transfer")
+    return content
+
+
+def patch_model(filepath: str) -> None:
+    """Install the final model-owned runtime after mmap ownership transfer."""
+    with open(filepath, encoding="utf-8") as source:
+        content = source.read()
+    content = transform_model(content)
     with open(filepath, "w", encoding="utf-8") as destination:
         destination.write(content)
 
@@ -295,13 +315,16 @@ def main() -> None:
     patches_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "patches", "llama-upstream")
     if not os.path.isdir(src_dir):
         raise RuntimeError(f"upstream source directory not found: {src_dir}")
+    model_path = os.path.join(src_dir, "llama-model.cpp")
+    with open(model_path, encoding="utf-8") as model_source:
+        transform_model(model_source.read())
     for filename in SLIM_ARC_FILES:
         source = os.path.join(patches_dir, filename)
         if not os.path.isfile(source):
             raise RuntimeError(f"required standalone source not found: {source}")
         shutil.copy2(source, os.path.join(src_dir, filename))
     patch_model_loader(os.path.join(src_dir, "llama-model-loader.cpp"))
-    patch_model(os.path.join(src_dir, "llama-model.cpp"))
+    patch_model(model_path)
     patch_context(os.path.join(src_dir, "llama-context.cpp"))
     patch_kv_cache(os.path.join(src_dir, "llama-kv-cache.cpp"))
     patch_cmakelists(os.path.join(src_dir, "CMakeLists.txt"))
