@@ -57,6 +57,19 @@ def load_configurations(path: Path) -> list[AblationConfig]:
     return configurations
 
 
+def build_schedule(
+    configurations: list[AblationConfig], *, rounds: int
+) -> list[tuple[int, AblationConfig, str]]:
+    if not 1 <= rounds <= 5:
+        raise ValueError("rounds must be between 1 and 5")
+    return [
+        (round_index, configuration, cache)
+        for round_index in range(1, rounds + 1)
+        for configuration in configurations
+        for cache in ("cold", "warm")
+    ]
+
+
 def _load_controller() -> Any:
     script_dir = Path(__file__).resolve().parent
     if str(script_dir) not in sys.path:
@@ -93,7 +106,7 @@ def _load_stable_memory(result_root: Path) -> int:
 
 
 def execute_ablation(
-    *, campaign_state: Path, result_root: Path, config_path: Path
+    *, campaign_state: Path, result_root: Path, config_path: Path, rounds: int = 1
 ) -> dict[str, object]:
     result_root = result_root.resolve()
     state_path = result_root / "ablation-state.json"
@@ -112,52 +125,56 @@ def execute_ablation(
     attempts = state["attempts"]
     assert isinstance(attempts, list)
     completed = {
-        (item.get("configuration"), item.get("cache"))
+        (item.get("round", 1), item.get("configuration"), item.get("cache"))
         for item in attempts
         if isinstance(item, dict)
     }
     memory_gib = _load_stable_memory(result_root)
     controller = _load_controller()
 
-    for configuration in load_configurations(config_path):
-        for cache in ("cold", "warm"):
-            if (configuration.name, cache) in completed:
-                continue
-            remaining = _remaining_seconds(campaign_state)
-            if remaining < 60:
-                state["stop_reason"] = "campaign_deadline"
-                _save_state(state_path, state)
-                return state
-            timeout = min(5400, remaining - 30)
-            timestamp = datetime.now(timezone.utc).strftime("%Y%m%dt%H%M%Sz")
-            run_id = f"ablation-{configuration.name}-{cache}-{timestamp}-{secrets.token_hex(3)}"
-            config = controller.RunConfig(
-                memory_gib=memory_gib,
-                cpus=4,
-                pp=64,
-                tg=16,
-                repetitions=1,
-                timeout_seconds=timeout,
-                variant=configuration.variant,
-                env=configuration.env,
-            )
-            result = controller.run_once(
-                config, result_root / "runs" / run_id, cold_cache=cache == "cold"
-            )
-            attempts.append(
-                {
-                    "configuration": configuration.name,
-                    "cache": cache,
-                    "outcome": result.outcome,
-                    "run_id": run_id,
-                }
-            )
-            state["updated_at"] = datetime.now(timezone.utc).isoformat()
+    schedule = build_schedule(load_configurations(config_path), rounds=rounds)
+    for round_index, configuration, cache in schedule:
+        if (round_index, configuration.name, cache) in completed:
+            continue
+        remaining = _remaining_seconds(campaign_state)
+        if remaining < 60:
+            state["stop_reason"] = "campaign_deadline"
             _save_state(state_path, state)
-            if result.outcome == "timeout":
-                state["stop_reason"] = "run_timeout"
-                _save_state(state_path, state)
-                return state
+            return state
+        timeout = min(5400, remaining - 30)
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%dt%H%M%Sz")
+        run_id = (
+            f"ablation-r{round_index}-{configuration.name}-{cache}-"
+            f"{timestamp}-{secrets.token_hex(3)}"
+        )
+        config = controller.RunConfig(
+            memory_gib=memory_gib,
+            cpus=4,
+            pp=64,
+            tg=16,
+            repetitions=1,
+            timeout_seconds=timeout,
+            variant=configuration.variant,
+            env=configuration.env,
+        )
+        result = controller.run_once(
+            config, result_root / "runs" / run_id, cold_cache=cache == "cold"
+        )
+        attempts.append(
+            {
+                "round": round_index,
+                "configuration": configuration.name,
+                "cache": cache,
+                "outcome": result.outcome,
+                "run_id": run_id,
+            }
+        )
+        state["updated_at"] = datetime.now(timezone.utc).isoformat()
+        _save_state(state_path, state)
+        if result.outcome == "timeout":
+            state["stop_reason"] = "run_timeout"
+            _save_state(state_path, state)
+            return state
     state["stop_reason"] = "ablation_complete"
     _save_state(state_path, state)
     return state
@@ -173,6 +190,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--config", type=Path, default=script_dir / "configs" / "current-ablation.json"
     )
+    parser.add_argument("--rounds", type=int, default=1)
     return parser
 
 
@@ -183,6 +201,7 @@ def main() -> int:
             campaign_state=args.campaign_state,
             result_root=args.result_root,
             config_path=args.config,
+            rounds=args.rounds,
         )
     except (OSError, ValueError) as exc:
         print(f"Ablation execution failed: {exc}", file=sys.stderr)
