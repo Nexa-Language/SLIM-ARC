@@ -17,7 +17,7 @@ sys.modules[SPEC.name] = run_ablation
 SPEC.loader.exec_module(run_ablation)
 
 
-def test_loads_fixed_eight_configuration_order() -> None:
+def test_loads_fixed_finalist_configuration_order() -> None:
     config_path = (
         Path(__file__).parents[2]
         / "scripts"
@@ -30,13 +30,31 @@ def test_loads_fixed_eight_configuration_order() -> None:
 
     assert [item.name for item in configurations] == [
         "baseline",
-        "patched-default",
-        "patched-no-prefetch",
-        "patched-decode-sequential",
-        "patched-decode-normal",
-        "patched-decode-random",
-        "patched-expert-confidence",
-        "patched-expert-budget-confidence",
+        "patched-control",
+        "patched-reclaim",
+        "patched-residency",
+        "patched-combined",
+    ]
+
+    assert [dict(item.env) for item in configurations] == [
+        {},
+        {"SLIM_ARC_DECODE_MADV": "SEQUENTIAL", "SLIM_ARC_DYNAMIC_MADV": "1"},
+        {
+            "SLIM_ARC_DECODE_MADV": "SEQUENTIAL",
+            "SLIM_ARC_DYNAMIC_MADV": "1",
+            "SLIM_ARC_EXPERT_RECLAIM_WASTE": "1",
+        },
+        {
+            "SLIM_ARC_DECODE_MADV": "SEQUENTIAL",
+            "SLIM_ARC_DYNAMIC_MADV": "1",
+            "SLIM_ARC_EXPERT_RESIDENCY": "1",
+        },
+        {
+            "SLIM_ARC_DECODE_MADV": "SEQUENTIAL",
+            "SLIM_ARC_DYNAMIC_MADV": "1",
+            "SLIM_ARC_EXPERT_RECLAIM_WASTE": "1",
+            "SLIM_ARC_EXPERT_RESIDENCY": "1",
+        },
     ]
 
 

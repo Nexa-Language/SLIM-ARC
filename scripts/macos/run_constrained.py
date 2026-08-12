@@ -32,6 +32,8 @@ SLIM_ARC_ENV_ALLOWLIST = frozenset(
         "SLIM_ARC_EXPERT_BUDGET",
         "SLIM_ARC_EXPERT_CONF",
         "SLIM_ARC_EXPERT_POP",
+        "SLIM_ARC_EXPERT_RECLAIM_WASTE",
+        "SLIM_ARC_EXPERT_RESIDENCY",
         "SLIM_ARC_KV_EVICT",
         "SLIM_ARC_KV_SINK",
         "SLIM_ARC_KV_WINDOW",
@@ -77,6 +79,11 @@ class RunConfig:
         for name, value in self.env.items():
             if name not in SLIM_ARC_ENV_ALLOWLIST:
                 raise ValueError(f"unsupported SLIM-ARC environment variable: {name}")
+            if name in {
+                "SLIM_ARC_EXPERT_RECLAIM_WASTE",
+                "SLIM_ARC_EXPERT_RESIDENCY",
+            } and value != "1":
+                raise ValueError(f"{name} must be exactly 1")
             if ENV_VALUE_PATTERN.fullmatch(value) is None:
                 raise ValueError(f"unsafe value for {name}")
 

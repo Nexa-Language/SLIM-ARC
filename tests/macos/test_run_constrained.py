@@ -132,3 +132,45 @@ def test_pressure_environment_is_allowlisted() -> None:
     )
 
     cfg.validate()
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        (name, value)
+        for name in ("SLIM_ARC_EXPERT_RECLAIM_WASTE", "SLIM_ARC_EXPERT_RESIDENCY")
+        for value in ("0", "2", "true", "", "01")
+    ],
+)
+def test_rejects_non_enabled_finalist_policy_values(name: str, value: str) -> None:
+    cfg = config(env={name: value})
+
+    with pytest.raises(ValueError, match="must be exactly 1"):
+        cfg.validate()
+
+
+def test_allows_finalist_policy_flags_only_when_enabled() -> None:
+    cfg = config(
+        env={
+            "SLIM_ARC_EXPERT_RECLAIM_WASTE": "1",
+            "SLIM_ARC_EXPERT_RESIDENCY": "1",
+        }
+    )
+
+    cfg.validate()
+
+
+def test_docker_command_carries_each_enabled_finalist_policy(tmp_path: Path) -> None:
+    cfg = config(
+        env={
+            "SLIM_ARC_EXPERT_RECLAIM_WASTE": "1",
+            "SLIM_ARC_EXPERT_RESIDENCY": "1",
+        }
+    )
+
+    command = run_constrained.build_docker_command(
+        cfg, tmp_path, container_name="slim-arc-run-test"
+    )
+
+    assert command.count("SLIM_ARC_EXPERT_RECLAIM_WASTE=1") == 1
+    assert command.count("SLIM_ARC_EXPERT_RESIDENCY=1") == 1
