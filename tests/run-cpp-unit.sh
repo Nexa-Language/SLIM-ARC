@@ -28,6 +28,10 @@ case "$target" in
         readonly test_source="$test_root/test-slim-arc-prefetch-budget.cpp"
         readonly module_sources=("$source_root/slim-arc-prefetch.cpp")
         ;;
+    test-slim-arc-page-range)
+        readonly test_source="$test_root/test-slim-arc-page-range.cpp"
+        readonly module_sources=("$source_root/slim-arc-page-range.cpp")
+        ;;
     test-slim-arc-unified-pressure)
         readonly test_source="$test_root/test-slim-arc-unified-pressure.cpp"
         readonly module_sources=(
