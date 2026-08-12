@@ -88,6 +88,8 @@ def test_manifest_has_resource_and_result_fields(tmp_path: Path) -> None:
         tg=1,
         threads=4,
         repetitions=2,
+        image_id="sha256:" + "e" * 64,
+        n_depth=0,
         environment={"SLIM_ARC_DYNAMIC_MADV": "1"},
         runtime_logs=runtime_logs,
     )
@@ -101,6 +103,19 @@ def test_manifest_has_resource_and_result_fields(tmp_path: Path) -> None:
     assert manifest["slim_arc_git_commit"] == "b" * 40
     assert manifest["slim_arc_build_context_sha256"] == "c" * 64
     assert manifest["patched_source_sha256"] == "d" * 64
+    assert manifest["image_id"] == "sha256:" + "e" * 64
+    assert manifest["workload_contract"] == {
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "context_tokens": 5,
+        "n_prompt": 4,
+        "n_gen": 1,
+        "n_depth": 0,
+        "threads": 4,
+        "no_warmup": True,
+        "load_mode": "mmap",
+        "offline": True,
+    }
     assert manifest["variant"] == "patched"
     assert manifest["outcome"] == "success"
     assert manifest["runtime_metrics"] == [
@@ -149,8 +164,34 @@ def test_patched_success_requires_one_runtime_line_per_repetition(tmp_path: Path
             tg=1,
             threads=4,
             repetitions=2,
+            image_id="sha256:" + "e" * 64,
+            n_depth=0,
             environment={},
             runtime_logs=[runtime_log],
+        )
+
+
+@pytest.mark.parametrize("image_id", ["", "sha256:" + "E" * 64, "sha256:" + "e" * 63])
+def test_manifest_rejects_malformed_runtime_image_identity(tmp_path: Path, image_id: str) -> None:
+    cgroup_dir = tmp_path / "cgroup"
+    cgroup_dir.mkdir()
+    write_fixture(cgroup_dir)
+    build_manifest = write_build_manifest(tmp_path / "build-manifest.env")
+
+    with pytest.raises(ValueError, match="image_id"):
+        run_manifest.build_manifest(
+            variant="baseline",
+            outcome="success",
+            exit_code=0,
+            cgroup_dir=cgroup_dir,
+            build_manifest_path=build_manifest,
+            pp=4,
+            tg=1,
+            threads=4,
+            repetitions=1,
+            image_id=image_id,
+            n_depth=0,
+            environment={},
         )
 
 
@@ -217,6 +258,8 @@ def test_manifest_preserves_runtime_log_order_and_saturates_each_counter(tmp_pat
         tg=1,
         threads=4,
         repetitions=2,
+        image_id="sha256:" + "e" * 64,
+        n_depth=0,
         environment={},
         runtime_logs=runtime_logs,
     )
@@ -244,6 +287,8 @@ def test_baseline_accepts_no_runtime_logs_with_zero_summary(tmp_path: Path) -> N
         tg=1,
         threads=4,
         repetitions=2,
+        image_id="sha256:" + "e" * 64,
+        n_depth=0,
         environment={},
         runtime_logs=[],
     )
@@ -273,6 +318,8 @@ def test_baseline_rejects_runtime_metric_line(tmp_path: Path) -> None:
             tg=1,
             threads=4,
             repetitions=1,
+            image_id="sha256:" + "e" * 64,
+            n_depth=0,
             environment={},
             runtime_logs=[runtime_log],
         )
@@ -295,6 +342,8 @@ def test_failed_patched_run_allows_absent_runtime_logs(tmp_path: Path) -> None:
         tg=1,
         threads=4,
         repetitions=2,
+        image_id="sha256:" + "e" * 64,
+        n_depth=0,
         environment={},
         runtime_logs=[],
     )
@@ -320,6 +369,8 @@ def test_manifest_records_pressure_admission_environment(tmp_path: Path) -> None
         tg=16,
         threads=4,
         repetitions=1,
+        image_id="sha256:" + "e" * 64,
+        n_depth=0,
         environment={
             "SLIM_ARC_PRESSURE_ADMISSION": "1",
             "SLIM_ARC_PRESSURE_RESERVE_MB": "512",
@@ -363,6 +414,8 @@ def test_rejects_missing_hard_memory_limit(tmp_path: Path) -> None:
             tg=1,
             threads=2,
             repetitions=1,
+            image_id="sha256:" + "e" * 64,
+            n_depth=0,
             environment={},
         )
 
@@ -385,6 +438,8 @@ def test_rejects_nonzero_swap_limit(tmp_path: Path) -> None:
             tg=1,
             threads=2,
             repetitions=1,
+            image_id="sha256:" + "e" * 64,
+            n_depth=0,
             environment={},
         )
 
@@ -416,6 +471,8 @@ def test_rejects_missing_or_malformed_build_identity(tmp_path: Path, identity: s
             tg=1,
             threads=2,
             repetitions=1,
+            image_id="sha256:" + "e" * 64,
+            n_depth=0,
             environment={},
         )
 

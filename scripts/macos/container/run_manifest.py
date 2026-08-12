@@ -56,6 +56,7 @@ UINT64_MAX = 2**64 - 1
 ASCII_UNSIGNED_DECIMAL = re.compile(r"[0-9]+", flags=re.ASCII)
 ASCII_GIT_COMMIT = re.compile(r"[0-9a-f]{40}", flags=re.ASCII)
 ASCII_SHA256 = re.compile(r"[0-9a-f]{64}", flags=re.ASCII)
+ASCII_IMAGE_ID = re.compile(r"sha256:[0-9a-f]{64}", flags=re.ASCII)
 
 
 def _read_int(path: Path, *, positive: bool = False) -> int:
@@ -213,6 +214,8 @@ def build_manifest(
     tg: int,
     threads: int,
     repetitions: int,
+    image_id: str,
+    n_depth: int,
     environment: Mapping[str, str],
     runtime_logs: Sequence[Path] = (),
 ) -> dict[str, object]:
@@ -220,8 +223,10 @@ def build_manifest(
         raise ValueError(f"unsupported variant: {variant}")
     if outcome not in OUTCOMES:
         raise ValueError(f"unsupported outcome: {outcome}")
-    if min(pp, tg, threads, repetitions) <= 0:
+    if min(pp, tg, threads, repetitions) <= 0 or n_depth < 0:
         raise ValueError("benchmark dimensions must be positive")
+    if ASCII_IMAGE_ID.fullmatch(image_id) is None:
+        raise ValueError("image_id must be an immutable SHA-256 image identity")
 
     memory_limit = _read_int(cgroup_dir / "memory.max", positive=True)
     swap_limit = _read_int(cgroup_dir / "memory.swap.max")
@@ -248,6 +253,19 @@ def build_manifest(
         "tg": tg,
         "threads": threads,
         "repetitions": repetitions,
+        "image_id": image_id,
+        "workload_contract": {
+            "seed": 1,
+            "seed_source": "implicit_c_rand_default",
+            "context_tokens": pp + tg + n_depth,
+            "n_prompt": pp,
+            "n_gen": tg,
+            "n_depth": n_depth,
+            "threads": threads,
+            "no_warmup": True,
+            "load_mode": "mmap",
+            "offline": True,
+        },
         "memory_limit_bytes": memory_limit,
         "memory_swap_limit_bytes": swap_limit,
         "memory_peak_bytes": memory_peak,
@@ -278,6 +296,8 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--tg", required=True, type=int)
     parser.add_argument("--threads", required=True, type=int)
     parser.add_argument("--repetitions", required=True, type=int)
+    parser.add_argument("--image-id", required=True)
+    parser.add_argument("--n-depth", required=True, type=int)
     parser.add_argument("--runtime-log", action="append", default=[], type=Path)
     parser.add_argument("--output", required=True, type=Path)
     return parser
@@ -295,6 +315,8 @@ def main() -> int:
         tg=args.tg,
         threads=args.threads,
         repetitions=args.repetitions,
+        image_id=args.image_id,
+        n_depth=args.n_depth,
         environment=os.environ,
         runtime_logs=args.runtime_log,
     )

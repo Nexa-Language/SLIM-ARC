@@ -19,9 +19,13 @@ DOCKER_CONTEXT = "colima-slim-arc"
 IMAGE = "slim-arc-llama:360e134"
 MODEL_GUEST_PATH = "/var/lib/slim-arc/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf"
 MODEL_CONTAINER_PATH = "/models/model.gguf"
+MODEL_FILENAME = "Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf"
+MODEL_SHA256 = "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+MODEL_SIZE_BYTES = 48410988384
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RESULT_ROOT = REPO_ROOT / "docs" / "macos_test_notes"
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+IMAGE_ID_PATTERN = re.compile(r"^sha256:[0-9a-f]{64}$")
 CONTAINER_NAME_PATTERN = re.compile(r"^slim-arc-run-[0-9]{8}t[0-9]{6}z-[0-9a-f]{8}$")
 ENV_VALUE_PATTERN = re.compile(r"^[A-Za-z0-9_.+-]{1,64}$")
 SLIM_ARC_ENV_ALLOWLIST = frozenset(
@@ -95,6 +99,7 @@ class RunResult:
     return_code: int | None
     oom_killed: bool
     result_dir: Path
+    image_id: str
 
 
 def new_container_name(now: datetime | None = None) -> str:
@@ -104,7 +109,11 @@ def new_container_name(now: datetime | None = None) -> str:
 
 
 def build_docker_command(
-    config: RunConfig, result_dir: Path, *, container_name: str | None = None
+    config: RunConfig,
+    result_dir: Path,
+    *,
+    container_name: str | None = None,
+    image_id: str,
 ) -> list[str]:
     config.validate()
     name = container_name or new_container_name()
@@ -113,6 +122,8 @@ def build_docker_command(
     resolved_result = result_dir.resolve()
     if "," in str(resolved_result):
         raise ValueError("result path must not contain a comma")
+    if IMAGE_ID_PATTERN.fullmatch(image_id) is None:
+        raise ValueError("Docker image ID is malformed")
 
     command = [
         "docker",
@@ -139,6 +150,8 @@ def build_docker_command(
         f"THREADS={config.cpus}",
         "--env",
         f"REPETITIONS={config.repetitions}",
+        "--env",
+        f"RUN_IMAGE_ID={image_id}",
     ]
     for name, value in sorted(config.env.items()):
         command.extend(("--env", f"{name}={value}"))
@@ -148,7 +161,7 @@ def build_docker_command(
             f"type=bind,source={MODEL_GUEST_PATH},target={MODEL_CONTAINER_PATH},readonly",
             "--mount",
             f"type=bind,source={resolved_result},target=/results",
-            IMAGE,
+            image_id,
             "/usr/local/bin/slim-arc-run-benchmark",
         )
     )
@@ -219,6 +232,26 @@ def _inspect_container(container_name: str) -> dict[str, object]:
     return state
 
 
+def resolve_image_id() -> str:
+    completed = _run(
+        [
+            "docker",
+            "--context",
+            DOCKER_CONTEXT,
+            "image",
+            "inspect",
+            IMAGE,
+            "--format",
+            "{{.Id}}",
+        ],
+        check=True,
+    )
+    image_id = completed.stdout.strip()
+    if IMAGE_ID_PATTERN.fullmatch(image_id) is None:
+        raise ValueError("Docker image ID is malformed")
+    return image_id
+
+
 def _load_memory_events(result_dir: Path) -> dict[str, int] | None:
     manifest_path = result_dir / "run-manifest.json"
     if not manifest_path.is_file():
@@ -255,8 +288,12 @@ def _load_model_manifest(result_dir: Path) -> dict[str, object]:
         or actual != expected
     ):
         raise ValueError("model manifest does not contain a matching verified SHA-256")
-    if payload.get("filename") != Path(MODEL_GUEST_PATH).name:
+    if payload.get("filename") != MODEL_FILENAME:
         raise ValueError("model manifest filename does not match the mounted model")
+    if payload.get("size") != MODEL_SIZE_BYTES:
+        raise ValueError("model manifest size does not match the mounted model")
+    if expected != MODEL_SHA256:
+        raise ValueError("model manifest SHA-256 does not match the pinned model")
     return payload
 
 
@@ -286,6 +323,7 @@ def _remove_owned_container(container_name: str) -> None:
 def _write_controller_result(
     *,
     path: Path,
+    run_id: str,
     config: RunConfig,
     container_name: str,
     outcome: str,
@@ -295,10 +333,12 @@ def _write_controller_result(
     stderr: str,
     model_manifest: Mapping[str, object],
     cold_cache: bool,
+    image_id: str,
+    workload_contract: Mapping[str, object] | None,
 ) -> None:
     payload = {
         "schema_version": 1,
-        "created_at": datetime.now(timezone.utc).isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat(timespec="microseconds"),
         "config": {
             "memory_gib": config.memory_gib,
             "cpus": config.cpus,
@@ -310,6 +350,8 @@ def _write_controller_result(
             "env": dict(config.env),
         },
         "container_name": container_name,
+        "run_id": run_id,
+        "image_id": image_id,
         "outcome": outcome,
         "return_code": return_code,
         "timed_out": timed_out,
@@ -319,6 +361,9 @@ def _write_controller_result(
         "memory_limit_bytes": config.memory_gib * 1024**3,
         "memory_swap_limit_bytes": 0,
         "cold_cache": cold_cache,
+        "workload_contract": dict(workload_contract)
+        if workload_contract is not None
+        else None,
         "stderr_summary": stderr[-2000:],
     }
     temporary = path.with_name(f".{path.name}.{secrets.token_hex(4)}")
@@ -326,6 +371,35 @@ def _write_controller_result(
         json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     temporary.replace(path)
+
+
+def _load_workload_contract(
+    result_dir: Path, *, config: RunConfig, image_id: str
+) -> dict[str, object] | None:
+    manifest_path = result_dir / "run-manifest.json"
+    if not manifest_path.is_file():
+        return None
+    payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if payload.get("image_id") != image_id:
+        raise ValueError("runner manifest image identity does not match controller")
+    contract = payload.get("workload_contract")
+    if not isinstance(contract, dict):
+        raise ValueError("runner manifest workload contract is missing")
+    expected: dict[str, object] = {
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "context_tokens": config.pp + config.tg,
+        "n_prompt": config.pp,
+        "n_gen": config.tg,
+        "n_depth": 0,
+        "threads": config.cpus,
+        "no_warmup": True,
+        "load_mode": "mmap",
+        "offline": True,
+    }
+    if contract != expected:
+        raise ValueError("runner manifest workload contract does not match request")
+    return expected
 
 
 def run_once(
@@ -342,7 +416,10 @@ def run_once(
         _drop_guest_caches()
 
     container_name = new_container_name()
-    command = build_docker_command(config, result_dir, container_name=container_name)
+    image_id = resolve_image_id()
+    command = build_docker_command(
+        config, result_dir, container_name=container_name, image_id=image_id
+    )
     timed_out = False
     completed: subprocess.CompletedProcess[str] | None = None
     try:
@@ -370,9 +447,13 @@ def run_once(
         container_state=state,
         memory_events=events,
     )
+    workload_contract = _load_workload_contract(
+        result_dir, config=config, image_id=image_id
+    )
     stderr = completed.stderr if completed is not None else "controller timeout"
     _write_controller_result(
         path=result_dir / "controller-result.json",
+        run_id=result_dir.name,
         config=config,
         container_name=container_name,
         outcome=outcome,
@@ -382,6 +463,8 @@ def run_once(
         stderr=stderr,
         model_manifest=model_manifest,
         cold_cache=cold_cache,
+        image_id=image_id,
+        workload_contract=workload_contract,
     )
     _remove_owned_container(container_name)
     return RunResult(
@@ -390,6 +473,7 @@ def run_once(
         return_code=return_code,
         oom_killed=state.get("OOMKilled") is True,
         result_dir=result_dir,
+        image_id=image_id,
     )
 
 

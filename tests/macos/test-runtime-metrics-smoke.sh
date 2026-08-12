@@ -13,6 +13,11 @@ if ! docker --context "${docker_context}" image inspect "${image}" >/dev/null 2>
     printf 'SKIP: test image is unavailable (not a pass): %s\n' "${image}"
     exit 0
 fi
+image_id="$(docker --context "${docker_context}" image inspect "${image}" --format '{{.Id}}')"
+if [[ ! "${image_id}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+    printf 'Image did not resolve to an immutable SHA-256 identity: %s\n' "${image_id}" >&2
+    exit 1
+fi
 
 work_dir="$(mktemp -d "${repo_root}/.runtime-metrics-smoke.XXXXXX")"
 cleanup() {
@@ -50,6 +55,7 @@ run_container() {
         --env TG=1 \
         --env THREADS=1 \
         --env REPETITIONS=1 \
+        --env "RUN_IMAGE_ID=${image_id}" \
         --env BENCHMARK_OVERRIDE=/opt/slim-arc-test/fake-llama-bench \
         "$@" \
         --mount "type=bind,source=${fixture_model},target=/models/model.gguf,readonly" \
@@ -116,4 +122,17 @@ assert len(manifest["runtime_metrics"]) == 1
 assert manifest["runtime_metrics"][0]["schema"] == 1
 assert manifest["runtime_metrics_summary"]["expert_samples"] == 0
 assert manifest["memory_swap_limit_bytes"] == 0
+assert manifest["image_id"].startswith("sha256:")
+assert manifest["workload_contract"] == {
+    "seed": 1,
+    "seed_source": "implicit_c_rand_default",
+    "context_tokens": 5,
+    "n_prompt": 4,
+    "n_gen": 1,
+    "n_depth": 0,
+    "threads": 1,
+    "no_warmup": True,
+    "load_mode": "mmap",
+    "offline": True,
+}
 PY
