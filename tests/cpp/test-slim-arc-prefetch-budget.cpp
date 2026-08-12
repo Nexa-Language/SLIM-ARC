@@ -103,7 +103,7 @@ void test_zero_expert_budget_disables_expert_prefetch() {
         scheduler.register_expert_tensor("blk.1.exps", mapping, page_size, 1, 1);
         scheduler.set_expert_budget(0);
         const int expert_id{0};
-        scheduler.prefetch_experts(1, &expert_id, 1);
+        assert(scheduler.prefetch_experts(1, &expert_id, 1) == 0);
         assert(scheduler.expert_prefetch_bytes() == 0);
     }
     assert(munmap(mapping, page_size) == 0);
@@ -132,10 +132,11 @@ void test_duplicate_router_ids_do_not_overcount_hits_or_underflow_waste() {
         slim_arc::prefetch_scheduler scheduler{1, 1};
         scheduler.register_expert_tensor("blk.1.exps", mapping, page_size, 1, 1);
         const int duplicate_selection[] = {0, 0};
-        scheduler.prefetch_experts(1, duplicate_selection, 2);
+        const uint64_t generation = scheduler.prefetch_experts(1, duplicate_selection, 2);
+        assert(generation != 0);
         assert(scheduler.expert_prefetch_bytes() == page_size);
 
-        scheduler.cache_router_experts(1, duplicate_selection, 2);
+        scheduler.cache_router_experts(1, duplicate_selection, 2, generation);
         assert(scheduler.expert_hit_bytes() == page_size);
         assert(scheduler.expert_waste_bytes() == 0);
     }
@@ -153,13 +154,86 @@ void test_partial_expert_advice_failure_accounts_only_successful_bytes() {
         scheduler.register_expert_tensor("blk.2.valid", mapping, page_size, 2, 1);
         scheduler.register_expert_tensor("blk.2.invalid", reinterpret_cast<void *>(1), page_size, 2, 1);
         const int expert_id{0};
-        scheduler.prefetch_experts(2, &expert_id, 1);
+        const uint64_t generation = scheduler.prefetch_experts(2, &expert_id, 1);
+        assert(generation != 0);
         assert(scheduler.expert_prefetch_bytes() == page_size);
 
-        scheduler.cache_router_experts(2, &expert_id, 1);
+        scheduler.cache_router_experts(2, &expert_id, 1, generation);
         assert(scheduler.expert_hit_bytes() == page_size);
         assert(scheduler.expert_waste_bytes() == 0);
         assert(scheduler.expert_hit_bytes() + scheduler.expert_waste_bytes() == scheduler.expert_prefetch_bytes());
+    }
+    assert(munmap(mapping, page_size) == 0);
+}
+
+void test_same_layer_generations_settle_in_reverse_order_once() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const mapping = mmap(nullptr, 2 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1};
+        scheduler.register_expert_tensor("blk.4.exps", mapping, 2 * page_size, 4, 2);
+        const int first_selection{0};
+        const int second_selection{1};
+        const uint64_t first_generation = scheduler.prefetch_experts(4, &first_selection, 1);
+        const uint64_t second_generation = scheduler.prefetch_experts(4, &second_selection, 1);
+        assert(first_generation != 0);
+        assert(second_generation > first_generation);
+
+        scheduler.cache_router_experts(4, &second_selection, 1, second_generation);
+        assert(scheduler.expert_hit_bytes() == page_size);
+        scheduler.cache_router_experts(4, &first_selection, 1, first_generation);
+        assert(scheduler.expert_hit_bytes() == 2 * page_size);
+        assert(scheduler.expert_waste_bytes() == 0);
+
+        scheduler.cache_router_experts(4, &first_selection, 1, first_generation);
+        assert(scheduler.expert_hit_bytes() == 2 * page_size);
+        assert(scheduler.expert_waste_bytes() == 0);
+    }
+    assert(munmap(mapping, 2 * page_size) == 0);
+}
+
+void test_zero_generation_updates_predictor_without_settling_metrics() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    slim_arc::prefetch_scheduler scheduler{1, 1};
+    scheduler.register_expert_tensor("blk.5.invalid", reinterpret_cast<void *>(1), page_size, 5, 1);
+    const int expert_id{0};
+    assert(scheduler.prefetch_experts(5, &expert_id, 1) == 0);
+    scheduler.cache_router_experts(5, &expert_id, 1, 0);
+    assert((scheduler.cached_experts_snapshot(5) == std::vector<int>{0}));
+    assert(scheduler.expert_hit_bytes() == 0);
+    assert(scheduler.expert_waste_bytes() == 0);
+}
+
+void test_pending_generations_are_bounded_before_advice() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const mapping = mmap(nullptr, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1};
+        scheduler.register_expert_tensor("blk.6.exps", mapping, page_size, 6, 1);
+        const int expert_id{0};
+        std::vector<uint64_t> generations;
+        for (size_t index = 0; index < 64; ++index) {
+            const uint64_t generation = scheduler.prefetch_experts(6, &expert_id, 1);
+            assert(generation != 0);
+            generations.push_back(generation);
+        }
+        assert(scheduler.pending_expert_records(6) == 64);
+        scheduler.set_expert_budget(page_size);
+        assert(scheduler.prefetch_experts(6, &expert_id, 1) == 0);
+        assert(scheduler.pending_expert_records(6) == 64);
+
+        scheduler.cache_router_experts(6, &expert_id, 1, generations.front());
+        assert(scheduler.pending_expert_records(6) == 63);
+        assert(scheduler.prefetch_experts(6, &expert_id, 1) != 0);
+        assert(scheduler.pending_expert_records(6) == 64);
     }
     assert(munmap(mapping, page_size) == 0);
 }
@@ -176,5 +250,8 @@ int main() {
     test_cached_expert_snapshot_does_not_change_after_router_update();
     test_duplicate_router_ids_do_not_overcount_hits_or_underflow_waste();
     test_partial_expert_advice_failure_accounts_only_successful_bytes();
+    test_same_layer_generations_settle_in_reverse_order_once();
+    test_zero_generation_updates_predictor_without_settling_metrics();
+    test_pending_generations_are_bounded_before_advice();
     return 0;
 }

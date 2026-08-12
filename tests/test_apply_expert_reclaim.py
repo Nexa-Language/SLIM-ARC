@@ -67,4 +67,6 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     context = second.decode(encoding="utf-8")
     assert context.count("cached_experts_snapshot(l)") == 2
     assert context.count("prefetch_experts(l, experts.data(), static_cast<int>(experts.size()))") == 2
+    assert context.count("expert_generation_tokens") >= 4
+    assert context.count("cache_router_experts(layer, ue.data(), static_cast<int>(ue.size()), expert_generation)") == 1
     assert "get_cached_experts" not in context

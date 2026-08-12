@@ -20,25 +20,16 @@ prefetch_scheduler * g_scheduler = nullptr;
 std::mutex g_mmap_mtx;
 std::vector<std::pair<void *, size_t>> g_mmap_regions;
 
-uint64_t saturating_add(uint64_t left, uint64_t right) noexcept {
-    const uint64_t maximum = std::numeric_limits<uint64_t>::max();
+template <typename T>
+T saturating_add(T left, T right) noexcept {
+    const T maximum = std::numeric_limits<T>::max();
     return right > maximum - left ? maximum : left + right;
 }
 
-size_t saturating_add_size(size_t left, size_t right) noexcept {
-    const size_t maximum = std::numeric_limits<size_t>::max();
-    return right > maximum - left ? maximum : left + right;
-}
-
-void atomic_saturating_add(std::atomic<uint64_t> & target, uint64_t increment) noexcept {
-    uint64_t current = target.load();
+template <typename T>
+void atomic_saturating_add(std::atomic<T> & target, T increment) noexcept {
+    T current = target.load();
     while (!target.compare_exchange_weak(current, saturating_add(current, increment))) {
-    }
-}
-
-void atomic_saturating_add(std::atomic<size_t> & target, size_t increment) noexcept {
-    size_t current = target.load();
-    while (!target.compare_exchange_weak(current, saturating_add_size(current, increment))) {
     }
 }
 
@@ -242,7 +233,7 @@ void prefetch_scheduler::worker_loop() {
         for (const size_t index : selected) {
             const tensor_prefetch_info & tensor = *items[index];
             if (posix_madvise(tensor.addr, tensor.size, POSIX_MADV_WILLNEED) == 0) {
-                issued = saturating_add(issued, tensor.size);
+                issued = saturating_add(issued, static_cast<uint64_t>(tensor.size));
             } else {
                 ++failures;
             }
@@ -253,7 +244,7 @@ void prefetch_scheduler::worker_loop() {
         atomic_saturating_add(budget_skipped_bytes_, skipped);
         atomic_saturating_add(budget_madvise_failures_, failures);
         if (skipped > 0) {
-            atomic_saturating_add(budget_rounds_throttled_, 1);
+            atomic_saturating_add(budget_rounds_throttled_, uint64_t{1});
         }
         total_bytes_.fetch_add(static_cast<size_t>(issued));
         total_calls_.fetch_add(1);
@@ -272,6 +263,11 @@ void prefetch_scheduler::register_expert_tensor(const char *, void * addr, size_
 }
 
 void prefetch_scheduler::cache_router_experts(int layer, const int * expert_ids, int n) {
+    cache_router_experts(layer, expert_ids, n, 0);
+}
+
+void prefetch_scheduler::cache_router_experts(
+    int layer, const int * expert_ids, int n, uint64_t generation) {
     if (layer < 0 || expert_ids == nullptr || n <= 0) return;
     std::vector<int> current;
     current.reserve(static_cast<size_t>(n));
@@ -283,30 +279,30 @@ void prefetch_scheduler::cache_router_experts(int layer, const int * expert_ids,
     if ((size_t)layer >= cached_router_experts_.size()) {
         cached_router_experts_.resize(layer + 1);
     }
-    // SLIM-ARC FIX 2026-08-09: 命中率统计（改进 1）。
-    // last_prefetched_experts_[layer] = 本 step 实际下发的预取集合；
-    // expert_ids = 本 step 实际路由。hit = 预取∩实际，waste = 预取 - hit。
-    if ((size_t)layer < last_prefetched_experts_.size() &&
-        (size_t)layer < last_prefetched_expert_bytes_.size()) {
-        const std::vector<int> & pref = last_prefetched_experts_[layer];
-        std::vector<size_t> & pref_bytes = last_prefetched_expert_bytes_[layer];
-        if (!pref.empty() && pref.size() == pref_bytes.size()) {
+    // 每个 router 观察只能结算调用方携带的精确预取代次；token 0 仅更新预测器。
+    if (generation != 0 && static_cast<size_t>(layer) < pending_expert_prefetches_.size()) {
+        std::vector<expert_prefetch_record> & pending = pending_expert_prefetches_[layer];
+        const auto it = std::find_if(pending.begin(), pending.end(), [generation](const auto & record) {
+            return record.generation == generation;
+        });
+        if (it != pending.end()) {
             size_t hit_bytes = 0;
             size_t waste_bytes = 0;
-            for (size_t index = 0; index < pref.size(); ++index) {
-                if (std::find(current.begin(), current.end(), pref[index]) != current.end()) {
-                    hit_bytes = saturating_add_size(hit_bytes, pref_bytes[index]);
+            for (size_t index = 0; index < it->expert_ids.size(); ++index) {
+                if (std::find(current.begin(), current.end(), it->expert_ids[index]) != current.end()) {
+                    hit_bytes = saturating_add(hit_bytes, it->issued_bytes[index]);
                 } else {
-                    waste_bytes = saturating_add_size(waste_bytes, pref_bytes[index]);
+                    waste_bytes = saturating_add(waste_bytes, it->issued_bytes[index]);
                 }
             }
             atomic_saturating_add(expert_hit_bytes_, hit_bytes);
             atomic_saturating_add(expert_waste_bytes_, waste_bytes);
-            // SLIM-ARC FIX 2026-08-09: 指标自洽修复——计数后清空，防止同一层
-            // 多个 ffn_moe_topk 节点对同一预取集合重复计数（pref != hit+waste）。
-            last_prefetched_experts_[layer].clear();
-            pref_bytes.clear();
+            pending.erase(it);
+        } else {
+            atomic_saturating_add(expert_unmatched_generations_, uint64_t{1});
         }
+    } else if (generation != 0) {
+        atomic_saturating_add(expert_unmatched_generations_, uint64_t{1});
     }
     ++router_samples_;
     // SLIM-ARC FIX 2026-08-09: 2-token 历史滑动（改进 2 门控用）
@@ -344,27 +340,35 @@ std::vector<int> prefetch_scheduler::cached_experts_snapshot(int layer) const {
     return cached_router_experts_[layer];
 }
 
-void prefetch_scheduler::prefetch_experts(int layer, const int * expert_ids, int n) {
-    issue_expert_willneed(layer, expert_ids, n);
+size_t prefetch_scheduler::pending_expert_records(int layer) const {
+    std::lock_guard<std::mutex> lock(expert_state_mtx_);
+    if (layer < 0 || static_cast<size_t>(layer) >= pending_expert_prefetches_.size()) {
+        return 0;
+    }
+    return pending_expert_prefetches_[layer].size();
 }
 
-void prefetch_scheduler::issue_expert_willneed(int layer, const int * expert_ids, int n) {
-    if (!enabled_.load()) return;
-    if (layer < 0 || expert_ids == nullptr || n <= 0) return;
+uint64_t prefetch_scheduler::prefetch_experts(int layer, const int * expert_ids, int n) {
+    return issue_expert_willneed(layer, expert_ids, n);
+}
+
+uint64_t prefetch_scheduler::issue_expert_willneed(int layer, const int * expert_ids, int n) {
+    if (!enabled_.load()) return 0;
+    if (layer < 0 || expert_ids == nullptr || n <= 0) return 0;
 
     std::vector<int> requested;
     requested.reserve(static_cast<size_t>(n));
     for (int i = 0; i < n; ++i) {
         append_unique_nonnegative(requested, expert_ids[i]);
     }
-    if (requested.empty()) return;
+    if (requested.empty()) return 0;
 
     std::vector<expert_tensor_info> exps;
     std::vector<int> prev;
     std::vector<int> population;
     {
         std::lock_guard<std::mutex> lock(expert_state_mtx_);
-        if (static_cast<size_t>(layer) >= experts_by_layer_.size()) return;
+        if (static_cast<size_t>(layer) >= experts_by_layer_.size()) return 0;
         exps = experts_by_layer_[layer];
         if (static_cast<size_t>(layer) < prev_router_experts_.size()) {
             prev = prev_router_experts_[layer];
@@ -373,7 +377,7 @@ void prefetch_scheduler::issue_expert_willneed(int layer, const int * expert_ids
             population = expert_pop_counts_[layer];
         }
     }
-    if (exps.empty()) return;
+    if (exps.empty()) return 0;
 
     // SLIM-ARC FIX 2026-08-09: 先构建"实际预取目标集合"。
     // 改进 2（置信度门控，文献 CommitMoE/DALI）：SLIM_ARC_EXPERT_CONF=1 时
@@ -418,33 +422,48 @@ void prefetch_scheduler::issue_expert_willneed(int layer, const int * expert_ids
                    eid < expert.n_experts && expert.size / static_cast<size_t>(expert.n_experts) > 0;
         });
     }), target.end());
-    // SLIM-ARC FIX 2026-08-09: 改进 3——每 step 统一 I/O 预算截断（文献 admission control）。
-    // expert_budget_ > 0 时，本 graph_compute step 内专家 WILLNEED 累计不超过预算；
-    // 预算耗尽则本层跳过（依赖按需分页）。unified tick 每 step 重置累计用量。
-    if (expert_budget_enabled_.load()) {
-        const size_t budget = expert_budget_.load();
-        size_t per_expert_total = 0;
-        for (const auto & expert : exps) {
-            const size_t item_size = expert.size / static_cast<size_t>(expert.n_experts);
-            const size_t maximum = std::numeric_limits<size_t>::max();
-            per_expert_total = item_size > maximum - per_expert_total ? maximum : per_expert_total + item_size;
+    uint64_t generation = 0;
+    {
+        std::lock_guard<std::mutex> lock(expert_state_mtx_);
+        if (next_expert_generation_ == 0 ||
+            next_expert_generation_ == std::numeric_limits<uint64_t>::max()) {
+            return 0;
         }
-        if (budget == 0 || per_expert_total == 0) return;
+        if (static_cast<size_t>(layer) >= pending_expert_prefetches_.size()) {
+            pending_expert_prefetches_.resize(static_cast<size_t>(layer) + 1);
+        }
+        std::vector<expert_prefetch_record> & pending = pending_expert_prefetches_[layer];
+        if (pending.size() >= max_pending_expert_records_) {
+            atomic_saturating_add(expert_pending_rejected_generations_, uint64_t{1});
+            return 0;
+        }
+        // Reserve the I/O budget only after the bounded pending slot is known
+        // available, so a rejected generation cannot consume this step's budget.
+        if (expert_budget_enabled_.load()) {
+            const size_t budget = expert_budget_.load();
+            size_t per_expert_total = 0;
+            for (const expert_tensor_info & expert : exps) {
+                const size_t item_size = expert.size / static_cast<size_t>(expert.n_experts);
+                per_expert_total = saturating_add(per_expert_total, item_size);
+            }
+            if (budget == 0 || per_expert_total == 0) return 0;
 
-        size_t used = expert_budget_used_.load();
-        while (true) {
-            if (used >= budget) return;
-            const size_t capacity = (budget - used) / per_expert_total;
-            if (capacity == 0) return;
-            if (capacity < target.size()) target.resize(capacity);
-            if (target.empty()) return;
-            const size_t reservation = target.size() * per_expert_total;
-            if (expert_budget_used_.compare_exchange_weak(used, used + reservation)) {
-                break;
+            size_t used = expert_budget_used_.load();
+            while (true) {
+                if (used >= budget) return 0;
+                const size_t capacity = (budget - used) / per_expert_total;
+                if (capacity == 0) return 0;
+                if (capacity < target.size()) target.resize(capacity);
+                if (target.empty()) return 0;
+                const size_t reservation = target.size() * per_expert_total;
+                if (expert_budget_used_.compare_exchange_weak(used, used + reservation)) {
+                    break;
+                }
             }
         }
+        generation = next_expert_generation_++;
+        pending.push_back({generation, {}, {}});
     }
-    if (target.empty()) return;
 
     size_t bytes = 0;
     std::vector<int> issued_experts;
@@ -467,32 +486,39 @@ void prefetch_scheduler::issue_expert_willneed(int layer, const int * expert_ids
             if (per_expert > std::numeric_limits<uintptr_t>::max() - address) continue;
             void * const addr = reinterpret_cast<void *>(address);
             if (posix_madvise(addr, per_expert, POSIX_MADV_WILLNEED) == 0) {
-                expert_bytes = saturating_add_size(expert_bytes, per_expert);
+                expert_bytes = saturating_add(expert_bytes, per_expert);
                 issued = true;
             }
         }
         if (issued) {
             issued_experts.push_back(eid);
             issued_expert_bytes.push_back(expert_bytes);
-            bytes = saturating_add_size(bytes, expert_bytes);
+            bytes = saturating_add(bytes, expert_bytes);
         }
     }
     {
         std::lock_guard<std::mutex> lock(expert_state_mtx_);
-        if (static_cast<size_t>(layer) >= last_prefetched_experts_.size()) {
-            last_prefetched_experts_.resize(static_cast<size_t>(layer) + 1);
+        std::vector<expert_prefetch_record> & pending = pending_expert_prefetches_[layer];
+        const auto it = std::find_if(pending.begin(), pending.end(), [generation](const auto & record) {
+            return record.generation == generation;
+        });
+        if (it == pending.end()) {
+            atomic_saturating_add(expert_unmatched_generations_, uint64_t{1});
+            return 0;
         }
-        if (static_cast<size_t>(layer) >= last_prefetched_expert_bytes_.size()) {
-            last_prefetched_expert_bytes_.resize(static_cast<size_t>(layer) + 1);
+        if (issued_experts.empty()) {
+            pending.erase(it);
+            return 0;
         }
-        last_prefetched_experts_[layer] = std::move(issued_experts);
-        last_prefetched_expert_bytes_[layer] = std::move(issued_expert_bytes);
+        it->expert_ids = std::move(issued_experts);
+        it->issued_bytes = std::move(issued_expert_bytes);
     }
 
     if (bytes > 0) {
         atomic_saturating_add(total_bytes_, bytes);
         atomic_saturating_add(expert_prefetch_bytes_, bytes);
     }
+    return generation;
 }
 
 // SLIM-ARC FIX 2026-08-09: 专家预取可观测性指标汇总（改进 1）。
@@ -503,7 +529,7 @@ void prefetch_scheduler::dump_metrics() const {
     size_t issued = expert_prefetch_bytes_.load();
     size_t hit    = expert_hit_bytes_.load();
     size_t waste  = expert_waste_bytes_.load();
-    size_t total  = saturating_add_size(hit, waste);
+    size_t total  = saturating_add(hit, waste);
     double hr = total > 0 ? 100.0 * (double) hit / (double) total : 0.0;
     fprintf(stderr,
             "[SLIM-ARC-METRICS] expert prefetch: samples=%d issued=%.1fMB "

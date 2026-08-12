@@ -205,6 +205,9 @@ def patch_context(filepath):
     if '<vector>' not in content:
         content = content.replace('#include <limits>', '#include <limits>\n#include <vector>', 1)
         print("  added <vector>")
+    if '<cstdint>' not in content:
+        content = content.replace('#include <limits>', '#include <limits>\n#include <cstdint>', 1)
+        print("  added <cstdint>")
     # SLIM-ARC FIX 2026-08-05: llama-context.cpp 使用 INT_MAX，需 <climits>（修复 INT_MAX 级联错误，
     # 否则 max_layer 声明被吞导致 'not declared in this scope'）。<limits> 不保证提供 INT_MAX。
     if '<climits>' not in content:
@@ -237,6 +240,10 @@ def patch_context(filepath):
             }
         }
     }
+    std::vector<uint64_t> expert_generation_tokens;
+    if (min_layer != INT_MAX && max_layer >= 0) {
+        expert_generation_tokens.resize(static_cast<size_t>(max_layer) + 1, 0);
+    }
     if (auto * u = slim_arc::get_global_unified_scheduler()) {
         u->set_phase(batched ? slim_arc::runtime_phase::PREFILL_SHORT
                               : slim_arc::runtime_phase::MOE_DECODE);
@@ -260,7 +267,8 @@ def patch_context(filepath):
                 for (int l = min_layer; l <= max_layer; ++l) {
                     const std::vector<int> experts = s->cached_experts_snapshot(l);
                     if (!experts.empty()) {
-                        s->prefetch_experts(l, experts.data(), static_cast<int>(experts.size()));
+                        expert_generation_tokens[static_cast<size_t>(l)] =
+                            s->prefetch_experts(l, experts.data(), static_cast<int>(experts.size()));
                     }
                 }
             }
@@ -279,7 +287,8 @@ def patch_context(filepath):
             for (int l = min_layer; l <= max_layer; ++l) {
                 const std::vector<int> experts = s->cached_experts_snapshot(l);
                 if (!experts.empty()) {
-                    s->prefetch_experts(l, experts.data(), static_cast<int>(experts.size()));
+                    expert_generation_tokens[static_cast<size_t>(l)] =
+                        s->prefetch_experts(l, experts.data(), static_cast<int>(experts.size()));
                 }
             }
         }
@@ -325,7 +334,12 @@ def patch_context(filepath):
                             if (!found) ue.push_back(eid);
                         }
                     }
-                    if (!ue.empty()) s->cache_router_experts(layer, ue.data(), (int) ue.size());
+                    const uint64_t expert_generation = static_cast<size_t>(layer) < expert_generation_tokens.size()
+                        ? expert_generation_tokens[static_cast<size_t>(layer)]
+                        : 0;
+                    if (!ue.empty()) {
+                        s->cache_router_experts(layer, ue.data(), static_cast<int>(ue.size()), expert_generation);
+                    }
                     // SLIM-ARC FIX 2026-08-08: 移除 break——缓存所有层的 topk 专家，
                     // 使跨层/跨步预测可用（原实现只缓存第一层，专家预取几乎从不触发）。
                 }

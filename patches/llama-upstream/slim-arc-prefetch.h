@@ -99,10 +99,13 @@ class prefetch_scheduler {
     void register_expert_tensor(const char * name, void * addr, size_t size, int layer, int n_experts);
     // 缓存该层路由器选中的专家 ID（用于跨层预测）
     void cache_router_experts(int layer, const int * expert_ids, int n);
+    // 结算指定预取代次；generation 为 0 时只更新预测器，不结算指标。
+    void cache_router_experts(int layer, const int * expert_ids, int n, uint64_t generation);
     // 获取某层最近缓存的路由专家 ID 的独立副本。
     std::vector<int> cached_experts_snapshot(int layer) const;
-    // 对指定层的给定专家发起 WILLNEED 预取
-    void prefetch_experts(int layer, const int * expert_ids, int n);
+    // 对指定层的给定专家发起 WILLNEED 预取，并返回不可复用的结算代次。
+    // 0 表示没有可结算的成功预取。
+    uint64_t prefetch_experts(int layer, const int * expert_ids, int n);
 
     // ---- SLIM-ARC FIX 2026-08-09: 专家预取可观测性指标（文献 1：先可观测再优化）----
     // 输出命中率/浪费字节等汇总（析构时调用）
@@ -110,6 +113,7 @@ class prefetch_scheduler {
     size_t expert_prefetch_bytes() const { return expert_prefetch_bytes_.load(); }
     size_t expert_hit_bytes()     const { return expert_hit_bytes_.load(); }
     size_t expert_waste_bytes()   const { return expert_waste_bytes_.load(); }
+    size_t pending_expert_records(int layer) const;
     // 统一 I/O 预算下发与每步重置（改进 3，供 unified_io_scheduler::tick 调用）
     void set_expert_budget(size_t bytes) {
         expert_budget_.store(bytes);
@@ -119,7 +123,7 @@ class prefetch_scheduler {
 
   private:
     void worker_loop();
-    void issue_expert_willneed(int layer, const int * expert_ids, int n);
+    uint64_t issue_expert_willneed(int layer, const int * expert_ids, int n);
 
     int n_threads_;
     int window_;
@@ -157,10 +161,17 @@ class prefetch_scheduler {
     mutable std::mutex                              expert_state_mtx_;
     // Router-selected expert IDs per layer (for next-layer prediction)
     std::vector<std::vector<int>>                  cached_router_experts_;
-    // 最近一次实际下发的预取专家集合（每层，供命中率统计，改进 1）
-    std::vector<std::vector<int>>                  last_prefetched_experts_;
-    // 与 last_prefetched_experts_ 平行，保存每个唯一 expert 成功 advice 的字节数。
-    std::vector<std::vector<size_t>>               last_prefetched_expert_bytes_;
+    struct expert_prefetch_record {
+        uint64_t generation;
+        std::vector<int> expert_ids;
+        std::vector<size_t> issued_bytes;
+    };
+    // 每层按 generation 保存有界、尚未结算的预取记录（advice 前占位）。
+    std::vector<std::vector<expert_prefetch_record>> pending_expert_prefetches_;
+    uint64_t                                        next_expert_generation_{1};
+    static constexpr size_t                         max_pending_expert_records_{64};
+    std::atomic<uint64_t>                           expert_pending_rejected_generations_{0};
+    std::atomic<uint64_t>                           expert_unmatched_generations_{0};
     // ---- SLIM-ARC FIX 2026-08-09: 置信度门控（改进 2）----
     // 上一步（t-2）路由，用于"连续两 token 稳定专家"高置信度过滤
     std::vector<std::vector<int>>                  prev_router_experts_;
