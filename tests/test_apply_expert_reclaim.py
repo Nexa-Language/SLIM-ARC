@@ -62,8 +62,8 @@ def write_fixture(root: Path) -> Path:
     return src
 
 
-def run_apply(root: Path) -> None:
-    subprocess.run(
+def run_apply(root: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
         [sys.executable, str(APPLY_SCRIPT), str(root)],
         cwd=REPO_ROOT,
         check=True,
@@ -93,12 +93,14 @@ def run_apply_failure(root: Path) -> subprocess.CompletedProcess[str]:
 def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: Path) -> None:
     src = write_fixture(tmp_path / "llama")
 
-    run_apply(src.parent)
+    first_run = run_apply(src.parent)
     first = {path.name: path.read_bytes() for path in src.iterdir() if path.is_file()}
-    run_apply(src.parent)
+    second_run = run_apply(src.parent)
     second = {path.name: path.read_bytes() for path in src.iterdir() if path.is_file()}
 
     assert first == second
+    assert first_run.stdout == "SLIM-ARC integration complete\n"
+    assert second_run.stdout == first_run.stdout
     context = second["llama-context.cpp"].decode(encoding="utf-8")
     assert context.count("cached_experts_snapshot(layer)") == 1
     assert context.count("prefetch_experts(layer, experts.data(), static_cast<int>(experts.size()))") == 1

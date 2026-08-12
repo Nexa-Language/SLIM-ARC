@@ -344,6 +344,7 @@ def main() -> None:
     patch_context(os.path.join(src_dir, "llama-context.cpp"))
     patch_kv_cache(os.path.join(src_dir, "llama-kv-cache.cpp"))
     patch_cmakelists(os.path.join(src_dir, "CMakeLists.txt"))
+    print("SLIM-ARC integration complete")
 
 
 if __name__ == "__main__":
