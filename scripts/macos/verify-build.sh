@@ -4,7 +4,12 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 source "${script_dir}/common.sh"
 
-result_dir="${1:?usage: verify-build.sh <result-dir>}"
+if [[ $# -ne 2 ]]; then
+    printf 'usage: verify-build.sh <result-dir> <model-manifest>\n' >&2
+    exit 2
+fi
+result_dir="$1"
+model_manifest="$2"
 assert_safe_result_dir "${result_dir}"
 mkdir -p "${result_dir}"
 
@@ -33,5 +38,16 @@ DOCKER_CONTEXT="${docker_context}" docker run --rm "${image_tag}" cat /opt/patch
 grep -q 'SLIM-ARC integration complete' "${result_dir}/patch-apply.log"
 DOCKER_CONTEXT="${docker_context}" docker image inspect "${image_tag}" --format '{{json .RepoTags}} {{.Id}} {{.Architecture}} {{.Os}}' >"${result_dir}/image-inspect.txt"
 bash "$(slim_arc_repo_root)/tests/macos/test-variant-linkage.sh" "${image_tag}"
+
+image_id="$(DOCKER_CONTEXT="${docker_context}" docker image inspect "${image_tag}" --format '{{.Id}}')"
+if [[ ! "${image_id}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+    printf 'Runtime image id is missing or malformed\n' >&2
+    exit 1
+fi
+python3 "$(slim_arc_repo_root)/scripts/macos/write_build_evidence.py" \
+    "${result_dir}" \
+    --build-manifest "${manifest_path}" \
+    --model-manifest "${model_manifest}" \
+    --image-id "${image_id}"
 
 cat "${manifest_path}"
