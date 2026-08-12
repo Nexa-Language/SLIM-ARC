@@ -51,6 +51,16 @@ struct prefetch_budget_stats {
     uint64_t madvise_failures{0};
 };
 
+struct expert_reclaim_stats {
+    uint64_t candidate_experts{0};
+    uint64_t calls{0};
+    uint64_t reclaimed_bytes{0};
+    uint64_t skipped_bytes{0};
+    uint64_t madvise_failures{0};
+    uint64_t invalid_layouts{0};
+    uint64_t invalid_ids{0};
+};
+
 std::vector<size_t> select_prefetch_items(
     const std::vector<size_t> & item_sizes,
     uint64_t budget_bytes,
@@ -59,7 +69,15 @@ std::vector<size_t> select_prefetch_items(
 
 class prefetch_scheduler {
   public:
-    explicit prefetch_scheduler(int n_threads = 2, int window = 3, std::function<void()> request_claim_hook = {});
+    using advice_fn = std::function<int(void *, size_t, int)>;
+    using page_size_query_fn = std::function<long()>;
+
+    explicit prefetch_scheduler(
+        int n_threads = 2,
+        int window = 3,
+        std::function<void()> request_claim_hook = {},
+        advice_fn advice = {},
+        page_size_query_fn page_size_query = {});
     ~prefetch_scheduler();
     prefetch_scheduler(const prefetch_scheduler &) = delete;
     prefetch_scheduler & operator=(const prefetch_scheduler &) = delete;
@@ -112,6 +130,7 @@ class prefetch_scheduler {
     size_t expert_hit_bytes()     const { return expert_hit_bytes_.load(); }
     size_t expert_waste_bytes()   const { return expert_waste_bytes_.load(); }
     size_t pending_expert_records(int layer) const;
+    expert_reclaim_stats expert_reclaim_statistics() const;
     size_t pending_request_count() const;
     uint64_t dropped_request_count() const { return dropped_requests_.load(); }
     bool confidence_gating_enabled() const { return conf_gating_; }
@@ -126,6 +145,10 @@ class prefetch_scheduler {
   private:
     void worker_loop();
     uint64_t issue_expert_willneed(int layer, const int * expert_ids, int n);
+    void reclaim_wrong_expert_pages(
+        const std::vector<int> & prefetched,
+        const std::vector<int> & selected,
+        const std::vector<expert_tensor_info> & tensors);
 
     int n_threads_;
     int window_;
@@ -149,6 +172,9 @@ class prefetch_scheduler {
 
     std::vector<std::thread>          workers_;
     std::function<void()>             request_claim_hook_;
+    const advice_fn                   advice_;
+    const page_size_query_fn          page_size_query_;
+    const bool                        reclaim_waste_enabled_;
     std::mutex                        shutdown_mtx_;
     mutable std::mutex                mtx_;
     std::condition_variable           cv_;
@@ -181,6 +207,13 @@ class prefetch_scheduler {
     static constexpr size_t                         max_pending_expert_records_{64};
     std::atomic<uint64_t>                           expert_pending_rejected_generations_{0};
     std::atomic<uint64_t>                           expert_unmatched_generations_{0};
+    std::atomic<uint64_t>                           reclaim_candidate_experts_{0};
+    std::atomic<uint64_t>                           reclaim_calls_{0};
+    std::atomic<uint64_t>                           reclaim_reclaimed_bytes_{0};
+    std::atomic<uint64_t>                           reclaim_skipped_bytes_{0};
+    std::atomic<uint64_t>                           reclaim_madvise_failures_{0};
+    std::atomic<uint64_t>                           reclaim_invalid_layouts_{0};
+    std::atomic<uint64_t>                           reclaim_invalid_ids_{0};
     // ---- SLIM-ARC FIX 2026-08-09: 置信度门控（改进 2）----
     // 上一步（t-2）路由，用于"连续两 token 稳定专家"高置信度过滤
     std::vector<std::vector<int>>                  prev_router_experts_;

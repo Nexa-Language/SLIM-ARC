@@ -26,13 +26,19 @@ case "$target" in
         ;;
     test-slim-arc-prefetch-budget)
         readonly test_source="$test_root/test-slim-arc-prefetch-budget.cpp"
-        readonly module_sources=("$source_root/slim-arc-prefetch.cpp")
+        readonly module_sources=(
+            "$source_root/slim-arc-prefetch.cpp"
+            "$source_root/slim-arc-page-range.cpp"
+            "$source_root/slim-arc-expert-reclaim.cpp"
+        )
         ;;
     test-slim-arc-runtime)
         readonly test_source="$test_root/test-slim-arc-runtime.cpp"
         readonly module_sources=(
             "$source_root/slim-arc-cgroup-memory.cpp"
             "$source_root/slim-arc-prefetch.cpp"
+            "$source_root/slim-arc-page-range.cpp"
+            "$source_root/slim-arc-expert-reclaim.cpp"
             "$source_root/slim-arc-pressure-budget.cpp"
             "$source_root/slim-arc-unified-scheduler.cpp"
             "$source_root/slim-arc-runtime.cpp"
@@ -54,6 +60,8 @@ case "$target" in
         readonly module_sources=(
             "$source_root/slim-arc-cgroup-memory.cpp"
             "$source_root/slim-arc-prefetch.cpp"
+            "$source_root/slim-arc-page-range.cpp"
+            "$source_root/slim-arc-expert-reclaim.cpp"
             "$source_root/slim-arc-pressure-budget.cpp"
             "$source_root/slim-arc-unified-scheduler.cpp"
         )

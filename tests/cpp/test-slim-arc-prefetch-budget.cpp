@@ -1,6 +1,7 @@
 #include "slim-arc-prefetch.h"
 
 #include <cassert>
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <limits>
@@ -414,6 +415,316 @@ void test_prefetch_cancel_cycles_do_not_exhaust_pending_slots() {
     assert(munmap(mapping, page_size) == 0);
 }
 
+struct advice_call {
+    void * address;
+    size_t length;
+    int advice;
+};
+
+void assert_zero_reclaim_stats(const slim_arc::expert_reclaim_stats & stats) {
+    assert(stats.candidate_experts == 0);
+    assert(stats.calls == 0);
+    assert(stats.reclaimed_bytes == 0);
+    assert(stats.skipped_bytes == 0);
+    assert(stats.madvise_failures == 0);
+    assert(stats.invalid_layouts == 0);
+    assert(stats.invalid_ids == 0);
+}
+
+void test_reclaim_flag_off_preserves_legacy_settlement_without_dontneed() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const mapping = mmap(nullptr, 2 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    scoped_env reclaim{"SLIM_ARC_EXPERT_RECLAIM_WASTE", "0"};
+    std::vector<advice_call> calls;
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void * address, size_t length, int advice) {
+            calls.push_back({address, length, advice});
+            return 0;
+        }};
+        scheduler.register_expert_tensor("blk.9.exps", mapping, 2 * page_size, 9, 2);
+        const int predicted[] = {0, 1};
+        const int selected{0};
+        const uint64_t generation = scheduler.prefetch_experts(9, predicted, 2);
+        assert(generation != 0);
+        scheduler.cache_router_experts(9, &selected, 1, generation);
+        assert(scheduler.expert_waste_bytes() == page_size);
+        assert_zero_reclaim_stats(scheduler.expert_reclaim_statistics());
+    }
+    assert(std::none_of(calls.begin(), calls.end(), [](const advice_call & call) {
+        return call.advice == POSIX_MADV_DONTNEED;
+    }));
+    assert(munmap(mapping, 2 * page_size) == 0);
+}
+
+void test_reclaim_flag_requires_exact_one() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    for (const char * value : {"0", "", "false", "true"}) {
+        void * const mapping = mmap(nullptr, 2 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+        assert(mapping != MAP_FAILED);
+        scoped_env reclaim{"SLIM_ARC_EXPERT_RECLAIM_WASTE", value};
+        int dontneed_count{0};
+        {
+            slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void *, size_t, int advice) {
+                if (advice == POSIX_MADV_DONTNEED) ++dontneed_count;
+                return 0;
+            }};
+            scheduler.register_expert_tensor("blk.9.exps", mapping, 2 * page_size, 9, 2);
+            const int predicted[] = {0, 1};
+            const int selected{0};
+            const uint64_t generation = scheduler.prefetch_experts(9, predicted, 2);
+            assert(generation != 0);
+            scheduler.cache_router_experts(9, &selected, 1, generation);
+            assert_zero_reclaim_stats(scheduler.expert_reclaim_statistics());
+        }
+        assert(dontneed_count == 0);
+        assert(munmap(mapping, 2 * page_size) == 0);
+    }
+}
+
+void test_reclaim_excludes_selected_experts_and_uses_only_dontneed() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const mapping = mmap(nullptr, 3 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    scoped_env reclaim{"SLIM_ARC_EXPERT_RECLAIM_WASTE", "1"};
+    std::vector<advice_call> calls;
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void * address, size_t length, int advice) {
+            calls.push_back({address, length, advice});
+            return 0;
+        }};
+        scheduler.register_expert_tensor("blk.10.exps", mapping, 3 * page_size, 10, 3);
+        const int predicted[] = {0, 1, 2};
+        const int selected[] = {0, 2};
+        const uint64_t generation = scheduler.prefetch_experts(10, predicted, 3);
+        assert(generation != 0);
+        scheduler.cache_router_experts(10, selected, 2, generation);
+        const auto stats = scheduler.expert_reclaim_statistics();
+        assert(stats.candidate_experts == 1);
+        assert(stats.calls == 1);
+        assert(stats.reclaimed_bytes == page_size);
+        assert(stats.skipped_bytes == 0);
+        assert(stats.madvise_failures == 0);
+        assert(stats.invalid_layouts == 0);
+        assert(stats.invalid_ids == 0);
+    }
+    const auto dontneed = std::find_if(calls.begin(), calls.end(), [](const advice_call & call) {
+        return call.advice == POSIX_MADV_DONTNEED;
+    });
+    assert(dontneed != calls.end());
+    assert(dontneed->address == static_cast<uint8_t *>(mapping) + page_size);
+    assert(dontneed->length == page_size);
+    assert(std::count_if(calls.begin(), calls.end(), [](const advice_call & call) {
+        return call.advice == POSIX_MADV_DONTNEED;
+    }) == 1);
+    assert(munmap(mapping, 3 * page_size) == 0);
+}
+
+void test_reclaim_counts_only_successful_dontneed_bytes() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const first = mmap(nullptr, 2 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    void * const second = mmap(nullptr, 2 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(first != MAP_FAILED && second != MAP_FAILED);
+    scoped_env reclaim{"SLIM_ARC_EXPERT_RECLAIM_WASTE", "1"};
+    int dontneed_count{0};
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void *, size_t, int advice) {
+            if (advice != POSIX_MADV_DONTNEED) return 0;
+            ++dontneed_count;
+            return dontneed_count == 1 ? 0 : -1;
+        }};
+        scheduler.register_expert_tensor("blk.11.first", first, 2 * page_size, 11, 2);
+        scheduler.register_expert_tensor("blk.11.second", second, 2 * page_size, 11, 2);
+        const int predicted[] = {0, 1};
+        const int selected{0};
+        const uint64_t generation = scheduler.prefetch_experts(11, predicted, 2);
+        assert(generation != 0);
+        scheduler.cache_router_experts(11, &selected, 1, generation);
+        const auto stats = scheduler.expert_reclaim_statistics();
+        assert(dontneed_count == 2);
+        assert(stats.candidate_experts == 1);
+        assert(stats.calls == 2);
+        assert(stats.reclaimed_bytes == page_size);
+        assert(stats.madvise_failures == 1);
+    }
+    assert(munmap(first, 2 * page_size) == 0);
+    assert(munmap(second, 2 * page_size) == 0);
+}
+
+void test_reclaim_propagates_invalid_ids_from_mismatched_tensor_views() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const triple = mmap(nullptr, 3 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    void * const pair = mmap(nullptr, 2 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(triple != MAP_FAILED && pair != MAP_FAILED);
+    scoped_env reclaim{"SLIM_ARC_EXPERT_RECLAIM_WASTE", "1"};
+    int dontneed_count{0};
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void *, size_t, int advice) {
+            if (advice == POSIX_MADV_DONTNEED) ++dontneed_count;
+            return 0;
+        }};
+        scheduler.register_expert_tensor("blk.16.triple", triple, 3 * page_size, 16, 3);
+        scheduler.register_expert_tensor("blk.16.pair", pair, 2 * page_size, 16, 2);
+        const int predicted{2};
+        const int selected{0};
+        const uint64_t generation = scheduler.prefetch_experts(16, &predicted, 1);
+        assert(generation != 0);
+        scheduler.cache_router_experts(16, &selected, 1, generation);
+        const auto stats = scheduler.expert_reclaim_statistics();
+        assert(dontneed_count == 1);
+        assert(stats.candidate_experts == 1);
+        assert(stats.calls == 1);
+        assert(stats.reclaimed_bytes == page_size);
+        assert(stats.invalid_layouts == 0);
+        assert(stats.invalid_ids == 1);
+    }
+    assert(munmap(triple, 3 * page_size) == 0);
+    assert(munmap(pair, 2 * page_size) == 0);
+}
+
+void test_reclaim_advice_callback_can_read_scheduler_state() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const mapping = mmap(nullptr, 2 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    scoped_env reclaim{"SLIM_ARC_EXPERT_RECLAIM_WASTE", "1"};
+    slim_arc::prefetch_scheduler * scheduler_ptr{nullptr};
+    bool callback_read_state{false};
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void *, size_t, int advice) {
+            if (advice == POSIX_MADV_DONTNEED) {
+                assert(scheduler_ptr != nullptr);
+                assert((scheduler_ptr->cached_experts_snapshot(17) == std::vector<int>{0}));
+                assert(scheduler_ptr->expert_reclaim_statistics().candidate_experts == 1);
+                callback_read_state = true;
+            }
+            return 0;
+        }};
+        scheduler_ptr = &scheduler;
+        scheduler.register_expert_tensor("blk.17.exps", mapping, 2 * page_size, 17, 2);
+        const int predicted[] = {0, 1};
+        const int selected{0};
+        const uint64_t generation = scheduler.prefetch_experts(17, predicted, 2);
+        assert(generation != 0);
+        scheduler.cache_router_experts(17, &selected, 1, generation);
+        assert(callback_read_state);
+    }
+    assert(munmap(mapping, 2 * page_size) == 0);
+}
+
+void test_reclaim_consumes_only_exact_successful_generation_once() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const mapping = mmap(nullptr, 2 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    scoped_env reclaim{"SLIM_ARC_EXPERT_RECLAIM_WASTE", "1"};
+    int dontneed_count{0};
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void *, size_t, int advice) {
+            if (advice == POSIX_MADV_DONTNEED) ++dontneed_count;
+            return 0;
+        }};
+        scheduler.register_expert_tensor("blk.12.exps", mapping, 2 * page_size, 12, 2);
+        const int predicted[] = {0, 1};
+        const int selected{0};
+        const uint64_t settled = scheduler.prefetch_experts(12, predicted, 2);
+        assert(settled != 0);
+        scheduler.cache_router_experts(12, &selected, 1, settled);
+        scheduler.cache_router_experts(12, &selected, 1, settled);
+        scheduler.cache_router_experts(12, &selected, 1, settled + 1000);
+        const uint64_t cancelled = scheduler.prefetch_experts(12, predicted, 2);
+        assert(cancelled != 0);
+        scheduler.cancel_expert_prefetch(12, cancelled);
+        scheduler.cache_router_experts(12, &selected, 1, cancelled);
+        scheduler.cache_router_experts(12, &selected, 1, 0);
+        assert(dontneed_count == 1);
+        const auto stats = scheduler.expert_reclaim_statistics();
+        assert(stats.candidate_experts == 1);
+        assert(stats.calls == 1);
+    }
+    assert(munmap(mapping, 2 * page_size) == 0);
+}
+
+void test_reclaim_skips_subpage_unaligned_ranges_and_rejects_invalid_page_size() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const mapping = mmap(nullptr, 3 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    scoped_env reclaim{"SLIM_ARC_EXPERT_RECLAIM_WASTE", "1"};
+    int dontneed_count{0};
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void *, size_t, int advice) {
+            if (advice == POSIX_MADV_DONTNEED) ++dontneed_count;
+            return 0;
+        }};
+        scheduler.register_expert_tensor("blk.13.exps", static_cast<uint8_t *>(mapping) + 1, 2 * page_size, 13, 2);
+        const int predicted[] = {0, 1};
+        const int selected{0};
+        const uint64_t generation = scheduler.prefetch_experts(13, predicted, 2);
+        assert(generation != 0);
+        scheduler.cache_router_experts(13, &selected, 1, generation);
+        const auto stats = scheduler.expert_reclaim_statistics();
+        assert(dontneed_count == 0);
+        assert(stats.candidate_experts == 1);
+        assert(stats.calls == 0);
+        assert(stats.skipped_bytes == page_size);
+    }
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [](void *, size_t, int) { return 0; }, [] { return -1L; }};
+        scheduler.register_expert_tensor("blk.14.exps", mapping, 2 * page_size, 14, 2);
+        const int predicted[] = {0, 1};
+        const int selected{0};
+        const uint64_t generation = scheduler.prefetch_experts(14, predicted, 2);
+        assert(generation != 0);
+        scheduler.cache_router_experts(14, &selected, 1, generation);
+        const auto stats = scheduler.expert_reclaim_statistics();
+        assert(stats.candidate_experts == 1);
+        assert(stats.calls == 0);
+        assert(stats.invalid_layouts == 1);
+    }
+    assert(munmap(mapping, 3 * page_size) == 0);
+}
+
+void test_reclaim_never_advises_after_shutdown() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const mapping = mmap(nullptr, 2 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    scoped_env reclaim{"SLIM_ARC_EXPERT_RECLAIM_WASTE", "1"};
+    int dontneed_count{0};
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void *, size_t, int advice) {
+            if (advice == POSIX_MADV_DONTNEED) ++dontneed_count;
+            return 0;
+        }};
+        scheduler.register_expert_tensor("blk.15.exps", mapping, 2 * page_size, 15, 2);
+        const int predicted[] = {0, 1};
+        const int selected{0};
+        const uint64_t generation = scheduler.prefetch_experts(15, predicted, 2);
+        assert(generation != 0);
+        scheduler.shutdown();
+        scheduler.cache_router_experts(15, &selected, 1, generation);
+        assert(scheduler.pending_expert_records(15) == 1);
+        assert(dontneed_count == 0);
+        assert_zero_reclaim_stats(scheduler.expert_reclaim_statistics());
+    }
+    assert(munmap(mapping, 2 * page_size) == 0);
+}
+
 } // namespace
 
 int main() {
@@ -437,5 +748,14 @@ int main() {
     test_pending_generations_are_bounded_before_advice();
     test_cancelled_generation_counts_once_as_waste();
     test_prefetch_cancel_cycles_do_not_exhaust_pending_slots();
+    test_reclaim_flag_off_preserves_legacy_settlement_without_dontneed();
+    test_reclaim_flag_requires_exact_one();
+    test_reclaim_excludes_selected_experts_and_uses_only_dontneed();
+    test_reclaim_counts_only_successful_dontneed_bytes();
+    test_reclaim_propagates_invalid_ids_from_mismatched_tensor_views();
+    test_reclaim_advice_callback_can_read_scheduler_state();
+    test_reclaim_consumes_only_exact_successful_generation_once();
+    test_reclaim_skips_subpage_unaligned_ranges_and_rejects_invalid_page_size();
+    test_reclaim_never_advises_after_shutdown();
     return 0;
 }

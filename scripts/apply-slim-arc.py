@@ -9,10 +9,11 @@ import sys
 
 SLIM_ARC_FILES = (
     "slim-arc-prefetch.h", "slim-arc-prefetch.cpp",
+    "slim-arc-page-range.h", "slim-arc-page-range.cpp",
+    "slim-arc-expert-reclaim.h", "slim-arc-expert-reclaim.cpp",
     "slim-arc-runtime.h", "slim-arc-runtime.cpp",
     "slim-arc-unified-scheduler.h", "slim-arc-unified-scheduler.cpp",
     "slim-arc-kv-eviction.h", "slim-arc-kv-eviction.cpp",
-    "slim-arc-on-demand.h", "slim-arc-on-demand.cpp",
     "slim-arc-cgroup-memory.h", "slim-arc-cgroup-memory.cpp",
     "slim-arc-pressure-budget.h", "slim-arc-pressure-budget.cpp",
 )
@@ -292,6 +293,7 @@ def patch_cmakelists(filepath: str) -> None:
     required = (
         "slim-arc-prefetch.cpp", "slim-arc-runtime.cpp", "slim-arc-kv-eviction.cpp",
         "slim-arc-unified-scheduler.cpp", "slim-arc-cgroup-memory.cpp", "slim-arc-pressure-budget.cpp",
+        "slim-arc-page-range.cpp", "slim-arc-expert-reclaim.cpp",
     )
     if all(name in content for name in required):
         return
@@ -301,12 +303,17 @@ def patch_cmakelists(filepath: str) -> None:
             slim-arc-kv-eviction.cpp
             slim-arc-unified-scheduler.cpp
             slim-arc-cgroup-memory.cpp
-            slim-arc-pressure-budget.cpp"""
+            slim-arc-pressure-budget.cpp
+            slim-arc-page-range.cpp
+            slim-arc-expert-reclaim.cpp"""
     if "slim-arc-prefetch.cpp" not in content:
         content = replace_required(content, "llama-vocab.cpp", files, "CMake llama-vocab.cpp")
     else:
         anchor = "slim-arc-unified-scheduler.cpp"
-        for name in ("slim-arc-runtime.cpp", "slim-arc-cgroup-memory.cpp", "slim-arc-pressure-budget.cpp"):
+        for name in (
+            "slim-arc-runtime.cpp", "slim-arc-cgroup-memory.cpp", "slim-arc-pressure-budget.cpp",
+            "slim-arc-page-range.cpp", "slim-arc-expert-reclaim.cpp",
+        ):
             if name not in content:
                 content = replace_required(content, anchor, f"{anchor}\n            {name}", "CMake source")
                 anchor = name
