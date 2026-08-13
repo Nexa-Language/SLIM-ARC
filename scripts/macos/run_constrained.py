@@ -44,8 +44,10 @@ SLIM_ARC_ENV_ALLOWLIST = frozenset(
         "SLIM_ARC_NO_MADV_RANDOM",
         "SLIM_ARC_NO_EXPERT_PREFETCH",
         "SLIM_ARC_NO_PREFETCH",
+        "SLIM_ARC_PREFILL_THREADS",
         "SLIM_ARC_PRESSURE_ADMISSION",
         "SLIM_ARC_PRESSURE_RESERVE_MB",
+        "SLIM_ARC_DECODE_THREADS",
         "SLIM_ARC_ROUTER_MLOCK",
         "SLIM_ARC_ROUTER_PREFETCH",
         "SLIM_ARC_SLOW_STORAGE",
@@ -96,6 +98,10 @@ class RunConfig:
                 "SLIM_ARC_SLOW_STORAGE",
             } and value != "1":
                 raise ValueError(f"{name} must be exactly 1")
+            if name in {"SLIM_ARC_PREFILL_THREADS", "SLIM_ARC_DECODE_THREADS"} and (
+                not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 256
+            ):
+                raise ValueError(f"{name} must be an integer between 1 and 256")
             if ENV_VALUE_PATTERN.fullmatch(value) is None:
                 raise ValueError(f"unsafe value for {name}")
 
