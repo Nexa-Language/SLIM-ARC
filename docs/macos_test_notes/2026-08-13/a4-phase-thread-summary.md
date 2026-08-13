@@ -34,3 +34,17 @@ SLIM_ARC_DECODE_THREADS=6
 This is a two-sample local Colima diagnostic, not a cross-device performance
 claim. The phase split remains opt-in until it is re-profiled on the remote
 slow-storage board.
+
+## Storage readahead combination
+
+Two single-run combinations expose a device-policy Pareto frontier. At 256 KB
+readahead, 8/6 reached the highest observed prefill throughput of 4.219298 t/s,
+0.647837 decode t/s, and 60.27 seconds wall time. At 512 KB it reached 3.938531
+prefill t/s, 0.634405 decode t/s, and the shortest observed wall time of 59.63
+seconds. The larger window reduced major faults but increased filesystem input
+blocks and lost decode throughput relative to the 128 KB 8/6 candidate.
+
+Readahead is therefore not hard-coded: 128 KB is the decode-oriented default,
+256 KB is the prefill-oriented local candidate, and 512 KB is a latency-oriented
+diagnostic that must be re-profiled on the target storage device. Every temporary
+setting was restored to `128 KB + mq-deadline` after its run.

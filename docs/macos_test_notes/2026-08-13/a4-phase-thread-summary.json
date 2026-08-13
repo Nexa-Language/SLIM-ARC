@@ -105,5 +105,27 @@
       "wall_seconds": 63.76
     }
   ],
+  "storage_readahead_exploratory": [
+    {
+      "run": "a4-threads-8-6-ra256-2g-cold",
+      "read_ahead_kb": 256,
+      "scheduler": "mq-deadline",
+      "prefill_tps": 4.219298,
+      "decode_tps": 0.647837,
+      "wall_seconds": 60.27,
+      "major_faults": 334451,
+      "filesystem_input_blocks": 210896136
+    },
+    {
+      "run": "a4-threads-8-6-ra512-2g-cold",
+      "read_ahead_kb": 512,
+      "scheduler": "mq-deadline",
+      "prefill_tps": 3.938531,
+      "decode_tps": 0.634405,
+      "wall_seconds": 59.63,
+      "major_faults": 252007,
+      "filesystem_input_blocks": 236624360
+    }
+  ],
   "decision": "keep_opt_in_8_6_candidate"
 }
