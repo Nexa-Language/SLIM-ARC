@@ -2,6 +2,23 @@
 
 ---
 
+## 2026-08-13 慢存储 I/O 重构阶段启动
+
+### 变更描述
+- 依据 2 GiB、4 CPU、no-swap、冷缓存和限速块设备诊断，确认当前细粒度普通/expert `WILLNEED` 使用未页对齐 GGUF tensor 地址，Linux 返回 `EINVAL`，expert issued 长期为零。
+- 将执行顺序冻结为 A0 页范围正确性、A1 有界/合并/可取消预取、A2 反馈控制、B 显式 expert resident slots、C 证据驱动的 packed file 与直接 I/O。
+- 固定慢存储实验矩阵、远端设备预检、结构化指标和晋级门禁；最终报告与 PPT 只在 2026-08-17 引用通过门禁的真实增量。
+
+### 涉及文件
+- `plan/28-v1-slow-storage-io-redesign.md`
+- `ROADMAP.md`
+
+### 决策原因
+- 当前 patched 相对 baseline 的诊断差异主要来自整映射访问 hint，不能证明细粒度预取有效；继续调 window 或 router 参数会掩盖页对齐根因并放大慢盘随机 I/O。
+- 先修 correctness 和可观测性，再限制 queue depth/预算，才能将论文中的异步预取、热 expert 缓存和多级驻留方向转化为可复现、可审计的系统增量。
+
+---
+
 ## 2026-08-12 决赛证据、材料与双远端发布阶段启动
 
 ### 变更描述
