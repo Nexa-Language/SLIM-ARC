@@ -1,0 +1,11 @@
+Thu Aug 13 15:27:33 CST 2026
+=== 测试前 ===
+               total        used        free      shared  buff/cache   available
+Mem:           4.0Gi       1.0Gi       429Mi        10Mi       2.7Gi       3.0Gi
+Swap:          2.0Gi       792Mi       1.2Gi
+EXIT=0(wrapped) ELAPSED=457s PEAK_RSS_KB=2908560
+=== 测试后 ===
+               total        used        free      shared  buff/cache   available
+Mem:           4.0Gi       964Mi       493Mi        10Mi       2.7Gi       3.0Gi
+Swap:          2.0Gi       833Mi       1.2Gi
+Thu Aug 13 15:35:10 CST 2026

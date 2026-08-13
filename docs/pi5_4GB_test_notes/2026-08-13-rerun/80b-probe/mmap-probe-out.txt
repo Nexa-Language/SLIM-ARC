@@ -1,0 +1,9 @@
+file size = 48410988384 bytes = 45.09 GiB
+mmap() whole file took 0.000s (lazy, no I/O yet)
+first 64KB read ok, magic=b'GGUF'
+peak RSS so far = 8464 KB = 8.3 MB
+madvise MADV_RANDOM: OK
+madvise MADV_SEQUENTIAL: OK
+madvise MADV_WILLNEED: OK
+madvise MADV_DONTNEED: OK
+probe done

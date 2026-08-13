@@ -1,0 +1,8 @@
+Thu Aug 13 16:02:07 CST 2026
+               total        used        free      shared  buff/cache   available
+Mem:           4.0Gi       1.0Gi       507Mi        11Mi       2.6Gi       2.9Gi
+Swap:          2.0Gi       796Mi       1.2Gi
+EXIT=0
+Thu Aug 13 16:09:42 CST 2026
+[SLIM-ARC-METRICS] expert prefetch: samples=528 issued=8718.8MB hit=3747.9MB waste=4970.8MB hit_rate=42.99% (accounted 8718.8MB)
+[ Prompt: 0.1 t/s | Generation: 0.1 t/s ]

@@ -1,0 +1,24 @@
+=== date ===
+Thu Aug 13 14:41:31 CST 2026
+=== mount ===
+=== model symlink ===
+lrwxrwxrwx 1 yituodabian yituodabian         62 Aug 12 10:37 Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf -> /home/yituodabian/data/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf
+-rwxr-xr-x 1 yituodabian yituodabian 48410988384 Aug 11 16:58 /home/yituodabian/data/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf
+=== df ===
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sda1       932G  128G  804G  14% /home/yituodabian/data
+=== free ===
+               total        used        free      shared  buff/cache   available
+Mem:           4.0Gi       1.1Gi       338Mi        11Mi       2.6Gi       2.8Gi
+Swap:          2.0Gi       410Mi       1.6Gi
+=== swap ===
+Filename				Type		Size		Used		Priority
+/dev/zram0                              partition	2097136		420480		100
+=== mmap 可行性小测试（读文件头 4MB）===
+4194304 bytes (4.2 MB, 4.0 MiB) copied, 0.0274132 s, 153 MB/s
+
+=== 补充：文件系统类型确认 ===
+/dev/sda1 on /home/yituodabian/data type fuseblk (rw,relatime,user_id=0,group_id=0,default_permissions,allow_other,blksize=16384)
+
+结论：/dev/sda1 为 fuseblk（NTFS-3G FUSE），blksize=16384
+FUSE mmap 走内核 page cache，madvise 语义依赖 FUSE 实现，为本次 80B 探测的最大风险点
