@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "slim_arc_git_commit": "c95b625b6612f431c0a2431a57756c68e2333c9e",
+    "llama_commit": "360e134",
+    "patched_source_sha256": "75fb13676a2c14c6ef42863f47461e9bbb516fbfd800d995f95a22926237b5b9",
+    "image_id": "sha256:dd4955caff15266047fb0c95fbb2ff460d93f2ffd6814f33dfc1253ce1b09ce9",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "contract": {
+    "memory_gib": 2,
+    "cpu_limit": 8,
+    "prefill_threads": 8,
+    "decode_threads": 6,
+    "read_ahead_kb": 128,
+    "swap_bytes": 0,
+    "n_prompt": 64,
+    "n_gen": 16,
+    "cache_state": "cold"
+  },
+  "control": {
+    "run": "a5-expert-madv-control-2g-cold",
+    "prefill_tps": 4.169861,
+    "decode_tps": 0.800984,
+    "wall_seconds": 55.90,
+    "major_faults": 487853,
+    "filesystem_input_blocks": 199690872
+  },
+  "expert_random": {
+    "run": "a5-expert-madv-random-2g-cold",
+    "prefill_tps": 4.447359,
+    "decode_tps": 0.261757,
+    "wall_seconds": 96.42,
+    "major_faults": 3866199,
+    "filesystem_input_blocks": 195199384,
+    "random_calls": 2304,
+    "random_bytes": 748944359424,
+    "advice_failures": 0
+  },
+  "candidate_relative_percent": {
+    "prefill_tps": 6.654850,
+    "decode_tps": -67.320571,
+    "wall_seconds": 72.486583,
+    "major_faults": 692.492616,
+    "filesystem_input_blocks": -2.249220
+  },
+  "decision": "reject_expert_random"
+}
