@@ -34,6 +34,12 @@ repetition.
 | A1 normal | cold | same as A1 pressure, dynamic advice disabled | 64.62 s | 3.499077 t/s | 0.682863 t/s | 117.127 GB | 251,503 | success, negative |
 | A1 random | cold | latest-wins + decode `MADV_RANDOM` | >120 s | NA | NA | NA | NA | stopped, negative |
 | A2 router-only, 2 GiB | cold | all-router prefetch + no expert prefetch | 68.76 s | 3.638826 t/s | 0.703270 t/s | 102.698 GB | 409,570 | success, negative |
+| A3 router mlock, 2 GiB | cold | pin 201.9 MB router path once | 68.64 s | 3.627730 t/s | 0.635464 t/s | 98.436 GB | 387,505 | success, negative |
+| A3 router mlock, 4 GiB | cold | pin 201.9 MB router path once | 60.75 s | 3.610230 t/s | 0.825438 t/s | 85.025 GB | 286,475 | success, negative |
+| A3 RA128, 2 GiB | cold | pressure policy, 128 KB, mq-deadline | 65.01 s | 3.469338 t/s | 0.671548 t/s | 102.365 GB | 411,047 | success |
+| A3 RA256, 2 GiB | cold | pressure policy, 256 KB, mq-deadline | 63.05 s | 4.011215 t/s | 0.639735 t/s | 111.377 GB | 274,984 | success |
+| A3 RA512, 2 GiB | cold | pressure policy, 512 KB, mq-deadline | 58.09 s | 4.202231 t/s | 0.674639 t/s | 119.436 GB | 189,763 | success |
+| A3 RA512 none, 2 GiB | cold | pressure policy, 512 KB, none | 58.07 s | 4.105445 t/s | 0.668469 t/s | 119.469 GB | 188,969 | success |
 
 The best cold diagnostic reduced wall time by 18.88%, increased prefill by
 12.28%, increased decode throughput by 36.00%, and reduced device reads by
@@ -61,6 +67,18 @@ router path every graph increased wall time by 20.29% and reduced decode by
 12.05% relative to the 2 GiB pressure candidate despite nearly identical
 device-read bytes. The next experiment therefore changes this path from
 repeated `WILLNEED` to a one-time bounded resident set.
+
+A3 successfully locked the complete 201.9 MB router path once with zero lock
+failures and zero runtime weight/expert advice. It reduced device reads at 2
+and 4 GiB, but reserving page-cache capacity reduced decode throughput; the
+router-resident path remains rejected for the extreme-memory tiers.
+
+The block-device scan found a separate prefill trade-off. Raising virtio
+`vdb` readahead from 128 to 512 KB cut major faults by 54% and raised observed
+prefill from 3.47 to 4.20 t/s, but increased device reads by 16.7 GB. Switching
+from `mq-deadline` to `none` at 512 KB was neutral. Every temporary block
+setting was restored to `128 KB + mq-deadline` after its run; the readahead
+choice must be re-profiled on the target SD/eMMC/NVMe device.
 
 ## Interpretation
 
