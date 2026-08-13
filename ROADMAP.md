@@ -2,6 +2,30 @@
 
 ---
 
+## 2026-08-13 Pi5 80B 预取回归修复 + FUSE 缺页延迟瓶颈归因 + 总预算 env 覆盖
+
+### 变更描述
+- 修复重大回归：[`slim-arc-prefetch.cpp`](patches/llama-upstream/slim-arc-prefetch.cpp) 的 `posix_madvise` 调用未页对齐（起始地址未向下、长度未向上对齐到页边界）→ EINVAL → 全部预取静默失败、issued=0。修复后 80B 实测 issued=28.9GB（默认）/ 15.3GB（CONF+BUDGET），8 个 C++ 单测目标全过。
+- P12 "回归" 归因澄清：旧 probe 457s 只生成 ~7 token（samples=528），P11/P12 用 `-n 32`（samples=1680 ≈ 48层×35token）。换算单 token decode：旧 ≈28–30s vs 新 ≈23s —— **持平略优，不存在回归**。
+- 瓶颈定位（P11≈P12≈P13 三组证据）：issued=0 / 15.3GB / 28.9GB 三组 wall=886/895/931s、majflt≈62–63万、CPU 时间 119–122s 几乎一致 → 预取量不是瓶颈。真瓶颈 = FUSE/NTFS-3G 缺页延迟：decode 期 ~675–880 majflt/s × ~1.5ms round-trip，CPU 利用率仅 12.9–13.6%。
+- 新增 `SLIM_ARC_TOTAL_BUDGET_MB`（16..1048576 MiB，严格十进制解析，非法值回退历史默认 1GiB 并 stderr 告警），覆盖 [`llama-model.cpp`](src/llama-upstream/src/llama-model.cpp) 硬编码的 1GiB/tick 总预算；[`apply-slim-arc.py`](scripts/apply-slim-arc.py) `transform_model` 内置遗留字符串内存迁移，保证已生成源码树幂等兼容。
+- 文档：[`docs/pi5_80b-optimization/优化方案.md`](docs/pi5_80b-optimization/优化方案.md) 更新瓶颈结构、负载标定（§1.4）、预算管道核实（§1.5）、P13 A0 结果（§1.6）与 P1–P4 方案。
+
+### 涉及文件
+- `patches/llama-upstream/slim-arc-prefetch.cpp`（页对齐修复）
+- `patches/llama-upstream/slim-arc-runtime.{h,cpp}`（`default_runtime_budget_bytes()`）
+- `scripts/apply-slim-arc.py`（模板改用新函数 + 遗留迁移）
+- `tests/cpp/test-slim-arc-runtime.cpp`（新增 3 组预算解析单测）
+- `docs/pi5_80b-optimization/优化方案.md`
+- `logs/phase-probe/p11|p12|p13-80b-*.{csv,summary,stdout,stderr}`
+
+### 决策原因
+- 数据诚实性优先：P12 "回归" 假象源于负载不一致，必须先统一负载标定再做 A/B；旧二进制经 ldd 确认已被重编译覆盖，A/B 一律改用新二进制 + env 门控。
+- 三线兼容：新 env 不设变量时行为与历史完全一致（1GiB），不影响 WSL/RK3588 默认路径；页大小继续运行时 `sysconf` 获取。
+- 瓶颈既已定位到 FUSE 缺页延迟，单纯加大预取量收益有限（P13 证据）；后续优化方向转为 RECLAIM_WASTE / RESIDENCY 门控 A/B 与 FUSE 层调参（后者需 root，Pi5 无 sudo 记为局限）。
+
+---
+
 ## 2026-08-12 决赛证据、材料与双远端发布阶段启动
 
 ### 变更描述
