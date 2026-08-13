@@ -2,6 +2,27 @@
 
 ---
 
+## 2026-08-13 Pi5 80B 五组统一负载 A/B 矩阵完成（A0–A4）
+
+### 变更描述
+- 修复后二进制 + 统一负载（`-p "请详细介绍量子计算的基本原理" -n 32 --single-turn`，samples=1680）完成六组对照：P11（issued=0）、A0 默认、A1 CONF+BUDGET、A2 +RECLAIM_WASTE、A3 +RESIDENCY、A4 +TOTAL_BUDGET_MB=256。
+- **主结论（五组证据）**：issued 从 0 到 28.9GB 相差悬殊，wall 全部落在 886–931s（±3%）、majflt 62–63 万、CPU 时间 119–122s 几乎一致 → 瓶颈确认为 FUSE 缺页延迟（~675–700 majflt/s × ~1.5ms），非预取量。
+- A2 RECLAIM_WASTE：机制正确有效（8076 次 DONTNEED、waste 4984MB 全量回收、0 失败），墙钟持平——价值在防 4GB 内存挤占而非提速。
+- A3 RESIDENCY 负结果：`residency_fallbacks=1632/1632`，Pi5 无压力快照源（未开 PRESSURE_ADMISSION）时机制未真正生效，wall=931.5s 六组最差；后续须与 PRESSURE_ADMISSION 组合重测。
+- A4 TOTAL_BUDGET_MB=256：新 env 端到端生效（issued 15.3GB→4.7GB），hit_rate 66.62%，wall=887.8s 六组最佳 → 4GB 端侧推荐小预算配置（CONF+BUDGET+TOTAL_BUDGET_MB=256+RECLAIM_WASTE）。
+
+### 涉及文件
+- `logs/phase-probe/p13|p14|p15|p16-80b-*.{csv,summary,stdout,stderr}`
+- `docs/pi5_80b-optimization/2026-08-13-A0至A4门控矩阵实验报告.md`（新增）
+- `docs/pi5_80b-optimization/优化方案.md`（§1.6 五组矩阵 + P1/P3 结论更新）
+
+### 决策原因
+- 单组单次运行（~15min/组），组间 ±3% 差异含系统噪声，结论以机制指标（reclaim 计数、fallbacks、issued 缩放）为主、墙钟为辅，避免过度解读。
+- warm-cache 限制如实记录：Pi5 无 sudo 不能 drop_caches；FUSE 层调参需 root，仅可在 WSL/RK3588 侧探索。
+- 所有 raw 数据只追加不修改；结论与局限同步入报告，供决赛材料与答辩引用。
+
+---
+
 ## 2026-08-13 Pi5 80B 预取回归修复 + FUSE 缺页延迟瓶颈归因 + 总预算 env 覆盖
 
 ### 变更描述
