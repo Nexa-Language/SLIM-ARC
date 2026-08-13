@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "slim_arc_git_commit": "88716adb2d0bca0a141cf0f103312bb79046bf40",
+    "llama_commit": "360e134",
+    "patched_source_sha256": "3f1b862d7a258027528c4b97ce7574e99c0754d7b11ac22b94691fa4c91a18eb",
+    "image_id": "sha256:e3294ff58f80d82a1848199b3c70f3a5fd6e6f0c198ee50eddb942bf95e96001",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "contract": {
+    "memory_gib": 2,
+    "cpu_limit": 8,
+    "prefill_threads": 8,
+    "decode_threads": 6,
+    "read_ahead_kb": 128,
+    "swap_bytes": 0,
+    "n_prompt": 64,
+    "n_gen": 16,
+    "cache_state": "cold"
+  },
+  "reference_control": {
+    "run": "a5-expert-madv-control-2g-cold",
+    "prefill_tps": 4.169861,
+    "decode_tps": 0.800984,
+    "wall_seconds": 55.90,
+    "major_faults": 487853,
+    "filesystem_input_blocks": 199690872
+  },
+  "expert_normal": {
+    "run": "a6-expert-madv-normal-2g-cold",
+    "prefill_tps": 4.232109,
+    "decode_tps": 0.657144,
+    "wall_seconds": 61.08,
+    "major_faults": 432226,
+    "filesystem_input_blocks": 202879960,
+    "advice_calls": 2304,
+    "advice_bytes": 748944359424,
+    "advice_failures": 0
+  },
+  "candidate_relative_percent": {
+    "prefill_tps": 1.492808,
+    "decode_tps": -17.957912,
+    "wall_seconds": 9.266547,
+    "major_faults": -11.402410,
+    "filesystem_input_blocks": 1.597012
+  },
+  "decision": "reject_expert_normal"
+}
