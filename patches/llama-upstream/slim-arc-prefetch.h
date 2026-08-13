@@ -95,6 +95,17 @@ struct expert_runtime_metrics {
     uint64_t invalid_ranges{0};
 };
 
+struct expert_hot_cache_stats {
+    uint64_t budget_bytes{0};
+    uint64_t locked_bytes{0};
+    uint64_t admissions{0};
+    uint64_t hits{0};
+    uint64_t evictions{0};
+    uint64_t budget_rejections{0};
+    uint64_t nonresident_bytes{0};
+    uint64_t lock_failures{0};
+};
+
 std::vector<size_t> select_prefetch_items(
     const std::vector<size_t> & item_sizes,
     uint64_t budget_bytes,
@@ -170,6 +181,7 @@ class prefetch_scheduler {
     expert_pressure_state current_expert_pressure() const;
     expert_residency_runtime_stats expert_residency_statistics() const noexcept;
     expert_runtime_metrics expert_runtime_statistics() const noexcept;
+    expert_hot_cache_stats expert_hot_cache_statistics() const noexcept;
     std::vector<uint32_t> expert_popularity_snapshot(int layer) const;
     uint64_t popularity_decay_count() const noexcept { return popularity_decay_count_.load(); }
     uint32_t expert_waste_ewma_milli() const;
@@ -193,12 +205,17 @@ class prefetch_scheduler {
         const std::vector<int> & prefetched,
         const std::vector<int> & selected,
         const std::vector<expert_tensor_info> & tensors);
+    void update_expert_hot_cache(
+        int layer,
+        const std::vector<int> & stable_experts,
+        const std::vector<expert_tensor_info> & tensors);
 
     const bool slow_storage_enabled_;
     const bool router_prefetch_enabled_;
     const bool router_mlock_enabled_;
     const bool shared_mlock_enabled_;
     const bool small_mlock_enabled_;
+    const size_t expert_hot_budget_bytes_;
     const bool expert_prefetch_disabled_;
     const bool expert_random_madv_enabled_;
     const bool expert_normal_madv_enabled_;
@@ -274,6 +291,21 @@ class prefetch_scheduler {
     std::vector<page_range>                        small_locked_ranges_;
     std::atomic<uint64_t>                          small_locked_bytes_{0};
     std::atomic<uint64_t>                          small_lock_failures_{0};
+    struct expert_hot_entry {
+        int layer{-1};
+        int expert_id{-1};
+        std::vector<page_range> ranges;
+        uint64_t locked_bytes{0};
+    };
+    mutable std::mutex                              expert_hot_mtx_;
+    std::vector<expert_hot_entry>                  expert_hot_entries_;
+    uint64_t                                        expert_hot_locked_bytes_{0};
+    uint64_t                                        expert_hot_admissions_{0};
+    uint64_t                                        expert_hot_hits_{0};
+    uint64_t                                        expert_hot_evictions_{0};
+    uint64_t                                        expert_hot_budget_rejections_{0};
+    uint64_t                                        expert_hot_nonresident_bytes_{0};
+    uint64_t                                        expert_hot_lock_failures_{0};
     std::vector<std::pair<void *, size_t>>         mmap_regions_;
     std::vector<page_range>                        expert_madv_ranges_;
     std::atomic<uint64_t>                          expert_madv_advice_calls_{0};

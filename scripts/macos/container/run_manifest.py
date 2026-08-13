@@ -19,6 +19,7 @@ SLIM_ARC_ENV_ALLOWLIST = frozenset(
         "SLIM_ARC_DYNAMIC_MADV",
         "SLIM_ARC_EXPERT_BUDGET",
         "SLIM_ARC_EXPERT_CONF",
+        "SLIM_ARC_EXPERT_HOT_MB",
         "SLIM_ARC_EXPERT_MADV_RANDOM",
         "SLIM_ARC_EXPERT_MADV_NORMAL",
         "SLIM_ARC_EXPERT_POP",
@@ -177,6 +178,10 @@ def collect_slim_arc_environment(environment: Mapping[str, str]) -> dict[str, st
             not value.isascii() or not value.isdecimal() or not 0 <= int(value) <= 100
         ):
             raise ValueError("SLIM_ARC_POLL must be an integer between 0 and 100")
+        if name == "SLIM_ARC_EXPERT_HOT_MB" and (
+            not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 512
+        ):
+            raise ValueError("SLIM_ARC_EXPERT_HOT_MB must be an integer between 1 and 512")
         selected[name] = value
     return dict(sorted(selected.items()))
 
