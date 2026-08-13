@@ -449,7 +449,13 @@ def test_manifest_records_pressure_admission_environment(tmp_path: Path) -> None
     ("name", "value"),
     [
         (name, value)
-        for name in ("SLIM_ARC_EXPERT_RECLAIM_WASTE", "SLIM_ARC_EXPERT_RESIDENCY", "SLIM_ARC_SLOW_STORAGE")
+        for name in (
+            "SLIM_ARC_EXPERT_RECLAIM_WASTE",
+            "SLIM_ARC_EXPERT_RESIDENCY",
+            "SLIM_ARC_NO_EXPERT_PREFETCH",
+            "SLIM_ARC_ROUTER_PREFETCH",
+            "SLIM_ARC_SLOW_STORAGE",
+        )
         for value in ("0", "2", "true", "", "01")
     ],
 )

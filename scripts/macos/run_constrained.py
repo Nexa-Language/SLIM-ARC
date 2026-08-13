@@ -42,9 +42,11 @@ SLIM_ARC_ENV_ALLOWLIST = frozenset(
         "SLIM_ARC_KV_SINK",
         "SLIM_ARC_KV_WINDOW",
         "SLIM_ARC_NO_MADV_RANDOM",
+        "SLIM_ARC_NO_EXPERT_PREFETCH",
         "SLIM_ARC_NO_PREFETCH",
         "SLIM_ARC_PRESSURE_ADMISSION",
         "SLIM_ARC_PRESSURE_RESERVE_MB",
+        "SLIM_ARC_ROUTER_PREFETCH",
         "SLIM_ARC_SLOW_STORAGE",
     }
 )
@@ -87,6 +89,8 @@ class RunConfig:
             if name in {
                 "SLIM_ARC_EXPERT_RECLAIM_WASTE",
                 "SLIM_ARC_EXPERT_RESIDENCY",
+                "SLIM_ARC_NO_EXPERT_PREFETCH",
+                "SLIM_ARC_ROUTER_PREFETCH",
                 "SLIM_ARC_SLOW_STORAGE",
             } and value != "1":
                 raise ValueError(f"{name} must be exactly 1")

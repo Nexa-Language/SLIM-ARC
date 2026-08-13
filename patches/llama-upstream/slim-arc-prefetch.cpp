@@ -239,6 +239,8 @@ prefetch_scheduler::prefetch_scheduler(
     advice_fn advice,
     page_size_query_fn page_size_query)
     : slow_storage_enabled_(env_exact_one("SLIM_ARC_SLOW_STORAGE"))
+    , router_prefetch_enabled_(env_exact_one("SLIM_ARC_ROUTER_PREFETCH"))
+    , expert_prefetch_disabled_(env_exact_one("SLIM_ARC_NO_EXPERT_PREFETCH"))
     , n_threads_(slow_storage_enabled_ ? 1 : std::max(1, n_threads))
     , window_(slow_storage_enabled_ ? 1 : std::max(1, window))
     , request_claim_hook_(std::move(request_claim_hook))
@@ -281,10 +283,17 @@ void prefetch_scheduler::shutdown() noexcept {
     }
 }
 
-void prefetch_scheduler::register_tensor(const char *, void * addr, size_t size, int layer) {
+void prefetch_scheduler::register_tensor(const char * name, void * addr, size_t size, int layer) {
     if (layer < 0 || addr == nullptr || size == 0) return;
     std::lock_guard<std::mutex> lock(mtx_);
     if (stop_.load()) return;
+    if (router_prefetch_enabled_) {
+        if (name != nullptr && std::strstr(name, ".ffn_gate_inp") != nullptr &&
+            std::strstr(name, ".weight") != nullptr) {
+            router_tensors_.push_back({addr, size, layer, 0});
+        }
+        return;
+    }
     if ((size_t)layer >= tensors_by_layer_.size()) {
         tensors_by_layer_.resize(layer + 1);
     }
@@ -342,11 +351,15 @@ prefetch_scheduler::prefetch_request prefetch_scheduler::plan_request(int curren
     {
         std::lock_guard<std::mutex> lock(mtx_);
         if (stop_.load()) return request;
-        for (int offset = 1; offset <= window_; ++offset) {
-            const int layer = current_layer + offset;
-            if (layer < 0 || static_cast<size_t>(layer) >= tensors_by_layer_.size()) continue;
-            for (const tensor_prefetch_info & tensor : tensors_by_layer_[layer]) {
-                if (tensor.addr != nullptr && tensor.size > 0) items.push_back(tensor);
+        if (router_prefetch_enabled_) {
+            items = router_tensors_;
+        } else {
+            for (int offset = 1; offset <= window_; ++offset) {
+                const int layer = current_layer + offset;
+                if (layer < 0 || static_cast<size_t>(layer) >= tensors_by_layer_.size()) continue;
+                for (const tensor_prefetch_info & tensor : tensors_by_layer_[layer]) {
+                    if (tensor.addr != nullptr && tensor.size > 0) items.push_back(tensor);
+                }
             }
         }
     }
@@ -743,6 +756,7 @@ void prefetch_scheduler::reclaim_wrong_expert_pages(
 }
 
 uint64_t prefetch_scheduler::prefetch_experts(int layer, const int * expert_ids, int n) {
+    if (expert_prefetch_disabled_) return 0;
     return issue_expert_willneed(layer, expert_ids, n);
 }
 

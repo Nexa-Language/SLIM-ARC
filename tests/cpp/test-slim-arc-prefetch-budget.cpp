@@ -274,6 +274,64 @@ void test_slow_storage_same_layer_duplicate_is_coalesced() {
     assert(munmap(mapping, 2 * page_size) == 0);
 }
 
+void test_router_prefetch_advises_only_always_used_router_weights() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(nullptr, 3 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    scoped_env router_prefetch{"SLIM_ARC_ROUTER_PREFETCH", "1"};
+    std::vector<std::pair<uintptr_t, size_t>> advised;
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void * address, size_t length, int advice) {
+            assert(advice == POSIX_MADV_WILLNEED);
+            advised.emplace_back(reinterpret_cast<uintptr_t>(address), length);
+            return 0;
+        }};
+        scheduler.register_tensor("blk.0.attn_q.weight", mapping, page_size, 0);
+        scheduler.register_tensor(
+            "blk.1.ffn_gate_inp.weight",
+            static_cast<uint8_t *>(mapping) + page_size,
+            page_size,
+            1);
+        scheduler.register_tensor(
+            "blk.2.ffn_gate_inp_shexp.weight",
+            static_cast<uint8_t *>(mapping) + 2 * page_size,
+            page_size,
+            2);
+        scheduler.set_memory_budget(2 * page_size);
+        scheduler.notify_layer_compute(0);
+        wait_for_rounds(scheduler, 1);
+        scheduler.shutdown();
+        const auto stats = scheduler.budget_stats();
+        assert(stats.requested_bytes == 2 * page_size);
+        assert(stats.issued_bytes == 2 * page_size);
+    }
+    assert(advised.size() == 1);
+    assert(advised[0].first == reinterpret_cast<uintptr_t>(mapping) + page_size);
+    assert(advised[0].second == 2 * page_size);
+    assert(munmap(mapping, 3 * page_size) == 0);
+}
+
+void test_no_expert_prefetch_keeps_router_observation_without_advice() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(nullptr, 2 * page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    scoped_env no_expert_prefetch{"SLIM_ARC_NO_EXPERT_PREFETCH", "1"};
+    size_t advice_calls = 0;
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, {}, [&](void *, size_t, int) {
+            ++advice_calls;
+            return 0;
+        }};
+        scheduler.register_expert_tensor("blk.1.ffn_down_exps.weight", mapping, 2 * page_size, 1, 2);
+        const int selected = 1;
+        scheduler.cache_router_experts(1, &selected, 1);
+        assert(scheduler.prefetch_experts(1, &selected, 1) == 0);
+        assert((scheduler.cached_experts_snapshot(1) == std::vector<int>{1}));
+    }
+    assert(advice_calls == 0);
+    assert(munmap(mapping, 2 * page_size) == 0);
+}
+
 void test_confidence_flag_requires_exact_one() {
     for (const char * value : {"0", "", "false", "invalid"}) {
         scoped_env env{"SLIM_ARC_EXPERT_CONF", value};
@@ -1327,6 +1385,8 @@ int main() {
     test_concurrent_shutdown_callers_return_only_after_join();
     test_slow_storage_latest_generation_replaces_unclaimed_work();
     test_slow_storage_same_layer_duplicate_is_coalesced();
+    test_router_prefetch_advises_only_always_used_router_weights();
+    test_no_expert_prefetch_keeps_router_observation_without_advice();
     test_confidence_flag_requires_exact_one();
     test_popularity_accepts_only_complete_range_zero_to_sixty_four();
     test_scheduler_enforces_budget_and_counts_success();

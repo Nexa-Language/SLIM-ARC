@@ -195,6 +195,8 @@ class prefetch_scheduler {
         const std::vector<expert_tensor_info> & tensors);
 
     const bool slow_storage_enabled_;
+    const bool router_prefetch_enabled_;
+    const bool expert_prefetch_disabled_;
     int n_threads_;
     int window_;
     std::atomic<compute_phase> phase_{compute_phase::DECODE};
@@ -256,6 +258,8 @@ class prefetch_scheduler {
 
     // tensor registry indexed by layer
     std::vector<std::vector<tensor_prefetch_info>> tensors_by_layer_;
+    // Small, always-used MoE router path. Kept separate from speculative weights.
+    std::vector<tensor_prefetch_info>              router_tensors_;
     std::vector<std::pair<void *, size_t>>         mmap_regions_;
     // MoE expert registry indexed by layer
     std::vector<std::vector<expert_tensor_info>>   experts_by_layer_;
