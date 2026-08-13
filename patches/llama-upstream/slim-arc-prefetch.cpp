@@ -240,6 +240,7 @@ prefetch_scheduler::prefetch_scheduler(
     page_size_query_fn page_size_query)
     : slow_storage_enabled_(env_exact_one("SLIM_ARC_SLOW_STORAGE"))
     , router_prefetch_enabled_(env_exact_one("SLIM_ARC_ROUTER_PREFETCH"))
+    , router_mlock_enabled_(env_exact_one("SLIM_ARC_ROUTER_MLOCK"))
     , expert_prefetch_disabled_(env_exact_one("SLIM_ARC_NO_EXPERT_PREFETCH"))
     , n_threads_(slow_storage_enabled_ ? 1 : std::max(1, n_threads))
     , window_(slow_storage_enabled_ ? 1 : std::max(1, window))
@@ -266,6 +267,14 @@ prefetch_scheduler::prefetch_scheduler(
 prefetch_scheduler::~prefetch_scheduler() {
     shutdown();
     dump_metrics();
+    std::vector<page_range> locked;
+    {
+        std::lock_guard<std::mutex> lock(mtx_);
+        locked.swap(router_locked_ranges_);
+    }
+    for (const page_range & range : locked) {
+        (void) munlock(reinterpret_cast<void *>(range.address), range.length);
+    }
 }
 
 void prefetch_scheduler::shutdown() noexcept {
@@ -287,10 +296,24 @@ void prefetch_scheduler::register_tensor(const char * name, void * addr, size_t 
     if (layer < 0 || addr == nullptr || size == 0) return;
     std::lock_guard<std::mutex> lock(mtx_);
     if (stop_.load()) return;
-    if (router_prefetch_enabled_) {
-        if (name != nullptr && std::strstr(name, ".ffn_gate_inp") != nullptr &&
-            std::strstr(name, ".weight") != nullptr) {
+    if (router_prefetch_enabled_ || router_mlock_enabled_) {
+        const bool is_router = name != nullptr && std::strstr(name, ".ffn_gate_inp") != nullptr &&
+            std::strstr(name, ".weight") != nullptr;
+        if (is_router && router_prefetch_enabled_) {
             router_tensors_.push_back({addr, size, layer, 0});
+        }
+        if (is_router && router_mlock_enabled_) {
+            const long raw_page_size = page_size_query_();
+            const page_range range = covering_page_range(
+                reinterpret_cast<uintptr_t>(addr),
+                size,
+                raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 0);
+            if (range.valid && mlock(reinterpret_cast<void *>(range.address), range.length) == 0) {
+                router_locked_ranges_.push_back(range);
+                atomic_saturating_add(router_locked_bytes_, static_cast<uint64_t>(range.length));
+            } else {
+                atomic_saturating_add(router_lock_failures_, uint64_t{1});
+            }
         }
         return;
     }
@@ -1103,6 +1126,13 @@ void prefetch_scheduler::dump_metrics() const {
             static_cast<unsigned long long>(router_samples_.load()),
             issued / 1048576.0, hit / 1048576.0, waste / 1048576.0, hr,
             total / 1048576.0);
+    if (router_mlock_enabled_) {
+        std::fprintf(
+            stderr,
+            "[SLIM-ARC-ROUTER] locked_bytes=%llu lock_failures=%llu\n",
+            static_cast<unsigned long long>(router_locked_bytes_.load()),
+            static_cast<unsigned long long>(router_lock_failures_.load()));
+    }
 }
 
 } // namespace slim_arc

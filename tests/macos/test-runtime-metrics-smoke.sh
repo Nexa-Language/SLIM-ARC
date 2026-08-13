@@ -91,7 +91,7 @@ assert_rejected unknown-slim-arc \
     'Unsupported SLIM-ARC environment variable: SLIM_ARC_UNKNOWN' \
     --env SLIM_ARC_UNKNOWN=1
 
-for policy_name in SLIM_ARC_EXPERT_RECLAIM_WASTE SLIM_ARC_EXPERT_RESIDENCY SLIM_ARC_NO_EXPERT_PREFETCH SLIM_ARC_ROUTER_PREFETCH SLIM_ARC_SLOW_STORAGE; do
+for policy_name in SLIM_ARC_EXPERT_RECLAIM_WASTE SLIM_ARC_EXPERT_RESIDENCY SLIM_ARC_NO_EXPERT_PREFETCH SLIM_ARC_ROUTER_MLOCK SLIM_ARC_ROUTER_PREFETCH SLIM_ARC_SLOW_STORAGE; do
     for policy_value in 0 01 2 true ''; do
         case_name="${policy_name}-${policy_value:-empty}"
         assert_rejected "${case_name}" "${policy_name} must be exactly 1" \
@@ -104,6 +104,7 @@ run_container valid-finalist-policies \
     --env SLIM_ARC_EXPERT_RECLAIM_WASTE=1 \
     --env SLIM_ARC_EXPERT_RESIDENCY=1 \
     --env SLIM_ARC_NO_EXPERT_PREFETCH=1 \
+    --env SLIM_ARC_ROUTER_MLOCK=1 \
     --env SLIM_ARC_ROUTER_PREFETCH=1 \
     --env SLIM_ARC_SLOW_STORAGE=1 || valid_exit_status=$?
 if (( valid_exit_status != 0 )); then
@@ -124,6 +125,7 @@ assert manifest["schema_version"] == 1
 assert len(manifest["runtime_metrics"]) == 1
 assert manifest["runtime_metrics"][0]["schema"] == 3
 assert manifest["environment"]["SLIM_ARC_NO_EXPERT_PREFETCH"] == "1"
+assert manifest["environment"]["SLIM_ARC_ROUTER_MLOCK"] == "1"
 assert manifest["environment"]["SLIM_ARC_ROUTER_PREFETCH"] == "1"
 assert manifest["environment"]["SLIM_ARC_SLOW_STORAGE"] == "1"
 assert manifest["runtime_metrics_summary"]["expert_samples"] == 0

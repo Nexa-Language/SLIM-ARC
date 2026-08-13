@@ -196,6 +196,7 @@ class prefetch_scheduler {
 
     const bool slow_storage_enabled_;
     const bool router_prefetch_enabled_;
+    const bool router_mlock_enabled_;
     const bool expert_prefetch_disabled_;
     int n_threads_;
     int window_;
@@ -260,6 +261,9 @@ class prefetch_scheduler {
     std::vector<std::vector<tensor_prefetch_info>> tensors_by_layer_;
     // Small, always-used MoE router path. Kept separate from speculative weights.
     std::vector<tensor_prefetch_info>              router_tensors_;
+    std::vector<page_range>                        router_locked_ranges_;
+    std::atomic<uint64_t>                          router_locked_bytes_{0};
+    std::atomic<uint64_t>                          router_lock_failures_{0};
     std::vector<std::pair<void *, size_t>>         mmap_regions_;
     // MoE expert registry indexed by layer
     std::vector<std::vector<expert_tensor_info>>   experts_by_layer_;
