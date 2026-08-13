@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "slim_arc_git_commit": "2f4e8a86da4839643ec7c6cb7681bbea1246008e",
+    "llama_commit": "360e134",
+    "patched_source_sha256": "4789bdfa4cb4994e96fd9f2a7806a087aac7c5151f97590c94dbe3c5ed9222b4",
+    "image_id": "sha256:835c9d3d2b95ef6bbfd29dbe4042c7f5b3adda2ee91a36177bf6fc205ffb6f33",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "contract": {
+    "memory_gib": 2,
+    "cpu_limit": 8,
+    "swap_bytes": 0,
+    "n_prompt": 64,
+    "n_gen": 16,
+    "repetitions_per_run": 1,
+    "cache_state": "cold",
+    "load_mode": "mmap",
+    "slow_storage": true,
+    "pressure_admission": true,
+    "pressure_reserve_mb": 512
+  },
+  "paired_runs": [
+    {
+      "run": "a4-threads-8-8-2g-cold",
+      "prefill_threads": 8,
+      "decode_threads": 8,
+      "prefill_tps": 3.774917,
+      "decode_tps": 0.624259,
+      "wall_seconds": 68.10,
+      "major_faults": 499882,
+      "filesystem_input_blocks": 201555536
+    },
+    {
+      "run": "a4-threads-8-8-r2-2g-cold",
+      "prefill_threads": 8,
+      "decode_threads": 8,
+      "prefill_tps": 3.846110,
+      "decode_tps": 0.562635,
+      "wall_seconds": 66.19,
+      "major_faults": 500017,
+      "filesystem_input_blocks": 201788080
+    },
+    {
+      "run": "a4-threads-8-6-2g-cold",
+      "prefill_threads": 8,
+      "decode_threads": 6,
+      "prefill_tps": 3.857132,
+      "decode_tps": 0.746504,
+      "wall_seconds": 60.76,
+      "major_faults": 475308,
+      "filesystem_input_blocks": 199166072
+    },
+    {
+      "run": "a4-threads-8-6-r2-2g-cold",
+      "prefill_threads": 8,
+      "decode_threads": 6,
+      "prefill_tps": 3.790056,
+      "decode_tps": 0.680494,
+      "wall_seconds": 65.60,
+      "major_faults": 471270,
+      "filesystem_input_blocks": 199646992
+    }
+  ],
+  "median_comparison": {
+    "control_8_8": {
+      "sample_count": 2,
+      "prefill_tps": 3.8105135,
+      "decode_tps": 0.593447,
+      "wall_seconds": 67.145,
+      "major_faults": 499949.5,
+      "filesystem_input_blocks": 201671808
+    },
+    "candidate_8_6": {
+      "sample_count": 2,
+      "prefill_tps": 3.823594,
+      "decode_tps": 0.713499,
+      "wall_seconds": 63.18,
+      "major_faults": 473289,
+      "filesystem_input_blocks": 199406532
+    },
+    "candidate_relative_percent": {
+      "prefill_tps": 0.343274,
+      "decode_tps": 20.229608,
+      "wall_seconds": -5.905131,
+      "major_faults": -5.332639,
+      "filesystem_input_blocks": -1.123249
+    }
+  },
+  "exploratory_single_runs": [
+    {
+      "run": "a4-threads-8-4-2g-cold",
+      "prefill_threads": 8,
+      "decode_threads": 4,
+      "prefill_tps": 3.813118,
+      "decode_tps": 0.660411,
+      "wall_seconds": 64.74
+    },
+    {
+      "run": "a4-threads-8-2-2g-cold",
+      "prefill_threads": 8,
+      "decode_threads": 2,
+      "prefill_tps": 4.168941,
+      "decode_tps": 0.582453,
+      "wall_seconds": 63.76
+    }
+  ],
+  "decision": "keep_opt_in_8_6_candidate"
+}

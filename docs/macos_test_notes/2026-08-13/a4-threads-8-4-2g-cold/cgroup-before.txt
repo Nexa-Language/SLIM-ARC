@@ -1,0 +1,98 @@
+CGROUP_RELATIVE=/
+=== memory.current ===
+11112448
+=== memory.max ===
+2147483648
+=== memory.peak ===
+11481088
+=== memory.events ===
+low 0
+high 0
+max 0
+oom 0
+oom_kill 0
+oom_group_kill 0
+=== memory.stat ===
+anon 1191936
+file 7688192
+kernel 1585152
+kernel_stack 32768
+pagetables 98304
+sec_pagetables 0
+percpu 0
+sock 0
+vmalloc 8192
+shmem 0
+zswap 0
+zswapped 0
+file_mapped 2834432
+file_dirty 8192
+file_writeback 0
+swapcached 0
+anon_thp 0
+file_thp 0
+shmem_thp 0
+inactive_anon 0
+active_anon 1175552
+inactive_file 1761280
+active_file 5918720
+unevictable 0
+slab_reclaimable 522848
+slab_unreclaimable 271560
+slab 794408
+workingset_refault_anon 0
+workingset_refault_file 0
+workingset_activate_anon 0
+workingset_activate_file 0
+workingset_restore_anon 0
+workingset_restore_file 0
+workingset_nodereclaim 0
+pgscan 0
+pgsteal 0
+pgscan_kswapd 0
+pgscan_direct 0
+pgscan_khugepaged 0
+pgsteal_kswapd 0
+pgsteal_direct 0
+pgsteal_khugepaged 0
+pgfault 3940
+pgmajfault 48
+pgrefill 0
+pgactivate 0
+pgdeactivate 0
+pglazyfree 0
+pglazyfreed 0
+zswpin 0
+zswpout 0
+zswpwb 0
+thp_fault_alloc 0
+thp_collapse_alloc 0
+thp_swpout 0
+thp_swpout_fallback 0
+=== memory.swap.current ===
+0
+=== memory.swap.max ===
+0
+=== memory.pressure ===
+some avg10=0.00 avg60=0.00 avg300=0.00 total=0
+full avg10=0.00 avg60=0.00 avg300=0.00 total=0
+=== cpu.max ===
+800000 100000
+=== cpu.stat ===
+usage_usec 31214
+user_usec 11560
+system_usec 19653
+core_sched.force_idle_usec 0
+nr_periods 1
+nr_throttled 0
+throttled_usec 0
+nr_bursts 0
+burst_usec 0
+=== cpu.pressure ===
+some avg10=0.00 avg60=0.00 avg300=0.00 total=381
+full avg10=0.00 avg60=0.00 avg300=0.00 total=381
+=== io.stat ===
+253:16 rbytes=7675904 wbytes=0 rios=440 wios=0 dbytes=0 dios=0
+=== io.pressure ===
+some avg10=0.00 avg60=0.00 avg300=0.00 total=8571
+full avg10=0.00 avg60=0.00 avg300=0.00 total=8571
