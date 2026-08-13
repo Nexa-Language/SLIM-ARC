@@ -161,6 +161,119 @@ class scoped_env {
     bool had_previous_{false};
 };
 
+void test_slow_storage_latest_generation_replaces_unclaimed_work() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(
+        nullptr,
+        3 * page_size,
+        PROT_READ | PROT_WRITE,
+        MAP_PRIVATE | MAP_ANON,
+        -1,
+        0);
+    assert(mapping != MAP_FAILED);
+    scoped_env slow_storage{"SLIM_ARC_SLOW_STORAGE", "1"};
+    std::promise<void> claimed;
+    std::promise<void> release;
+    std::atomic<bool> first{true};
+    std::shared_future<void> release_gate = release.get_future().share();
+    std::mutex advised_mtx;
+    std::vector<uintptr_t> advised;
+    {
+        slim_arc::prefetch_scheduler scheduler{
+            4,
+            3,
+            [&] {
+                if (first.exchange(false)) {
+                    claimed.set_value();
+                    release_gate.wait();
+                }
+            },
+            [&](void * address, size_t length, int advice) {
+                assert(advice == POSIX_MADV_WILLNEED);
+                assert(length == page_size);
+                std::lock_guard<std::mutex> lock(advised_mtx);
+                advised.push_back(reinterpret_cast<uintptr_t>(address));
+                return 0;
+            }};
+        scheduler.register_tensor("blk.1.weight", mapping, page_size, 1);
+        scheduler.register_tensor(
+            "blk.2.weight",
+            static_cast<uint8_t *>(mapping) + page_size,
+            page_size,
+            2);
+        scheduler.register_tensor(
+            "blk.3.weight",
+            static_cast<uint8_t *>(mapping) + 2 * page_size,
+            page_size,
+            3);
+        scheduler.set_memory_budget(page_size);
+        scheduler.notify_layer_compute(0);
+        claimed.get_future().wait();
+        scheduler.notify_layer_compute(1);
+        scheduler.notify_layer_compute(2);
+        assert(scheduler.pending_request_count() == 1);
+        release.set_value();
+        wait_for_rounds(scheduler, 2);
+        scheduler.shutdown();
+
+        const auto stats = scheduler.budget_stats();
+        assert(stats.stale_requests == 1);
+        assert(stats.stale_bytes == page_size);
+        assert(stats.inflight_peak_bytes <= page_size);
+        assert(stats.requested_bytes == 2 * page_size);
+        std::lock_guard<std::mutex> lock(advised_mtx);
+        assert(advised.size() == 2);
+        assert(advised[0] == reinterpret_cast<uintptr_t>(mapping));
+        assert(advised[1] == reinterpret_cast<uintptr_t>(mapping) + 2 * page_size);
+    }
+    assert(munmap(mapping, 3 * page_size) == 0);
+}
+
+void test_slow_storage_same_layer_duplicate_is_coalesced() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(
+        nullptr,
+        2 * page_size,
+        PROT_READ | PROT_WRITE,
+        MAP_PRIVATE | MAP_ANON,
+        -1,
+        0);
+    assert(mapping != MAP_FAILED);
+    scoped_env slow_storage{"SLIM_ARC_SLOW_STORAGE", "1"};
+    std::promise<void> claimed;
+    std::promise<void> release;
+    std::atomic<bool> first{true};
+    std::shared_future<void> release_gate = release.get_future().share();
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1, [&] {
+            if (first.exchange(false)) {
+                claimed.set_value();
+                release_gate.wait();
+            }
+        }};
+        scheduler.register_tensor("blk.1.weight", mapping, page_size, 1);
+        scheduler.register_tensor(
+            "blk.2.weight",
+            static_cast<uint8_t *>(mapping) + page_size,
+            page_size,
+            2);
+        scheduler.set_memory_budget(page_size);
+        scheduler.notify_layer_compute(0);
+        claimed.get_future().wait();
+        scheduler.notify_layer_compute(1);
+        scheduler.notify_layer_compute(1);
+        assert(scheduler.pending_request_count() == 1);
+        release.set_value();
+        wait_for_rounds(scheduler, 2);
+        scheduler.shutdown();
+        const auto stats = scheduler.budget_stats();
+        assert(stats.stale_requests == 0);
+        assert(stats.requested_bytes == 2 * page_size);
+        assert(stats.inflight_peak_bytes <= page_size);
+    }
+    assert(munmap(mapping, 2 * page_size) == 0);
+}
+
 void test_confidence_flag_requires_exact_one() {
     for (const char * value : {"0", "", "false", "invalid"}) {
         scoped_env env{"SLIM_ARC_EXPERT_CONF", value};
@@ -1212,6 +1325,8 @@ int main() {
     test_two_workers_claim_distinguishable_layers_without_duplication();
     test_request_queue_is_bounded_and_drops_oldest_unclaimed();
     test_concurrent_shutdown_callers_return_only_after_join();
+    test_slow_storage_latest_generation_replaces_unclaimed_work();
+    test_slow_storage_same_layer_duplicate_is_coalesced();
     test_confidence_flag_requires_exact_one();
     test_popularity_accepts_only_complete_range_zero_to_sixty_four();
     test_scheduler_enforces_budget_and_counts_success();

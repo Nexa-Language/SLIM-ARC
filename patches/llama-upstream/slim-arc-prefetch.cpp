@@ -63,6 +63,17 @@ long system_page_size() {
     return sysconf(_SC_PAGESIZE);
 }
 
+bool env_exact_one(const char * name) noexcept {
+    const char * const value = std::getenv(name);
+    return value != nullptr && std::strcmp(value, "1") == 0;
+}
+
+void update_atomic_peak(std::atomic<uint64_t> & peak, uint64_t candidate) noexcept {
+    uint64_t current = peak.load();
+    while (current < candidate && !peak.compare_exchange_weak(current, candidate)) {
+    }
+}
+
 uint32_t ratio_permille(uint64_t numerator, uint64_t denominator) noexcept {
     if (denominator == 0 || numerator == 0) return 0;
     if (numerator >= denominator) return 1000;
@@ -227,8 +238,9 @@ prefetch_scheduler::prefetch_scheduler(
     std::function<void()> request_claim_hook,
     advice_fn advice,
     page_size_query_fn page_size_query)
-    : n_threads_(std::max(1, n_threads))
-    , window_(std::max(1, window))
+    : slow_storage_enabled_(env_exact_one("SLIM_ARC_SLOW_STORAGE"))
+    , n_threads_(slow_storage_enabled_ ? 1 : std::max(1, n_threads))
+    , window_(slow_storage_enabled_ ? 1 : std::max(1, window))
     , request_claim_hook_(std::move(request_claim_hook))
     , advice_(advice ? std::move(advice) : advice_fn{system_advice})
     , page_size_query_(page_size_query ? std::move(page_size_query) : page_size_query_fn{system_page_size})
@@ -295,20 +307,89 @@ bool prefetch_scheduler::register_mapping(void * addr, size_t size) {
 
 void prefetch_scheduler::notify_layer_compute(int current_layer) {
     if (!enabled_.load()) return;
+    prefetch_request request = plan_request(current_layer);
     {
         std::lock_guard<std::mutex> lk(mtx_);
         if (stop_.load()) return;
-        if (pending_requests_.size() == max_pending_requests) {
-            pending_requests_.pop_front();
-            atomic_saturating_add(dropped_requests_, uint64_t{1});
-        }
         if (next_request_generation_ == std::numeric_limits<uint64_t>::max()) {
             atomic_saturating_add(dropped_requests_, uint64_t{1});
             return;
         }
-        pending_requests_.push_back({++next_request_generation_, current_layer});
+        if (slow_storage_enabled_) {
+            if (!pending_requests_.empty() && pending_requests_.back().layer == current_layer) {
+                return;
+            }
+            for (const prefetch_request & stale : pending_requests_) {
+                atomic_saturating_add(budget_stale_requests_, uint64_t{1});
+                atomic_saturating_add(budget_stale_bytes_, stale.covered_bytes);
+            }
+            pending_requests_.clear();
+        } else if (pending_requests_.size() == max_pending_requests) {
+            pending_requests_.pop_front();
+            atomic_saturating_add(dropped_requests_, uint64_t{1});
+        }
+        request.generation = ++next_request_generation_;
+        pending_requests_.push_back(std::move(request));
     }
     cv_.notify_one();
+}
+
+prefetch_scheduler::prefetch_request prefetch_scheduler::plan_request(int current_layer) {
+    prefetch_request request;
+    request.layer = current_layer;
+    request.memory_budget = memory_budget_.load();
+    std::vector<tensor_prefetch_info> items;
+    {
+        std::lock_guard<std::mutex> lock(mtx_);
+        if (stop_.load()) return request;
+        for (int offset = 1; offset <= window_; ++offset) {
+            const int layer = current_layer + offset;
+            if (layer < 0 || static_cast<size_t>(layer) >= tensors_by_layer_.size()) continue;
+            for (const tensor_prefetch_info & tensor : tensors_by_layer_[layer]) {
+                if (tensor.addr != nullptr && tensor.size > 0) items.push_back(tensor);
+            }
+        }
+    }
+
+    for (const tensor_prefetch_info & item : items) {
+        request.requested_bytes = saturating_add(
+            request.requested_bytes,
+            static_cast<uint64_t>(item.size));
+    }
+    request.advice_requests = static_cast<uint64_t>(items.size());
+    const long raw_page_size = page_size_query_();
+    if (raw_page_size <= 0) {
+        request.invalid_ranges = request.advice_requests;
+        return request;
+    }
+    request.page_size = static_cast<size_t>(raw_page_size);
+    std::vector<page_range> planned_ranges;
+    planned_ranges.reserve(items.size());
+    for (const tensor_prefetch_info & item : items) {
+        const page_range range = covering_page_range(
+            reinterpret_cast<uintptr_t>(item.addr),
+            item.size,
+            request.page_size);
+        if (!range.valid) {
+            request.invalid_ranges = saturating_add(request.invalid_ranges, uint64_t{1});
+            continue;
+        }
+        planned_ranges.push_back(range);
+    }
+    page_range_set coalesced = coalesce_page_ranges(std::move(planned_ranges));
+    if (!coalesced.valid) {
+        request.invalid_ranges = saturating_add(
+            request.invalid_ranges,
+            static_cast<uint64_t>(coalesced.input_ranges));
+        return request;
+    }
+    request.ranges = std::move(coalesced.ranges);
+    for (const page_range & range : request.ranges) {
+        request.covered_bytes = saturating_add(
+            request.covered_bytes,
+            static_cast<uint64_t>(range.length));
+    }
+    return request;
 }
 
 size_t prefetch_scheduler::pending_request_count() const {
@@ -327,85 +408,44 @@ prefetch_budget_stats prefetch_scheduler::budget_stats() const {
         budget_coalesced_ranges_.load(),
         budget_covered_bytes_.load(),
         budget_invalid_ranges_.load(),
+        budget_stale_requests_.load(),
+        budget_stale_bytes_.load(),
+        budget_inflight_peak_bytes_.load(),
     };
 }
 
 void prefetch_scheduler::worker_loop() {
     while (true) {
-        int target_layer;
-        std::vector<tensor_prefetch_info> items;
+        prefetch_request request;
         {
             std::unique_lock<std::mutex> lk(mtx_);
             cv_.wait(lk, [this] { return stop_.load() || !pending_requests_.empty(); });
             if (stop_) return;
-            const prefetch_request request = pending_requests_.front();
+            request = std::move(pending_requests_.front());
             pending_requests_.pop_front();
-            target_layer = request.layer;
-            for (int w = 1; w <= window_; ++w) {
-                const int layer = target_layer + w;
-                if (layer < 0 || static_cast<size_t>(layer) >= tensors_by_layer_.size()) continue;
-                for (const auto & tensor : tensors_by_layer_[layer]) {
-                    if (tensor.addr != nullptr && tensor.size > 0) items.push_back(tensor);
-                }
-            }
         }
         if (request_claim_hook_) request_claim_hook_();
-        uint64_t requested{0};
-        for (const tensor_prefetch_info & item : items) {
-            requested = saturating_add(requested, static_cast<uint64_t>(item.size));
-        }
-        const uint64_t advice_requests = static_cast<uint64_t>(items.size());
-        uint64_t invalid_ranges{0};
-        std::vector<page_range> planned_ranges;
-        planned_ranges.reserve(items.size());
-        const long raw_page_size = page_size_query_();
-        if (raw_page_size <= 0) {
-            invalid_ranges = advice_requests;
-        } else {
-            const size_t page_size = static_cast<size_t>(raw_page_size);
-            for (const tensor_prefetch_info & item : items) {
-                const page_range range = covering_page_range(
-                    reinterpret_cast<uintptr_t>(item.addr),
-                    item.size,
-                    page_size);
-                if (!range.valid) {
-                    invalid_ranges = saturating_add(invalid_ranges, uint64_t{1});
-                    continue;
-                }
-                planned_ranges.push_back(range);
-            }
-        }
-
-        page_range_set coalesced = coalesce_page_ranges(std::move(planned_ranges));
-        if (!coalesced.valid) {
-            invalid_ranges = saturating_add(
-                invalid_ranges,
-                static_cast<uint64_t>(coalesced.input_ranges));
-            coalesced.ranges.clear();
-        }
-
-        uint64_t covered{0};
-        for (const page_range & range : coalesced.ranges) {
-            covered = saturating_add(covered, static_cast<uint64_t>(range.length));
-        }
 
         std::vector<page_range> selected;
-        selected.reserve(coalesced.ranges.size());
+        selected.reserve(request.ranges.size());
         uint64_t skipped{0};
-        uint64_t remaining = memory_budget_.load();
-        const size_t page_size = raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 0;
-        for (const page_range & range : coalesced.ranges) {
+        uint64_t selected_bytes{0};
+        uint64_t remaining = request.memory_budget;
+        for (const page_range & range : request.ranges) {
             const uint64_t available = std::min<uint64_t>(remaining, range.length);
-            const uint64_t admitted = page_size == 0 ? 0 : available - available % page_size;
+            const uint64_t admitted = request.page_size == 0 ? 0 : available - available % request.page_size;
             if (admitted > 0) {
                 selected.push_back({range.address, static_cast<size_t>(admitted), 0, true, 0});
                 remaining -= admitted;
+                selected_bytes = saturating_add(selected_bytes, admitted);
             }
             skipped = saturating_add(skipped, static_cast<uint64_t>(range.length) - admitted);
         }
 
+        const uint64_t inflight = budget_inflight_bytes_.fetch_add(selected_bytes) + selected_bytes;
+        update_atomic_peak(budget_inflight_peak_bytes_, inflight);
         uint64_t issued{0};
-        uint64_t failures = invalid_ranges;
+        uint64_t failures = request.invalid_ranges;
         for (const page_range & range : selected) {
             if (advice_(reinterpret_cast<void *>(range.address), range.length, POSIX_MADV_WILLNEED) == 0) {
                 issued = saturating_add(issued, static_cast<uint64_t>(range.length));
@@ -413,17 +453,18 @@ void prefetch_scheduler::worker_loop() {
                 failures = saturating_add(failures, uint64_t{1});
             }
         }
+        budget_inflight_bytes_.fetch_sub(selected_bytes);
 
-        atomic_saturating_add(budget_requested_bytes_, requested);
+        atomic_saturating_add(budget_requested_bytes_, request.requested_bytes);
         atomic_saturating_add(budget_issued_bytes_, issued);
         atomic_saturating_add(budget_skipped_bytes_, skipped);
         atomic_saturating_add(budget_madvise_failures_, failures);
-        atomic_saturating_add(budget_advice_requests_, advice_requests);
+        atomic_saturating_add(budget_advice_requests_, request.advice_requests);
         atomic_saturating_add(
             budget_coalesced_ranges_,
-            static_cast<uint64_t>(coalesced.ranges.size()));
-        atomic_saturating_add(budget_covered_bytes_, covered);
-        atomic_saturating_add(budget_invalid_ranges_, invalid_ranges);
+            static_cast<uint64_t>(request.ranges.size()));
+        atomic_saturating_add(budget_covered_bytes_, request.covered_bytes);
+        atomic_saturating_add(budget_invalid_ranges_, request.invalid_ranges);
         if (skipped > 0) {
             atomic_saturating_add(budget_rounds_throttled_, uint64_t{1});
         }

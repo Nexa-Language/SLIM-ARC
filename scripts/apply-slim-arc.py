@@ -203,10 +203,12 @@ def patch_context(filepath: str) -> None:
             expert_generation_tokens.resize(static_cast<size_t>(max_layer) + 1, 0);
             auto & scheduler = slim_arc_runtime.prefetch();
             auto & unified = slim_arc_runtime.unified();
+            const char * slow_storage_raw = std::getenv("SLIM_ARC_SLOW_STORAGE");
+            const bool slow_storage = slow_storage_raw != nullptr && std::strcmp(slow_storage_raw, "1") == 0;
             scheduler.set_phase(batched ? slim_arc::compute_phase::PREFILL : slim_arc::compute_phase::DECODE);
             unified.set_phase(batched ? slim_arc::runtime_phase::PREFILL_SHORT : slim_arc::runtime_phase::MOE_DECODE);
             unified.tick(min_layer, 3);
-            if (!batched && max_layer > min_layer) {
+            if (!slow_storage && !batched && max_layer > min_layer) {
                 for (int layer = min_layer + scheduler.effective_window() + 1; layer <= max_layer; ++layer) scheduler.notify_layer_compute(layer);
             }
             for (int layer = min_layer; layer <= max_layer; ++layer) {

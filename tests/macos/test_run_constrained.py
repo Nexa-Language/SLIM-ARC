@@ -215,7 +215,7 @@ def test_pressure_environment_is_allowlisted() -> None:
     ("name", "value"),
     [
         (name, value)
-        for name in ("SLIM_ARC_EXPERT_RECLAIM_WASTE", "SLIM_ARC_EXPERT_RESIDENCY")
+        for name in ("SLIM_ARC_EXPERT_RECLAIM_WASTE", "SLIM_ARC_EXPERT_RESIDENCY", "SLIM_ARC_SLOW_STORAGE")
         for value in ("0", "2", "true", "", "01")
     ],
 )
@@ -231,6 +231,7 @@ def test_allows_finalist_policy_flags_only_when_enabled() -> None:
         env={
             "SLIM_ARC_EXPERT_RECLAIM_WASTE": "1",
             "SLIM_ARC_EXPERT_RESIDENCY": "1",
+            "SLIM_ARC_SLOW_STORAGE": "1",
         }
     )
 
@@ -242,6 +243,7 @@ def test_docker_command_carries_each_enabled_finalist_policy(tmp_path: Path) -> 
         env={
             "SLIM_ARC_EXPERT_RECLAIM_WASTE": "1",
             "SLIM_ARC_EXPERT_RESIDENCY": "1",
+            "SLIM_ARC_SLOW_STORAGE": "1",
         }
     )
 
@@ -251,3 +253,4 @@ def test_docker_command_carries_each_enabled_finalist_policy(tmp_path: Path) -> 
 
     assert command.count("SLIM_ARC_EXPERT_RECLAIM_WASTE=1") == 1
     assert command.count("SLIM_ARC_EXPERT_RESIDENCY=1") == 1
+    assert command.count("SLIM_ARC_SLOW_STORAGE=1") == 1

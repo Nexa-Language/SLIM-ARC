@@ -83,7 +83,7 @@ def _cgroup(directory: Path, peak: int) -> Path:
 def _runtime_line(waste: int) -> str:
     values = {name: 0 for name in manifest.RUNTIME_COUNTER_FIELDS}
     values["expert_waste_bytes"] = waste
-    return "[SLIM-ARC-RUNTIME] " + " ".join(["schema=2", *(f"{name}={value}" for name, value in values.items())])
+    return "[SLIM-ARC-RUNTIME] " + " ".join(["schema=3", *(f"{name}={value}" for name, value in values.items())])
 
 
 def _write_run(

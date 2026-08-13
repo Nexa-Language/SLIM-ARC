@@ -91,7 +91,7 @@ assert_rejected unknown-slim-arc \
     'Unsupported SLIM-ARC environment variable: SLIM_ARC_UNKNOWN' \
     --env SLIM_ARC_UNKNOWN=1
 
-for policy_name in SLIM_ARC_EXPERT_RECLAIM_WASTE SLIM_ARC_EXPERT_RESIDENCY; do
+for policy_name in SLIM_ARC_EXPERT_RECLAIM_WASTE SLIM_ARC_EXPERT_RESIDENCY SLIM_ARC_SLOW_STORAGE; do
     for policy_value in 0 01 2 true ''; do
         case_name="${policy_name}-${policy_value:-empty}"
         assert_rejected "${case_name}" "${policy_name} must be exactly 1" \

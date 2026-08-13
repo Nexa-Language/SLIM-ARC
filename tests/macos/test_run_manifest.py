@@ -19,13 +19,14 @@ SPEC.loader.exec_module(run_manifest)
 
 
 RUNTIME_LINE = (
-    "[SLIM-ARC-RUNTIME] schema=2 expert_samples=0 expert_issued_bytes=0 "
+    "[SLIM-ARC-RUNTIME] schema=3 expert_samples=0 expert_issued_bytes=0 "
     "expert_hit_bytes=0 expert_waste_bytes=0 reclaim_candidates=0 reclaim_calls=0 "
     "expert_advice_requests=0 expert_coalesced_ranges=0 expert_covered_bytes=0 "
     "expert_advice_failures=0 expert_invalid_ranges=0 weight_requested_bytes=0 "
     "weight_covered_bytes=0 weight_issued_bytes=0 weight_skipped_bytes=0 "
     "weight_advice_requests=0 weight_coalesced_ranges=0 weight_invalid_ranges=0 "
     "weight_advice_failures=0 weight_rounds_throttled=0 "
+    "weight_stale_requests=0 weight_stale_bytes=0 weight_inflight_peak_bytes=0 "
     "reclaimed_bytes=0 reclaim_skipped_bytes=0 reclaim_failures=0 "
     "residency_samples=0 residency_admitted_experts=0 residency_admitted_bytes=0 "
     "residency_skipped_bytes=0 residency_fallbacks=0 pressure_normal=0 "
@@ -65,7 +66,7 @@ def write_runtime_log(path: Path, content: str = RUNTIME_LINE) -> Path:
 
 
 def runtime_line(counter_values: dict[str, int]) -> str:
-    fields = ["schema=2"]
+    fields = ["schema=3"]
     fields.extend(
         f"{name}={counter_values[name]}" for name in run_manifest.RUNTIME_COUNTER_FIELDS
     )
@@ -126,7 +127,7 @@ def test_manifest_has_resource_and_result_fields(tmp_path: Path) -> None:
     assert manifest["runtime_metrics_status"] == "collected"
     assert manifest["runtime_metrics"] == [
         {
-            "schema": 2,
+            "schema": 3,
             "expert_samples": 0,
             "expert_issued_bytes": 0,
             "expert_hit_bytes": 0,
@@ -145,6 +146,9 @@ def test_manifest_has_resource_and_result_fields(tmp_path: Path) -> None:
             "weight_invalid_ranges": 0,
             "weight_advice_failures": 0,
             "weight_rounds_throttled": 0,
+            "weight_stale_requests": 0,
+            "weight_stale_bytes": 0,
+            "weight_inflight_peak_bytes": 0,
             "reclaim_candidates": 0,
             "reclaim_calls": 0,
             "reclaimed_bytes": 0,
@@ -218,11 +222,11 @@ def test_manifest_rejects_malformed_runtime_image_identity(tmp_path: Path, image
 @pytest.mark.parametrize(
     "line",
     [
-        RUNTIME_LINE.replace("schema=2 ", ""),
+        RUNTIME_LINE.replace("schema=3 ", ""),
         RUNTIME_LINE.replace("expert_samples=0", "expert_samples=0 expert_samples=0"),
         RUNTIME_LINE.replace("pressure_critical=0", "unknown=0"),
         RUNTIME_LINE.replace("expert_samples=0", "expert_samples=+1"),
-        RUNTIME_LINE.replace("schema=2", "schema=1"),
+        RUNTIME_LINE.replace("schema=3", "schema=2"),
         RUNTIME_LINE.replace("expert_samples=0", "expert_samples=\u0661"),
         RUNTIME_LINE.replace("expert_samples=0", "expert_samples=18446744073709551616"),
         f"{RUNTIME_LINE} extra-token",
@@ -284,7 +288,7 @@ def test_manifest_preserves_runtime_log_order_and_saturates_each_counter(tmp_pat
         runtime_logs=runtime_logs,
     )
 
-    assert manifest["runtime_metrics"] == [{"schema": 2, **first}, {"schema": 2, **second}]
+    assert manifest["runtime_metrics"] == [{"schema": 3, **first}, {"schema": 3, **second}]
     assert manifest["runtime_metrics_summary"] == {
         name: run_manifest.UINT64_MAX for name in run_manifest.RUNTIME_COUNTER_FIELDS
     }
@@ -445,7 +449,7 @@ def test_manifest_records_pressure_admission_environment(tmp_path: Path) -> None
     ("name", "value"),
     [
         (name, value)
-        for name in ("SLIM_ARC_EXPERT_RECLAIM_WASTE", "SLIM_ARC_EXPERT_RESIDENCY")
+        for name in ("SLIM_ARC_EXPERT_RECLAIM_WASTE", "SLIM_ARC_EXPERT_RESIDENCY", "SLIM_ARC_SLOW_STORAGE")
         for value in ("0", "2", "true", "", "01")
     ],
 )

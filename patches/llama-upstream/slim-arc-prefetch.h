@@ -1,6 +1,7 @@
 #pragma once
 
 #include "slim-arc-expert-residency.h"
+#include "slim-arc-page-range.h"
 
 // SLIM-ARC: Tensor-level asynchronous prefetch scheduler
 //
@@ -55,6 +56,9 @@ struct prefetch_budget_stats {
     uint64_t coalesced_ranges{0};
     uint64_t covered_bytes{0};
     uint64_t invalid_ranges{0};
+    uint64_t stale_requests{0};
+    uint64_t stale_bytes{0};
+    uint64_t inflight_peak_bytes{0};
 };
 
 struct expert_reclaim_stats {
@@ -190,6 +194,7 @@ class prefetch_scheduler {
         const std::vector<int> & selected,
         const std::vector<expert_tensor_info> & tensors);
 
+    const bool slow_storage_enabled_;
     int n_threads_;
     int window_;
     std::atomic<compute_phase> phase_{compute_phase::DECODE};
@@ -207,6 +212,10 @@ class prefetch_scheduler {
     std::atomic<uint64_t>   budget_coalesced_ranges_{0};
     std::atomic<uint64_t>   budget_covered_bytes_{0};
     std::atomic<uint64_t>   budget_invalid_ranges_{0};
+    std::atomic<uint64_t>   budget_stale_requests_{0};
+    std::atomic<uint64_t>   budget_stale_bytes_{0};
+    std::atomic<uint64_t>   budget_inflight_bytes_{0};
+    std::atomic<uint64_t>   budget_inflight_peak_bytes_{0};
 
     // ---- SLIM-ARC FIX 2026-08-09: 专家预取可观测性指标（改进 1）----
     std::atomic<size_t>     expert_prefetch_bytes_{0};  // 实际 WILLNEED 下发字节
@@ -229,9 +238,17 @@ class prefetch_scheduler {
     mutable std::mutex                mtx_;
     std::condition_variable           cv_;
     struct prefetch_request {
-        uint64_t generation;
-        int layer;
+        uint64_t generation{0};
+        int layer{-1};
+        uint64_t memory_budget{0};
+        uint64_t requested_bytes{0};
+        uint64_t advice_requests{0};
+        uint64_t invalid_ranges{0};
+        uint64_t covered_bytes{0};
+        size_t page_size{0};
+        std::vector<page_range> ranges;
     };
+    prefetch_request plan_request(int current_layer);
     std::deque<prefetch_request>      pending_requests_;
     uint64_t                          next_request_generation_{0};
     static constexpr size_t           max_pending_requests{64};
