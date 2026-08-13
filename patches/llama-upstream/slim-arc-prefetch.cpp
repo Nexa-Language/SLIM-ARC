@@ -215,6 +215,23 @@ void prefetch_scheduler::set_phase(compute_phase phase) {
     for (const auto & region : regions) {
         (void) advice_(region.first, region.second, advice);
     }
+    if (phase == compute_phase::DECODE && expert_random_madv_enabled_) {
+        std::vector<page_range> expert_ranges;
+        {
+            std::lock_guard<std::mutex> lock(expert_state_mtx_);
+            expert_ranges = expert_random_ranges_;
+        }
+        for (const page_range & range : expert_ranges) {
+            atomic_saturating_add(expert_random_advice_calls_, uint64_t{1});
+            if (advice_(reinterpret_cast<void *>(range.address), range.length, POSIX_MADV_RANDOM) == 0) {
+                atomic_saturating_add(
+                    expert_random_advice_bytes_,
+                    static_cast<uint64_t>(range.length));
+            } else {
+                atomic_saturating_add(expert_random_advice_failures_, uint64_t{1});
+            }
+        }
+    }
 }
 
 int tensor_layer_from_name(const char * name) {
@@ -242,6 +259,7 @@ prefetch_scheduler::prefetch_scheduler(
     , router_prefetch_enabled_(env_exact_one("SLIM_ARC_ROUTER_PREFETCH"))
     , router_mlock_enabled_(env_exact_one("SLIM_ARC_ROUTER_MLOCK"))
     , expert_prefetch_disabled_(env_exact_one("SLIM_ARC_NO_EXPERT_PREFETCH"))
+    , expert_random_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_RANDOM"))
     , n_threads_(slow_storage_enabled_ ? 1 : std::max(1, n_threads))
     , window_(slow_storage_enabled_ ? 1 : std::max(1, window))
     , request_claim_hook_(std::move(request_claim_hook))
@@ -513,11 +531,20 @@ void prefetch_scheduler::worker_loop() {
 void prefetch_scheduler::register_expert_tensor(const char *, void * addr, size_t size, int layer, int n_experts) {
     if (addr == nullptr || size == 0 || n_experts < 1 || layer < 0) return;
     if (size % static_cast<size_t>(n_experts) != 0) return;
+    page_range random_range;
+    if (expert_random_madv_enabled_) {
+        const long raw_page_size = page_size_query_();
+        random_range = covering_page_range(
+            reinterpret_cast<uintptr_t>(addr),
+            size,
+            raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 0);
+    }
     std::lock_guard<std::mutex> lock(expert_state_mtx_);
     if ((size_t)layer >= experts_by_layer_.size()) {
         experts_by_layer_.resize(layer + 1);
     }
     experts_by_layer_[layer].push_back({addr, size, n_experts});
+    if (random_range.valid) expert_random_ranges_.push_back(random_range);
 }
 
 void prefetch_scheduler::cache_router_experts(int layer, const int * expert_ids, int n) {
@@ -1132,6 +1159,14 @@ void prefetch_scheduler::dump_metrics() const {
             "[SLIM-ARC-ROUTER] locked_bytes=%llu lock_failures=%llu\n",
             static_cast<unsigned long long>(router_locked_bytes_.load()),
             static_cast<unsigned long long>(router_lock_failures_.load()));
+    }
+    if (expert_random_madv_enabled_) {
+        std::fprintf(
+            stderr,
+            "[SLIM-ARC-EXPERT-MADV] random_calls=%llu random_bytes=%llu failures=%llu\n",
+            static_cast<unsigned long long>(expert_random_advice_calls_.load()),
+            static_cast<unsigned long long>(expert_random_advice_bytes_.load()),
+            static_cast<unsigned long long>(expert_random_advice_failures_.load()));
     }
 }
 

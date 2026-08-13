@@ -35,6 +35,7 @@ SLIM_ARC_ENV_ALLOWLIST = frozenset(
         "SLIM_ARC_DYNAMIC_MADV",
         "SLIM_ARC_EXPERT_BUDGET",
         "SLIM_ARC_EXPERT_CONF",
+        "SLIM_ARC_EXPERT_MADV_RANDOM",
         "SLIM_ARC_EXPERT_POP",
         "SLIM_ARC_EXPERT_RECLAIM_WASTE",
         "SLIM_ARC_EXPERT_RESIDENCY",
@@ -91,6 +92,7 @@ class RunConfig:
                 raise ValueError(f"unsupported SLIM-ARC environment variable: {name}")
             if name in {
                 "SLIM_ARC_EXPERT_RECLAIM_WASTE",
+                "SLIM_ARC_EXPERT_MADV_RANDOM",
                 "SLIM_ARC_EXPERT_RESIDENCY",
                 "SLIM_ARC_NO_EXPERT_PREFETCH",
                 "SLIM_ARC_ROUTER_MLOCK",

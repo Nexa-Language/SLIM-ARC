@@ -198,6 +198,7 @@ class prefetch_scheduler {
     const bool router_prefetch_enabled_;
     const bool router_mlock_enabled_;
     const bool expert_prefetch_disabled_;
+    const bool expert_random_madv_enabled_;
     int n_threads_;
     int window_;
     std::atomic<compute_phase> phase_{compute_phase::DECODE};
@@ -265,6 +266,10 @@ class prefetch_scheduler {
     std::atomic<uint64_t>                          router_locked_bytes_{0};
     std::atomic<uint64_t>                          router_lock_failures_{0};
     std::vector<std::pair<void *, size_t>>         mmap_regions_;
+    std::vector<page_range>                        expert_random_ranges_;
+    std::atomic<uint64_t>                          expert_random_advice_calls_{0};
+    std::atomic<uint64_t>                          expert_random_advice_bytes_{0};
+    std::atomic<uint64_t>                          expert_random_advice_failures_{0};
     // MoE expert registry indexed by layer
     std::vector<std::vector<expert_tensor_info>>   experts_by_layer_;
     // Guards the expert registry and router predictor/accounting state.
