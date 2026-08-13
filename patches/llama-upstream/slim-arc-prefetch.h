@@ -197,6 +197,7 @@ class prefetch_scheduler {
     const bool slow_storage_enabled_;
     const bool router_prefetch_enabled_;
     const bool router_mlock_enabled_;
+    const bool shared_mlock_enabled_;
     const bool expert_prefetch_disabled_;
     const bool expert_random_madv_enabled_;
     const bool expert_normal_madv_enabled_;
@@ -266,6 +267,9 @@ class prefetch_scheduler {
     std::vector<page_range>                        router_locked_ranges_;
     std::atomic<uint64_t>                          router_locked_bytes_{0};
     std::atomic<uint64_t>                          router_lock_failures_{0};
+    std::vector<page_range>                        shared_locked_ranges_;
+    std::atomic<uint64_t>                          shared_locked_bytes_{0};
+    std::atomic<uint64_t>                          shared_lock_failures_{0};
     std::vector<std::pair<void *, size_t>>         mmap_regions_;
     std::vector<page_range>                        expert_madv_ranges_;
     std::atomic<uint64_t>                          expert_madv_advice_calls_{0};
