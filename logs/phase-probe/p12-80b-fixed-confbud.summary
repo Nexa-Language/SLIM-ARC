@@ -1,0 +1,8 @@
+exit_code=0
+wall_s=895.30
+cpu_time_s=121.71 (utime=92.10 stime=29.61)
+cpu_util_pct=13.6
+delta_minflt=2738956 (3059.3/s)
+delta_majflt=630405 (704.127/s)
+delta_rchar=11990036 (11.4 MiB, 0.01 MiB/s)
+delta_read_bytes=45596672 (43.5 MiB, 0.05 MiB/s)
