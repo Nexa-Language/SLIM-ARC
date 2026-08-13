@@ -127,4 +127,55 @@ int main() {
         real_covering.length,
         POSIX_MADV_WILLNEED) == 0);
     assert(munmap(mapping, mapping_size) == 0);
+
+    const auto empty_ranges = slim_arc::coalesce_page_ranges({});
+    assert(empty_ranges.valid);
+    assert(empty_ranges.input_ranges == 0);
+    assert(empty_ranges.ranges.empty());
+
+    const auto identical_ranges = slim_arc::coalesce_page_ranges({
+        {0x2000, 0x1000, 0, true, 0},
+        {0x2000, 0x1000, 0, true, 0},
+    });
+    assert(identical_ranges.valid);
+    assert(identical_ranges.input_ranges == 2);
+    assert(identical_ranges.ranges.size() == 1);
+    assert(identical_ranges.ranges[0].address == 0x2000);
+    assert(identical_ranges.ranges[0].length == 0x1000);
+
+    const auto unsorted_adjacent_ranges = slim_arc::coalesce_page_ranges({
+        {0x4000, 0x1000, 0, true, 0},
+        {0x2000, 0x1000, 0, true, 0},
+        {0x3000, 0x1000, 0, true, 0},
+    });
+    assert(unsorted_adjacent_ranges.valid);
+    assert(unsorted_adjacent_ranges.input_ranges == 3);
+    assert(unsorted_adjacent_ranges.ranges.size() == 1);
+    assert(unsorted_adjacent_ranges.ranges[0].address == 0x2000);
+    assert(unsorted_adjacent_ranges.ranges[0].length == 0x3000);
+
+    const auto overlap_and_disjoint_ranges = slim_arc::coalesce_page_ranges({
+        {0x2800, 0x1000, 0, true, 0},
+        {0x5000, 0x1000, 0, true, 0},
+        {0x2000, 0x1000, 0, true, 0},
+    });
+    assert(overlap_and_disjoint_ranges.valid);
+    assert(overlap_and_disjoint_ranges.ranges.size() == 2);
+    assert(overlap_and_disjoint_ranges.ranges[0].address == 0x2000);
+    assert(overlap_and_disjoint_ranges.ranges[0].length == 0x1800);
+    assert(overlap_and_disjoint_ranges.ranges[1].address == 0x5000);
+    assert(overlap_and_disjoint_ranges.ranges[1].length == 0x1000);
+
+    const auto ignores_empty_range = slim_arc::coalesce_page_ranges({
+        {0x2003, 0, 0, true, 0},
+        {0x3000, 0x1000, 0, true, 0},
+    });
+    assert(ignores_empty_range.valid);
+    assert(ignores_empty_range.input_ranges == 2);
+    assert(ignores_empty_range.ranges.size() == 1);
+    assert(ignores_empty_range.ranges[0].address == 0x3000);
+
+    assert(!slim_arc::coalesce_page_ranges({{0x2000, 0x1000, 0, false, 0}}).valid);
+    assert(!slim_arc::coalesce_page_ranges({{
+        std::numeric_limits<uintptr_t>::max() - 3, 4, 0, true, 0}}).valid);
 }

@@ -1,5 +1,6 @@
 #include "slim-arc-page-range.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <limits>
 
@@ -72,6 +73,46 @@ page_range covering_page_range(uintptr_t address, size_t length, size_t page_siz
         return {};
     }
     return {first_page, covered_length, 0, true, covered_length - length};
+}
+
+page_range_set coalesce_page_ranges(std::vector<page_range> ranges) noexcept {
+    const size_t input_ranges = ranges.size();
+    std::vector<page_range> nonempty;
+    nonempty.reserve(ranges.size());
+    for (const page_range & range : ranges) {
+        if (!range.valid || range.length > UINTPTR_MAX - range.address) {
+            return {{}, input_ranges, false};
+        }
+        if (range.length == 0) {
+            continue;
+        }
+        nonempty.push_back({range.address, range.length, 0, true, 0});
+    }
+
+    std::sort(nonempty.begin(), nonempty.end(), [](const page_range & left, const page_range & right) {
+        if (left.address != right.address) return left.address < right.address;
+        return left.length < right.length;
+    });
+
+    std::vector<page_range> merged;
+    merged.reserve(nonempty.size());
+    for (const page_range & range : nonempty) {
+        if (merged.empty()) {
+            merged.push_back(range);
+            continue;
+        }
+        page_range & previous = merged.back();
+        const uintptr_t previous_end = previous.address + previous.length;
+        if (range.address > previous_end) {
+            merged.push_back(range);
+            continue;
+        }
+        const uintptr_t range_end = range.address + range.length;
+        if (range_end > previous_end) {
+            previous.length = static_cast<size_t>(range_end - previous.address);
+        }
+    }
+    return {std::move(merged), input_ranges, true};
 }
 
 } // namespace slim_arc
