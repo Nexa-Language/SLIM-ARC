@@ -6,6 +6,7 @@
 #include "slim-arc-prefetch.h"
 
 #include "slim-arc-expert-reclaim.h"
+#include "slim-arc-page-range.h"
 
 #include <algorithm>
 #include <charconv>
@@ -288,10 +289,23 @@ void prefetch_scheduler::worker_loop() {
         const auto selected = select_prefetch_items(item_sizes, budget, &requested, &skipped);
         uint64_t issued{0};
         uint64_t failures{0};
+        // SLIM-ARC FIX 2026-08-13: posix_madvise 要求页对齐地址。GGUF 张量地址通常
+        // 带 2KB 偏移，直接对原始张量地址下发 WILLNEED 会 EINVAL，预取完全失效
+        // （issued=0 回归）。先取内部整页区间（与 reclaim 路径同一规则）。
+        const long raw_page_size = page_size_query_();
+        const size_t page_size =
+            raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 4096;
         for (const size_t index : selected) {
             const tensor_prefetch_info & tensor = items[index];
-            if (advice_(tensor.addr, tensor.size, POSIX_MADV_WILLNEED) == 0) {
-                issued = saturating_add(issued, static_cast<uint64_t>(tensor.size));
+            const page_range range = interior_page_range(
+                reinterpret_cast<uintptr_t>(tensor.addr), tensor.size, page_size);
+            if (!range.valid || range.length == 0) {
+                ++failures;
+                continue;
+            }
+            void * const addr = reinterpret_cast<void *>(range.address);
+            if (advice_(addr, range.length, POSIX_MADV_WILLNEED) == 0) {
+                issued = saturating_add(issued, static_cast<uint64_t>(range.length));
             } else {
                 ++failures;
             }
@@ -793,6 +807,9 @@ uint64_t prefetch_scheduler::issue_expert_willneed(int layer, const int * expert
         pending.push_back({generation, {}, {}});
     }
 
+    const long raw_page_size = page_size_query_();
+    const size_t page_size =
+        raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 4096;
     size_t bytes = 0;
     std::vector<int> issued_experts;
     std::vector<size_t> issued_expert_bytes;
@@ -812,9 +829,14 @@ uint64_t prefetch_scheduler::issue_expert_willneed(int layer, const int * expert
             if (off > std::numeric_limits<uintptr_t>::max() - base) continue;
             const uintptr_t address = base + off;
             if (per_expert > std::numeric_limits<uintptr_t>::max() - address) continue;
-            void * const addr = reinterpret_cast<void *>(address);
-            if (advice_(addr, per_expert, POSIX_MADV_WILLNEED) == 0) {
-                expert_bytes = saturating_add(expert_bytes, per_expert);
+            // SLIM-ARC FIX 2026-08-13: posix_madvise 要求页对齐地址；专家切片继承
+            // GGUF 张量的未对齐偏移，直接对切片地址下发 WILLNEED 会 EINVAL，
+            // 导致 issued=0 回归。与 reclaim 路径一致，取内部整页区间下发。
+            const page_range range = interior_page_range(address, per_expert, page_size);
+            if (!range.valid || range.length == 0) continue;
+            void * const addr = reinterpret_cast<void *>(range.address);
+            if (advice_(addr, range.length, POSIX_MADV_WILLNEED) == 0) {
+                expert_bytes = saturating_add(expert_bytes, range.length);
                 issued = true;
             }
         }
