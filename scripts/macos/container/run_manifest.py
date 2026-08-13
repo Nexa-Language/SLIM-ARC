@@ -22,6 +22,7 @@ SLIM_ARC_ENV_ALLOWLIST = frozenset(
         "SLIM_ARC_EXPERT_HOT_MB",
         "SLIM_ARC_EXPERT_MADV_RANDOM",
         "SLIM_ARC_EXPERT_MADV_NORMAL",
+        "SLIM_ARC_EXPERT_PIPELINE_MB",
         "SLIM_ARC_EXPERT_POP",
         "SLIM_ARC_EXPERT_RECLAIM_WASTE",
         "SLIM_ARC_EXPERT_RESIDENCY",
@@ -184,6 +185,10 @@ def collect_slim_arc_environment(environment: Mapping[str, str]) -> dict[str, st
             not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 512
         ):
             raise ValueError("SLIM_ARC_EXPERT_HOT_MB must be an integer between 1 and 512")
+        if name == "SLIM_ARC_EXPERT_PIPELINE_MB" and (
+            not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 64
+        ):
+            raise ValueError("SLIM_ARC_EXPERT_PIPELINE_MB must be an integer between 1 and 64")
         selected[name] = value
     return dict(sorted(selected.items()))
 

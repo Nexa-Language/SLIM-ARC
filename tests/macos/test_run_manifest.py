@@ -470,6 +470,21 @@ def test_manifest_environment_rejects_unknown_slim_arc_variable() -> None:
         run_manifest.collect_slim_arc_environment({"SLIM_ARC_UNKNOWN": "1"})
 
 
+@pytest.mark.parametrize("value", ["1", "32", "64"])
+def test_manifest_records_bounded_layer_local_expert_pipeline(value: str) -> None:
+    assert run_manifest.collect_slim_arc_environment(
+        {"SLIM_ARC_EXPERT_PIPELINE_MB": value}
+    ) == {"SLIM_ARC_EXPERT_PIPELINE_MB": value}
+
+
+@pytest.mark.parametrize("value", ["", "0", "65", "-1", "1.5", "true"])
+def test_manifest_rejects_unbounded_layer_local_expert_pipeline(value: str) -> None:
+    with pytest.raises(ValueError, match="SLIM_ARC_EXPERT_PIPELINE_MB"):
+        run_manifest.collect_slim_arc_environment(
+            {"SLIM_ARC_EXPERT_PIPELINE_MB": value}
+        )
+
+
 def test_rejects_missing_hard_memory_limit(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="memory.max"):
         run_manifest.build_manifest(
