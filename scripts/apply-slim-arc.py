@@ -174,7 +174,7 @@ def patch_context(filepath: str) -> None:
     if '#include "slim-arc-runtime.h"' not in content:
         content = replace_required(content, '#include "llama-ext.h"',
                                    '#include "llama-ext.h"\n#include "slim-arc-runtime.h"', "context include")
-    for header in ("<vector>", "<cstdint>", "<climits>", "<algorithm>", "<cstdlib>"):
+    for header in ("<vector>", "<cstdint>", "<climits>", "<algorithm>", "<cstdlib>", "<cstring>", "<utility>"):
         if f"#include {header}" not in content:
             content = replace_required(content, "#include <limits>",
                                        f"#include <limits>\n#include {header}", f"context {header} include")
@@ -237,6 +237,57 @@ def patch_context(filepath: str) -> None:
             }
         }
     }
+    const char * slim_arc_inline_router_raw = std::getenv("SLIM_ARC_INLINE_ROUTER");
+    const bool slim_arc_inline_router = slim_arc_runtime && !batched && cparams.cb_eval == nullptr &&
+        slim_arc_inline_router_raw != nullptr && std::strcmp(slim_arc_inline_router_raw, "1") == 0;
+    struct slim_arc_inline_router_state {
+        slim_arc::runtime_lease * runtime;
+        std::vector<uint64_t> * generations;
+        int pending_layer{-1};
+        std::vector<int> pending_experts;
+
+        void settle_pending() {
+            if (runtime == nullptr || !*runtime || pending_layer < 0 || pending_experts.empty()) return;
+            uint64_t generation = static_cast<size_t>(pending_layer) < generations->size() ?
+                (*generations)[static_cast<size_t>(pending_layer)] : 0;
+            runtime->prefetch().cache_router_experts(
+                pending_layer, pending_experts.data(), static_cast<int>(pending_experts.size()), generation);
+            if (generation != 0) (*generations)[static_cast<size_t>(pending_layer)] = 0;
+            pending_layer = -1;
+            pending_experts.clear();
+        }
+    } slim_arc_inline_state{&slim_arc_runtime, &expert_generation_tokens, -1, {}};
+    if (slim_arc_inline_router) {
+        ggml_backend_sched_set_eval_callback(
+            sched.get(),
+            [](struct ggml_tensor * tensor, bool ask, void * user_data) -> bool {
+                if (tensor == nullptr || std::strstr(tensor->name, "ffn_moe_topk") == nullptr) return false;
+                if (ask) return true;
+                auto * state = static_cast<slim_arc_inline_router_state *>(user_data);
+                state->settle_pending();
+                if (tensor->data == nullptr || tensor->ne[0] <= 0) return true;
+                int layer = slim_arc::tensor_layer_from_name(tensor->name);
+                if (layer < 0) {
+                    const char * dash = std::strrchr(tensor->name, '-');
+                    if (dash != nullptr && dash[1] >= '0' && dash[1] <= '9') layer = std::atoi(dash + 1);
+                }
+                if (layer < 0) return true;
+                const int32_t * selected = static_cast<const int32_t *>(tensor->data);
+                std::vector<int> unique;
+                for (int expert = 0; expert < tensor->ne[0] && expert < 64; ++expert) {
+                    if (selected[expert] >= 0 &&
+                        std::find(unique.begin(), unique.end(), selected[expert]) == unique.end()) {
+                        unique.push_back(selected[expert]);
+                    }
+                }
+                if (!unique.empty()) {
+                    state->pending_layer = layer;
+                    state->pending_experts = std::move(unique);
+                }
+                return true;
+            },
+            &slim_arc_inline_state);
+    }
 '''
     if "auto slim_arc_runtime = slim_arc::acquire_runtime();" not in content:
         content = replace_required(content, compute, precompute + compute, "graph compute")
@@ -244,7 +295,11 @@ def patch_context(filepath: str) -> None:
     final_marker = "// SLIM-ARC: lease-guarded router finalization."
     finalization = r'''
     // SLIM-ARC: lease-guarded router finalization.
-    if (slim_arc_runtime && status == GGML_STATUS_SUCCESS) {
+    if (slim_arc_inline_router) {
+        ggml_backend_sched_set_eval_callback(sched.get(), cparams.cb_eval, cparams.cb_eval_user_data);
+        if (status == GGML_STATUS_SUCCESS) slim_arc_inline_state.settle_pending();
+    }
+    if (slim_arc_runtime && status == GGML_STATUS_SUCCESS && !slim_arc_inline_router) {
         auto & scheduler = slim_arc_runtime.prefetch();
         const int n_nodes = ggml_graph_n_nodes(gf);
         for (int i = 0; i < n_nodes; ++i) {

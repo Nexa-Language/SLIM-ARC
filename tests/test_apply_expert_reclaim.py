@@ -42,6 +42,7 @@ def write_fixture(root: Path) -> Path:
     (src / "llama-context.cpp").write_text(
         '#include "llama-ext.h"\n#include <limits>\n'
         "int graph_compute() {\n"
+        "    int n_threads        = batched ? cparams.n_threads_batch : cparams.n_threads;\n"
         "    auto status = ggml_backend_sched_graph_compute_async(sched.get(), gf);\n"
         "    return status;\n"
         "}\n",
@@ -118,6 +119,12 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert context.index("if (slim_arc_runtime) {") < context.index("ggml_graph_n_nodes(gf)")
     assert "get_global_prefetch_scheduler" not in context
     assert "get_global_unified_scheduler" not in context
+    assert 'std::getenv("SLIM_ARC_INLINE_ROUTER")' in context
+    assert "cparams.cb_eval == nullptr" in context
+    assert "slim_arc_inline_router_state" in context
+    assert "settle_pending()" in context
+    assert "ggml_backend_sched_set_eval_callback(sched.get(), cparams.cb_eval, cparams.cb_eval_user_data);" in context
+    assert "status == GGML_STATUS_SUCCESS && !slim_arc_inline_router" in context
 
     model = second["llama-model.cpp"].decode(encoding="utf-8")
     impl = model[model.index("struct llama_model::impl"):model.index("};", model.index("struct llama_model::impl"))]
