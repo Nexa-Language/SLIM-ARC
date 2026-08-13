@@ -1,0 +1,21 @@
+ARG BASE_IMAGE=slim-arc-llama-test:360e134
+FROM ${BASE_IMAGE}
+
+ARG SLIM_ARC_GIT_COMMIT
+ARG SLIM_ARC_BUILD_CONTEXT_SHA256
+
+RUN printf '%s\n' "${SLIM_ARC_GIT_COMMIT}" | grep -Eq '^[0-9a-f]{40}$' \
+    && printf '%s\n' "${SLIM_ARC_BUILD_CONTEXT_SHA256}" | grep -Eq '^[0-9a-f]{64}$'
+
+COPY scripts/macos/container/run-benchmark.sh /usr/local/bin/slim-arc-run-benchmark
+COPY scripts/macos/container/run_manifest.py /opt/slim-arc-runner/run_manifest.py
+COPY scripts/macos/container/fake-llama-bench.sh /opt/slim-arc-test/fake-llama-bench
+
+RUN chmod 0755 /usr/local/bin/slim-arc-run-benchmark \
+        /opt/slim-arc-runner/run_manifest.py \
+        /opt/slim-arc-test/fake-llama-bench \
+    && sed -i '/^SLIM_ARC_GIT_COMMIT=/d; /^SLIM_ARC_BUILD_CONTEXT_SHA256=/d' /opt/build-manifest.env \
+    && printf 'SLIM_ARC_GIT_COMMIT=%s\nSLIM_ARC_BUILD_CONTEXT_SHA256=%s\n' \
+        "${SLIM_ARC_GIT_COMMIT}" "${SLIM_ARC_BUILD_CONTEXT_SHA256}" >> /opt/build-manifest.env
+
+LABEL org.slim-arc.build-mode="runner-only-performance-iteration"

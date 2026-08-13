@@ -30,6 +30,7 @@ SLIM_ARC_ENV_ALLOWLIST = frozenset(
         "SLIM_ARC_NO_MADV_RANDOM",
         "SLIM_ARC_NO_EXPERT_PREFETCH",
         "SLIM_ARC_NO_PREFETCH",
+        "SLIM_ARC_POLL",
         "SLIM_ARC_PREFILL_THREADS",
         "SLIM_ARC_PRESSURE_ADMISSION",
         "SLIM_ARC_PRESSURE_RESERVE_MB",
@@ -168,6 +169,10 @@ def collect_slim_arc_environment(environment: Mapping[str, str]) -> dict[str, st
             not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 256
         ):
             raise ValueError(f"{name} must be an integer between 1 and 256")
+        if name == "SLIM_ARC_POLL" and (
+            not value.isascii() or not value.isdecimal() or not 0 <= int(value) <= 100
+        ):
+            raise ValueError("SLIM_ARC_POLL must be an integer between 0 and 100")
         selected[name] = value
     return dict(sorted(selected.items()))
 
