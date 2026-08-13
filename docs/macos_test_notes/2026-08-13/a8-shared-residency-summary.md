@@ -28,5 +28,16 @@ At 1 GiB, the same paired experiment continued to reduce major faults by 5.45%
 and input blocks by 1.76%, but median prefill fell 3.27%, decode fell 4.03%, and
 wall time increased 0.92%. The second candidate run was especially slow,
 showing that reserving 92.4 MB makes the remaining page cache too fragile at
-this tier. The finalist policy therefore enables shared residency at 2 GiB and
-disables it at 1 GiB.
+this tier.
+
+## 4 GiB boundary
+
+At 4 GiB, two more paired cold runs kept prefill effectively flat (-0.10%) and
+improved median decode by 14.25%. Median wall time fell from 62.65 s to 58.27 s
+(-7.00%), major faults fell 3.86%, and input blocks fell 1.84%. Both resident
+runs were tightly grouped at 58.10--58.43 s, while one control decode sample
+was unusually slow; the wall-time and I/O reductions are therefore the more
+stable evidence than the decode percentage alone.
+
+The finalist policy enables shared residency at 2 GiB and 4 GiB, and disables
+it at 1 GiB. The remote board remains the final device-specific boundary check.

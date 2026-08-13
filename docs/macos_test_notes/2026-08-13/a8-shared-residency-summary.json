@@ -50,5 +50,21 @@
     "median_relative_percent":{"prefill_tps":-3.270715,"decode_tps":-4.027582,"wall_seconds":0.920795,"major_faults":-5.445198,"filesystem_input_blocks":-1.758128},
     "decision": "disable_at_1g"
   },
-  "decision": "promote_at_2g_disable_at_1g"
+  "four_gib_boundary": {
+    "control_runs": [
+      {"run":"a8-shared-control-4g-cold","prefill_tps":4.266058,"decode_tps":0.816866,"wall_seconds":59.51,"major_faults":476154,"filesystem_input_blocks":196795856},
+      {"run":"a8-shared-control-r2-4g-cold","prefill_tps":4.038470,"decode_tps":0.554868,"wall_seconds":65.79,"major_faults":462407,"filesystem_input_blocks":196665016}
+    ],
+    "candidate_runs": [
+      {"run":"a8-shared-mlock-4g-cold","prefill_tps":4.058011,"decode_tps":0.801062,"wall_seconds":58.10,"major_faults":454323,"filesystem_input_blocks":193230224,"locked_bytes":92405760,"lock_failures":0},
+      {"run":"a8-shared-mlock-r2-4g-cold","prefill_tps":4.238298,"decode_tps":0.766100,"wall_seconds":58.43,"major_faults":447997,"filesystem_input_blocks":193007872,"locked_bytes":92405760,"lock_failures":0}
+    ],
+    "median_comparison": {
+      "control":{"sample_count":2,"prefill_tps":4.152264,"decode_tps":0.685867,"wall_seconds":62.65,"major_faults":469280.5,"filesystem_input_blocks":196730436},
+      "shared_resident":{"sample_count":2,"prefill_tps":4.1481545,"decode_tps":0.783581,"wall_seconds":58.265,"major_faults":451160,"filesystem_input_blocks":193119048},
+      "candidate_relative_percent":{"prefill_tps":-0.098970,"decode_tps":14.246785,"wall_seconds":-6.999202,"major_faults":-3.861337,"filesystem_input_blocks":-1.835704}
+    },
+    "decision": "promote_at_4g"
+  },
+  "decision": "promote_at_2g_and_4g_disable_at_1g"
 }
