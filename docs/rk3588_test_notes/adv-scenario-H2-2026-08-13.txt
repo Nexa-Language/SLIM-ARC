@@ -1,0 +1,208 @@
+[LOG-TRIM 2026-08-13] 原始日志 315MB（含模型加载进度帧），已精简为关键对话与性能统计行。
+[原始大小] 315M
+build      : b1-360e134
+model      : /home/orangepi/SLIM-ARC/data/models/Qwen3-4B-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+> 你好
+SLIM-ARC KV eviction: ENABLED (sink=4, window=512)
+[Start thinking]
+[End thinking]
+[ Prompt: 7.9 t/s | Generation: 6.7 t/s ]
+> 请介绍一下你自己
+[Start thinking]
+[End thinking]
+[ Prompt: 8.3 t/s | Generation: 5.9 t/s ]
+> 什么是人工智能
+[Start thinking]
+[End thinking]
+[ Prompt: 8.0 t/s | Generation: 5.2 t/s ]
+> 请写一首诗
+[Start thinking]
+[ Prompt: 7.8 t/s | Generation: 4.2 t/s ]
+> 谢谢
+[Start thinking]
+[End thinking]
+[ Prompt: 7.4 t/s | Generation: 4.0 t/s ]
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+> 
+
+[TEST-NOTE 2026-08-13] H2 结果: 5 轮对话全部完成，KV eviction 已启用 (sink=4, window=512)。
+配置: SLIM-ARC + KV_EVICT, 4B 模型, MemoryMax=3G, MemorySwapMax=0, -c 4096 -n 256 -t 4
+性能: Prompt 7.9/8.3/8.0/7.8/7.4 t/s; Generation 6.7/5.9/5.2/4.2/4.0 t/s (5 轮)
+对比 H1: Generation 平均 5.2 vs 4.52 t/s（+15%），Prompt 持平（7.88 vs 7.86）。
+进程在 stdin 耗尽后等待更多输入，被 600s timeout 正常终止（EXIT=124），非异常。

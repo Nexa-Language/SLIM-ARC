@@ -3,6 +3,7 @@ set -euo pipefail
 
 readonly expected_model_path="/models/model.gguf"
 readonly result_dir="/results"
+readonly benchmark_n_depth=0
 
 require_positive_integer() {
     local name="${1:?name is required}"
@@ -61,11 +62,19 @@ require_positive_integer PP "${PP:-}"
 require_positive_integer TG "${TG:-}"
 require_positive_integer THREADS "${THREADS:-}"
 require_positive_integer REPETITIONS "${REPETITIONS:-}"
+if [[ ! "${RUN_IMAGE_ID:-}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+    printf 'RUN_IMAGE_ID must be an immutable SHA-256 image identity\n' >&2
+    exit 2
+fi
 
-readonly allowed_slim_arc_env='^(SLIM_ARC_DECODE_MADV|SLIM_ARC_DISABLE|SLIM_ARC_DYNAMIC_MADV|SLIM_ARC_EXPERT_BUDGET|SLIM_ARC_EXPERT_CONF|SLIM_ARC_EXPERT_POP|SLIM_ARC_KV_EVICT|SLIM_ARC_KV_SINK|SLIM_ARC_KV_WINDOW|SLIM_ARC_NO_MADV_RANDOM|SLIM_ARC_NO_PREFETCH|SLIM_ARC_PRESSURE_ADMISSION|SLIM_ARC_PRESSURE_RESERVE_MB)$'
+readonly allowed_slim_arc_env='^(SLIM_ARC_DECODE_MADV|SLIM_ARC_DISABLE|SLIM_ARC_DYNAMIC_MADV|SLIM_ARC_EXPERT_BUDGET|SLIM_ARC_EXPERT_CONF|SLIM_ARC_EXPERT_POP|SLIM_ARC_EXPERT_RECLAIM_WASTE|SLIM_ARC_EXPERT_RESIDENCY|SLIM_ARC_KV_EVICT|SLIM_ARC_KV_SINK|SLIM_ARC_KV_WINDOW|SLIM_ARC_NO_MADV_RANDOM|SLIM_ARC_NO_PREFETCH|SLIM_ARC_PRESSURE_ADMISSION|SLIM_ARC_PRESSURE_RESERVE_MB)$'
 while IFS= read -r variable_name; do
     if [[ "${variable_name}" == SLIM_ARC_* && ! "${variable_name}" =~ ${allowed_slim_arc_env} ]]; then
         printf 'Unsupported SLIM-ARC environment variable: %s\n' "${variable_name}" >&2
+        exit 2
+    fi
+    if [[ ( "${variable_name}" == "SLIM_ARC_EXPERT_RECLAIM_WASTE" || "${variable_name}" == "SLIM_ARC_EXPERT_RESIDENCY" ) && "${!variable_name}" != "1" ]]; then
+        printf '%s must be exactly 1\n' "${variable_name}" >&2
         exit 2
     fi
 done < <(compgen -e)
@@ -111,6 +120,7 @@ capture_cgroup "${result_dir}/cgroup-before.txt"
 } >"${result_dir}/proc-status.txt"
 
 benchmark_exit=0
+runtime_log_args=()
 for ((rep = 1; rep <= REPETITIONS; rep++)); do
     stdout_log="${result_dir}/rep-${rep}.stdout.log"
     stderr_log="${result_dir}/rep-${rep}.stderr.log"
@@ -122,6 +132,7 @@ for ((rep = 1; rep <= REPETITIONS; rep++)); do
         --threads "${THREADS}" \
         --n-prompt "${PP}" \
         --n-gen "${TG}" \
+        --n-depth "${benchmark_n_depth}" \
         --repetitions 1 \
         --output jsonl \
         --no-warmup \
@@ -131,6 +142,7 @@ for ((rep = 1; rep <= REPETITIONS; rep++)); do
         >"${stdout_log}" 2>"${stderr_log}"
     benchmark_exit=$?
     set -e
+    runtime_log_args+=(--runtime-log "${stderr_log}")
     printf '%s\n' "${benchmark_exit}" >"${result_dir}/rep-${rep}.exit-status.txt"
     if (( benchmark_exit != 0 )); then
         break
@@ -159,6 +171,9 @@ python3 /opt/slim-arc-runner/run_manifest.py \
     --tg "${TG}" \
     --threads "${THREADS}" \
     --repetitions "${REPETITIONS}" \
+    --image-id "${RUN_IMAGE_ID}" \
+    --n-depth "${benchmark_n_depth}" \
+    "${runtime_log_args[@]}" \
     --output "${manifest_temp}"
 mv "${manifest_temp}" "${result_dir}/run-manifest.json"
 exit "${benchmark_exit}"

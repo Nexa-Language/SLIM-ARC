@@ -2,6 +2,46 @@
 
 ---
 
+## 2026-08-12 决赛证据、材料与双远端发布阶段启动
+
+### 变更描述
+- 在整体设计确认后，将运行时 GREEN 之后的执行顺序固化为：pinned image/linkage/packaged metrics 门禁、2 GiB 80A3B 精简对照、机器生成晋级结论、22:00 后冻结初赛材料并增量生成决赛材料、GitHub 发布、23:00 官方 GitLab fast-forward 发布与 fresh-clone 复核。
+- 决赛实验固定为 `baseline`、`patched-control`、`patched-reclaim`、`patched-residency`、`patched-combined` 五组；执行恰好两轮完整矩阵，每轮每组各一次 cold 和 warm，共 20 次，不允许第三轮或非对称追跑。
+- GitLab 发布工具只负责确定性 allowlist、路径规范化、manifest-owned 删除和 SHA-256 manifest；token、clone、commit、push 与远端校验保留在 23:00 发布门禁中，旧的历史回放/伪造日期/force push 路径继续禁用。
+
+### 涉及文件
+- `plan/27-v1-finals-evidence-material-release.md`
+- `ROADMAP.md`
+
+### 决策原因
+- 代码正确性、镜像打包真实性、低内存实验可比性、材料口径和正式提交历史必须共享同一冻结 commit 与单一结果源；若并行推进而不固定依赖顺序，容易再次出现动态库串用、无效数据进入报告或 GitLab 历史被重写的问题。
+- 当前距离 22:00/23:00 时间门禁有限，精简且对称的实验可以优先完成可信闭环；未满足晋级阈值的优化保留为 opt-in 或负结果，不以主观挑选数据进入默认配置。
+
+---
+
+## 2026-08-12 决赛科研闭环设计与发布边界确认
+
+### 变更描述
+- 将决赛阶段收敛为 `predict -> admit -> prefetch -> observe -> reclaim` 的 MoE expert residency 闭环，优先实现可在 Mac 80A3B 上形成 A/B 证据的 Safe Expert Waste Reclamation 与 Pressure/Accuracy-Aware Expert Residency。
+- 明确先修复 router snapshot 裸指针、expert 状态并发、无界 popularity、指标重复计数与失效实验口径，再决定新策略是否进入最终演示配置。
+- 独立计划审阅发现 raw global getter、process-static mmap registry、宿主压力直读和 runtime metrics 数据通路无法形成可证明门禁；v2 改为 model-owned runtime + lease teardown barrier、可注入压力快照、固定 hysteresis/EWMA 和严格单行 metrics schema。
+- 设计提交 `912ec91f` 后的执行基线为 49 个 Python 测试通过，cgroup/pressure/prefetch/unified 四组 C++ normal 与 ASan/UBSan 通过，Python/Shell 语法和 `git diff --check` 通过；uv/Python 默认用户 cache 在受限权限下失败，改用 `/tmp/slim-arc-uv-cache` 与 `/tmp/slim-arc-pycache` 后验证，不计为代码失败。
+- 固化精简重复的 Mac 限内存/限核实验、晋级阈值、PPT/决赛报告增量规则、初赛材料冻结规则和单一数据源。
+- GitLab 决赛发布保留官方初赛 88 个提交，使用 fresh clone、allowlist、manifest、secret/size/test/report gate 和 fast-forward push；废弃伪造日期及全历史回放流程。
+
+### 涉及文件
+- `plan/25-v1-finals-research-closure.md`
+- `plan/25-v2-finals-research-closure.md`
+- `plan/26-v1-finals-runtime-implementation.md`
+- `ROADMAP.md`
+
+### 决策原因
+- 调研和现有 corrected Mac 数据已经证明 expert prefetch 有约 2.41 GiB waste，但训练期路由、INT2/3、GPU/NVMe KV 和分布式 placement 今晚缺少校准或目标硬件，无法形成可信实验闭环。
+- 比赛评审强调系统完成度与可演示性；把 correctness、可复现数据、退化边界和材料口径统一起来，比堆叠无法验证的 feature flag 更有利于答辩与论文化。
+- 用户确认 23:00 只提交最佳已验证版本、保留官方 GitLab 历史、Mac 新实验结合仓库内已有设备数据、视频只引用原 B 站 P2，并于 2026-08-12 明确确认整体设计。
+
+---
+
 ## 2026-08-12 pressure admission Task 5：80B A/B 决策为 kept_opt_in
 
 ### 变更描述

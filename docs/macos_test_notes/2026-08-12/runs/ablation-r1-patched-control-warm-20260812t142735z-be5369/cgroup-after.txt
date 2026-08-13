@@ -1,0 +1,98 @@
+CGROUP_RELATIVE=/
+=== memory.current ===
+1887936512
+=== memory.max ===
+2147483648
+=== memory.peak ===
+2147483648
+=== memory.events ===
+low 0
+high 0
+max 159322
+oom 0
+oom_kill 0
+oom_group_kill 0
+=== memory.stat ===
+anon 1122304
+file 1847250944
+kernel 39702528
+kernel_stack 32768
+pagetables 98304
+sec_pagetables 0
+percpu 0
+sock 0
+vmalloc 8192
+shmem 0
+zswap 0
+zswapped 0
+file_mapped 0
+file_dirty 0
+file_writeback 0
+swapcached 0
+anon_thp 0
+file_thp 0
+shmem_thp 0
+inactive_anon 925696
+active_anon 176128
+inactive_file 969326592
+active_file 877875200
+unevictable 0
+slab_reclaimable 38543728
+slab_unreclaimable 247360
+slab 38791088
+workingset_refault_anon 0
+workingset_refault_file 12596964
+workingset_activate_anon 0
+workingset_activate_file 6195757
+workingset_restore_anon 0
+workingset_restore_file 0
+workingset_nodereclaim 59653
+pgscan 31907992
+pgsteal 20745174
+pgscan_kswapd 0
+pgscan_direct 31907992
+pgscan_khugepaged 0
+pgsteal_kswapd 0
+pgsteal_direct 20745174
+pgsteal_khugepaged 0
+pgfault 2227807
+pgmajfault 310930
+pgrefill 3
+pgactivate 129789
+pgdeactivate 0
+pglazyfree 0
+pglazyfreed 0
+zswpin 0
+zswpout 0
+zswpwb 0
+thp_fault_alloc 0
+thp_collapse_alloc 0
+thp_swpout 0
+thp_swpout_fallback 0
+=== memory.swap.current ===
+0
+=== memory.swap.max ===
+0
+=== memory.pressure ===
+some avg10=10.87 avg60=6.15 avg300=1.78 total=6089804
+full avg10=10.87 avg60=6.15 avg300=1.78 total=6089804
+=== cpu.max ===
+400000 100000
+=== cpu.stat ===
+usage_usec 59209124
+user_usec 10983099
+system_usec 48226025
+core_sched.force_idle_usec 0
+nr_periods 557
+nr_throttled 0
+throttled_usec 0
+nr_bursts 0
+burst_usec 0
+=== cpu.pressure ===
+some avg10=0.61 avg60=0.15 avg300=0.03 total=424349
+full avg10=0.61 avg60=0.15 avg300=0.03 total=424346
+=== io.stat ===
+253:16 rbytes=86819450880 wbytes=0 rios=1249587 wios=0 dbytes=0 dios=0
+=== io.pressure ===
+some avg10=40.94 avg60=20.67 avg300=5.48 total=17958812
+full avg10=40.94 avg60=20.67 avg300=5.48 total=17958698

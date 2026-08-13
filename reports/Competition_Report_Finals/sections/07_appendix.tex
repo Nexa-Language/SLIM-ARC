@@ -1,0 +1,21 @@
+\newpage
+\section{附录：可追溯性清单}
+
+\begin{longtable}{p{0.30\textwidth}p{0.62\textwidth}}
+\toprule
+\textbf{对象} & \textbf{决赛要求} \\
+\midrule
+\endhead
+源码与镜像 & 固定 commit、patched source hash、llama.cpp \texttt{360e134}、镜像 ID 和 variant linkage。 \\
+模型 & 固定文件名、大小和 SHA-256；挂载为只读。 \\
+资源边界 & 2\,GiB、4 vCPU、no-swap 的 cgroup 文件记录；无有限值的行不接受。 \\
+工作负载 & \texttt{pp64}/\texttt{tg16}、prompt、seed、context 与 cold/warm 标签保持可比较。 \\
+结果行 & outcome、wall time、吞吐、cgroup peak、fault/I/O 和每个 patched 行的唯一运行时指标。 \\
+负面结果 & OOM、timeout、error 及未通过 promotion gate 的配置保留在 JSON 和总结中。 \\
+报告导入 & 只从机器生成的 \texttt{finals-results.json} 及其 raw manifests 写入最终表格或图；不得手工转录。 \\
+\bottomrule
+\end{longtable}
+
+\subsection{构建保护}
+
+当固定路径的正式 JSON 不存在、无效、不是恰好两轮完整 20 次成功运行，或生成的 TeX 与当前 JSON hash 不一致时，构建驱动将以明确错误退出，不留下可能被误交付的 ``final'' PDF。该错误是发布门，而不是 TeX 环境错误。本次输入已到位并通过该门禁；维护者在结果文件变化后仍必须按 \texttt{RESULTS\_IMPORT.md} 重新运行构建驱动，并对新 PDF 逐页检查。

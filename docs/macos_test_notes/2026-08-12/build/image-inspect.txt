@@ -1,0 +1,1 @@
+["slim-arc-llama:360e134"] sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6 arm64 linux

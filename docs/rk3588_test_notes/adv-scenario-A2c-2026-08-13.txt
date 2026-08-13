@@ -1,0 +1,8 @@
+Running scope as unit: run-r13f419c112ce42879a59b7603f5dfbc7.scope
+| model                          |       size |     params | backend    | threads | type_k | type_v |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | -----: | -----: | --------------: | -------------------: |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       4 |   q4_0 |   q4_0 |           pp128 |          4.39 ± 0.00 |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       4 |   q4_0 |   q4_0 |            tg64 |          2.04 ± 0.00 |
+[SLIM-ARC-METRICS] expert prefetch: samples=3120 issued=53702.6MB hit=20478.4MB waste=34334.4MB hit_rate=37.36% (accounted 54812.7MB)
+
+build: 360e134 (1)

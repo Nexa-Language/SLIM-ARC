@@ -38,7 +38,7 @@ SLIM-ARC 是 2026 全国大学生系统能力大赛操作系统设计赛 Proj 59
 |:---|:---|
 | 🌐 项目主页 | https://slim.nexa-lang.com/ |
 | 📦 项目仓库（GitLab） | https://gitlab.eduxiji.net/T2026105589911358/project3136859-389100 |
-| 🎬 项目介绍与 Demo 视频（B站） | https://www.bilibili.com/video/BV1fXTF6HEAw |
+| 🎬 项目介绍与 Demo 视频（B站 P2） | https://www.bilibili.com/video/BV1fXTF6HEAw?p=2 |
 | 📄 项目报告 PDF | [`reports/Competition_Report/main.pdf`](reports/Competition_Report/main.pdf) |
 | 📑 展示 PPT | [`reports/SLIM-ARC展示PPT.pdf`](reports/SLIM-ARC展示PPT.pdf) |
 | 📁 报告+实机Demo+PPT（百度网盘） | https://pan.baidu.com/s/1i83bdq-oiqOCvga3g05v8g （提取码 `m8yy`） |

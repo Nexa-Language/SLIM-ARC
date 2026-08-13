@@ -16,6 +16,7 @@
 #include <atomic>
 #include <chrono>
 #include <cstddef>
+#include <functional>
 #include <mutex>
 
 namespace slim_arc {
@@ -54,9 +55,12 @@ struct pressure_admission_stats {
 
 class unified_io_scheduler {
   public:
+    using pressure_snapshot_provider = std::function<cgroup_memory_snapshot()>;
+
     explicit unified_io_scheduler(size_t total_budget_bytes,
                                    prefetch_scheduler * weight_prefetcher,
-                                   kv_eviction_manager * kv_manager);
+                                   kv_eviction_manager * kv_manager,
+                                   pressure_snapshot_provider pressure_provider = {});
     ~unified_io_scheduler();
 
     // Called at the start of each graph compute cycle
@@ -100,6 +104,10 @@ class unified_io_scheduler {
     std::vector<adaptation_record> history_;
     int tick_count_ = 0;
     bool pressure_admission_enabled_{false};
+    bool expert_residency_enabled_{false};
+    pressure_snapshot_provider pressure_provider_;
+    std::mutex pressure_controller_mtx_;
+    expert_pressure_controller expert_pressure_controller_;
     uint64_t pressure_minimum_reserve_bytes_{512ULL << 20};
     std::atomic<uint64_t> pressure_samples_{0};
     std::atomic<uint64_t> pressure_throttled_samples_{0};
@@ -120,9 +128,5 @@ class unified_io_scheduler {
     io_budget allocate_budget_for_total(size_t total_budget_bytes);
     runtime_phase detect_phase(bool is_prefill, bool is_moe, size_t context_len);
 };
-
-// Global singleton accessor (set by llama-model-loader during init)
-unified_io_scheduler * get_global_unified_scheduler();
-void set_global_unified_scheduler(unified_io_scheduler * s);
 
 } // namespace slim_arc

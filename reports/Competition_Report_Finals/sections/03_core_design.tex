@@ -1,0 +1,30 @@
+\section{决赛运行时设计}
+
+\subsection{错误专家页回收：安全优先的候选建议}
+
+每轮 Router 观测产生已预取集合和实际选中集合。回收规划器保留前者中未出现在后者的 ID，并保持首次出现顺序。对于每个候选专家，它验证张量的专家数、可整除布局、ID 范围和无溢出的偏移计算；再把专家切片向内收缩到完整页面。零长度、跨越张量边界、非整除布局或非法 ID 都不产生页面建议，而是记录可审核的原因。这样，建议绝不覆盖选中专家，也不触及专家切片外的字节。
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=9mm and 7mm, >=Latex, every node/.style={font=\small,align=center,draw,rounded corners,minimum height=9mm}]
+  \node[fill=blue!9] (router) {Router 观测\\\textbf{事实}};
+  \node[fill=orange!12,right=of router] (plan) {差集与内部页规划\\\textbf{设计}};
+  \node[fill=green!10,right=of plan] (advice) {可选页建议\\\textbf{设计}};
+  \node[fill=gray!14,below=of plan] (metrics) {命中、浪费、跳过、失败\\\textbf{事实记录}};
+  \draw[->] (router) -- (plan);
+  \draw[->] (plan) -- (advice);
+  \draw[->] (advice) |- (metrics);
+  \draw[->] (router) -- (metrics);
+\end{tikzpicture}
+\caption{安全错误专家页回收闭环（\textbf{设计图，非性能测量}）。事实记录由严格运行时指标输出；是否带来性能收益必须由第\ref{sec:protocol}节协议的正式结果判定。}
+% chktex 24 is a false positive: this figure label belongs after its caption.
+\label{fig:reclaim-loop} % chktex 24
+\end{figure}
+
+\subsection{压力/准确性导向的专家驻留}
+
+驻留不是无条件缓存。运行时从 cgroup v2 读取 \texttt{memory.current} 与 \texttt{memory.max}，将压力归为 normal、high、critical 或 missing；无效、溢出或不一致读数走显式兼容回退，而不被当作剩余容量。策略同时参考预测浪费的 EWMA 和饱和的专家热度：高压力时缩紧准入，错误率高时不为不可靠预测预留预算。压力阈值、恢复所需的连续样本和预算均为可测试的确定性规则，而非从最终结果反推的参数。
+
+\subsection{不变量与设计取舍}
+
+回收与驻留只发出建议，建议失败记为指标并回退，不使推理失败。其代价是保守：页边缘和不规则张量可能被跳过，错误预测也可能使驻留无收益。该取舍优先于以任何性能代价换取覆盖率；是否满足推广门槛留给受控实验决定。

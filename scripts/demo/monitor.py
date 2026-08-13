@@ -88,6 +88,9 @@ MODEL_CONFIGS = {
         "threads": 4,
         "ctx": 2048,
         "n_parallel": 1,
+        # SLIM-ARC FIX 2026-08-12: KV 量化参数化（SLIM_ARC_KV_TYPE，实验用），
+        # 与 start-demo.sh 保持一致：默认 q4_0，SLIM_ARC_KV_TYPE=f16 时用 f16。
+        "kv_type": CONFIG["kv_type"],
     },
     "80b": {
         # SLIM-ARC FIX 2026-08-12: 迁移后 80B 实际文件为 Q4_K_M（约 46GB），
@@ -99,9 +102,17 @@ MODEL_CONFIGS = {
         "experts_active": 10,
         # 80B MoE 在 4GB 设备上 KV cache 需更小（-c 1024），
         # 尽量把内存留给 mmap+MADV_RANDOM 的按需加载。
+        # SLIM-ARC FIX 2026-08-12: 修复 8GB 设备（RK3588）80B 启动 OOM（与
+        # start-demo.sh 保持一致）。-c 0 会按训练上下文 262144(256K) 预分配
+        # KV cache ~1.5GB，匿名内存升至 5.8GB 超物理可用被 OOM Killed
+        # （2026-08-12 实测）。改用 16384：KV cache 96MiB 安全，覆盖 15000
+        # token 长输出 + ~1K prompt。
         "threads": 4,
-        "ctx": 1024,
+        "ctx": 16384,
         "n_parallel": 1,
+        # SLIM-ARC FIX 2026-08-12: KV 量化参数化（SLIM_ARC_KV_TYPE，实验用），
+        # 与 start-demo.sh 保持一致：默认 q4_0，SLIM_ARC_KV_TYPE=f16 时用 f16。
+        "kv_type": CONFIG["kv_type"],
     },
 }
 
@@ -301,8 +312,13 @@ def _read_llama_log_tail(n: int = 15) -> str:
 # 4GB 设备加载 80B（46GB）时，llama.cpp 可能先打印 "failed to fit params ...
 # abort" 后进程卡在 swap 风暴中不退出，导致需等满 timeout。
 # 检测到这些关键字即终止进程并提前判定失败，让 UI 快速显示错误。
+# SLIM-ARC FIX 2026-08-12: "failed to fit params" 已移出致命关键字——
+# 它仅是 llama.cpp 的 WRN 警告（common.cpp 不检查 fit 返回值，模型仍会
+# 继续 mmap 加载）；若据此 kill 会误杀在 7.8GB 设备上正常加载 46GB 的 80B
+# 进程（终端直接启动可跑通、UI 切换却失败）。该情况由 _wait_llama_ready
+# 单独检测：仅记录告警、不 kill、继续等待就绪；真正 OOM 退出由 proc.poll()
+# 兜底检测。
 _LLAMA_FAIL_KEYWORDS = (
-    "failed to fit params",
     "failed to allocate",
     "error while loading",
     "not enough memory",
@@ -338,6 +354,14 @@ def _wait_llama_ready(proc, timeout: float = 600.0, interval: float = 3.0) -> bo
                     with open(LLAMA_LOG, "r", errors="replace") as f:
                         f.seek(start_size)
                         new_log = f.read()
+                    # SLIM-ARC FIX 2026-08-12: "failed to fit params" 仅是 llama.cpp 的
+                    # WRN 警告，不代表加载失败——llama.cpp 不检查 fit 返回值，模型仍会
+                    # 通过 mmap 按需加载（终端直接启动 80B 可跑通）。此前误将其 kill
+                    # 导致 UI 热切换 80B 时进程被杀。此处仅记录，不 kill，继续等待就绪；
+                    # 若真的 OOM 退出，上方 proc.poll() 会兜底检测到并返回 False。
+                    if "failed to fit params" in new_log.lower():
+                        print("[SLIM-ARC] llama.cpp 报告 'failed to fit params'（非致命警告，"
+                              "模型仍通过 mmap 加载中），继续等待就绪...", flush=True)
                     for kw in _LLAMA_FAIL_KEYWORDS:
                         if kw.lower() in new_log.lower():
                             try:
@@ -353,6 +377,10 @@ def _wait_llama_ready(proc, timeout: float = 600.0, interval: float = 3.0) -> bo
 
 def _build_llama_cmd(cfg: dict) -> list:
     """构造 llama-server 启动命令（与 start-demo.sh 参数保持一致）"""
+    # SLIM-ARC FIX 2026-08-12: KV 量化参数化（SLIM_ARC_KV_TYPE，实验用）。
+    # 由 MODEL_CONFIGS 中 kv_type 决定（读自环境变量，默认 q4_0，f16 时用 f16），
+    # 保证 UI 热切换链路与 start-demo.sh 一键启动保持一致。
+    kv_type = cfg["kv_type"]
     return [
         str(LLAMA_SERVER_BIN),
         "-m", str(MODELS_DIR / cfg["file"]),
@@ -362,8 +390,8 @@ def _build_llama_cmd(cfg: dict) -> list:
         "--host", "0.0.0.0",
         "--port", "8080",
         "-fa", "auto",
-        "-ctk", "q4_0",
-        "-ctv", "q4_0",
+        "-ctk", str(kv_type),
+        "-ctv", str(kv_type),
         "--no-repack",
         "--no-context-shift",
     ]

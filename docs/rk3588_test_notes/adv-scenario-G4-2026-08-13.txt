@@ -1,0 +1,8 @@
+Running scope as unit: run-r7af82c8e6bc54e4d87da810ea207f32d.scope
+
+[TEST-NOTE 2026-08-13] G4 result: TIMEOUT after 600s (timeout 命令 EXIT=124).
+配置: SLIM-ARC + KV_EVICT (sink=4, window=1024), MemoryMax=4G, MemorySwapMax=0, -p 8192 -n 128 -t 4
+现象: 600 秒内无任何性能表格输出（进程仍在 pp8192 阶段即超时）。
+root-cause 分析: 与 G2/G3 相同根因。8192 token pp 阶段在 4GB 内存限制下
+对 45GB 模型而言耗时远超 600s 预算。KV eviction 不改变 pp 阶段耗时。
+无 OOM kill 事件。

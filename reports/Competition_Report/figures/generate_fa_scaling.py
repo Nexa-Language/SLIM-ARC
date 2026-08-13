@@ -3,8 +3,7 @@
 import matplotlib
 matplotlib.rcParams.update({'font.size': 13, 'axes.titlesize': 16, 'axes.labelsize': 14, 'xtick.labelsize': 12, 'ytick.labelsize': 12, 'legend.fontsize': 11})
 matplotlib.use('Agg')
-import matplotlib
-matplotlib.rcParams.update({'font.size': 13, 'axes.titlesize': 16, 'axes.labelsize': 14, 'xtick.labelsize': 12, 'ytick.labelsize': 12, 'legend.fontsize': 11}).pyplot as plt
+import matplotlib.pyplot as plt
 import numpy as np
 import os
 

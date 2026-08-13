@@ -1,0 +1,30 @@
+===== RSS 补测 =====
+日期: 2026-08-13 16:22:12 +0800
+日志文件: /home/orangepi/SLIM-ARC/docs/rk3588_test_notes/adv-scenario-R4-3g-sa-rss.txt
+ENV: <none>
+MemoryMax: 3G
+命令: /home/orangepi/src/llama-upstream/build/bin/llama-bench -m /home/orangepi/ssd/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf -p 128 -n 64 -r 1 --no-warmup
+主机: Linux orangepi5plus 5.10.160-rockchip-rk3588 #1.2.0 SMP Wed Nov 20 18:11:49 CST 2024 aarch64 aarch64 aarch64 GNU/Linux
+               total        used        free      shared  buff/cache   available
+Mem:            7940         722        5837           0        1379        7134
+
+Running scope as unit: rss178660933212238.scope
+[monitor] bench PID=12244 proc_cgroup=/user.slice/user-1000.slice/user@1000.service/app.slice/rss178660933212238.scope final_cgroup=/user.slice/user-1000.slice/user@1000.service/app.slice/rss178660933212238.scope
+| model                          |       size |     params | backend    | threads |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --------------: | -------------------: |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       8 |           pp128 |          4.57 ± 0.00 |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       8 |            tg64 |          1.31 ± 0.00 |
+[SLIM-ARC-METRICS] expert prefetch: samples=3120 issued=54928.1MB hit=22494.4MB waste=32786.4MB hit_rate=40.69% (accounted 55280.8MB)
+
+build: 360e134 (1)
+
+===== RSS 监控结果 =====
+采样次数: 225（间隔 0.5s）
+进程退出码: 0
+轮询捕获最大 VmRSS: 3985 MB (4081080 kB)
+轮询捕获最大 VmHWM: 3986 MB (4082360 kB)
+进程结束后读到的最终 VmHWM: 不可得（进程已退出）
+cgroup 路径: /sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/app.slice/rss178660933212238.scope
+cgroup memory.current 轮询峰值: 3072 MB (3221225472 bytes)
+cgroup memory.peak: N/A（kernel 5.10.160-rockchip-rk3588，无 memory.peak 接口，5.15+ 才支持)
+结束时间: 2026-08-13 16:24:14 +0800

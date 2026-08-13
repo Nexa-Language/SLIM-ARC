@@ -1,0 +1,10 @@
+{
+  "lowest_stable_gib": 2,
+  "lowest_survival_gib": 2,
+  "performance_comparison_valid": false,
+  "qualification_scope": "memory-tier-only",
+  "schema_version": 1,
+  "source_matrix_sha256": "91aab90f51cd11e8e8f0c1c440d0df341ba3f8a7b3d25bde4b976c84fd00ef8a",
+  "source_matrix_state": "docs/macos_test_notes/2026-08-11/matrix-state.json",
+  "stop_reason": "reused_verified_memory_tier"
+}

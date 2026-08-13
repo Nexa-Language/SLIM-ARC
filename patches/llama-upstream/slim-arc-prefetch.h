@@ -1,5 +1,7 @@
 #pragma once
 
+#include "slim-arc-expert-residency.h"
+
 // SLIM-ARC: Tensor-level asynchronous prefetch scheduler
 //
 // This module implements layer-ahead prefetch on top of upstream llama.cpp's
@@ -12,6 +14,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <mutex>
 #include <thread>
@@ -26,12 +29,6 @@ enum class compute_phase {
     PREFILL,
     DECODE,
 };
-
-// SLIM-ARC FIX 2026-08-07: 动态 MADV 阶段切换前置声明。
-// 供 prefetch_scheduler::set_phase() 内联调用（定义在 slim-arc-prefetch.cpp）。
-// PREFILL -> MADV_SEQUENTIAL（顺序预读）；DECODE -> MADV_RANDOM（按需分页）。
-// SLIM_ARC_DYNAMIC_MADV=0 禁用。
-void apply_dynamic_madv(compute_phase phase);
 
 struct tensor_prefetch_info {
     void *   addr;      // mmap address of tensor data
@@ -56,6 +53,35 @@ struct prefetch_budget_stats {
     uint64_t madvise_failures{0};
 };
 
+struct expert_reclaim_stats {
+    uint64_t candidate_experts{0};
+    uint64_t calls{0};
+    uint64_t reclaimed_bytes{0};
+    uint64_t skipped_bytes{0};
+    uint64_t madvise_failures{0};
+    uint64_t invalid_layouts{0};
+    uint64_t invalid_ids{0};
+};
+
+struct expert_residency_runtime_stats {
+    uint64_t samples{0};
+    uint64_t admitted_experts{0};
+    uint64_t admitted_bytes{0};
+    uint64_t skipped_bytes{0};
+    uint64_t fallbacks{0};
+    uint64_t pressure_missing{0};
+    uint64_t pressure_normal{0};
+    uint64_t pressure_high{0};
+    uint64_t pressure_critical{0};
+};
+
+struct expert_runtime_metrics {
+    uint64_t samples{0};
+    uint64_t issued_bytes{0};
+    uint64_t hit_bytes{0};
+    uint64_t waste_bytes{0};
+};
+
 std::vector<size_t> select_prefetch_items(
     const std::vector<size_t> & item_sizes,
     uint64_t budget_bytes,
@@ -64,11 +90,23 @@ std::vector<size_t> select_prefetch_items(
 
 class prefetch_scheduler {
   public:
-    explicit prefetch_scheduler(int n_threads = 2, int window = 3);
+    using advice_fn = std::function<int(void *, size_t, int)>;
+    using page_size_query_fn = std::function<long()>;
+
+    explicit prefetch_scheduler(
+        int n_threads = 2,
+        int window = 3,
+        std::function<void()> request_claim_hook = {},
+        advice_fn advice = {},
+        page_size_query_fn page_size_query = {});
     ~prefetch_scheduler();
+    prefetch_scheduler(const prefetch_scheduler &) = delete;
+    prefetch_scheduler & operator=(const prefetch_scheduler &) = delete;
+    void shutdown() noexcept;
 
     // Register a tensor for potential prefetch. Called during model load.
     void register_tensor(const char * name, void * addr, size_t size, int layer);
+    bool register_mapping(void * addr, size_t size);
 
     // Notify that we are about to compute layer `current_layer`.
     // This triggers async madvise(WILLNEED) for layers
@@ -85,10 +123,7 @@ class prefetch_scheduler {
     // ---- SLIM-ARC FIX 2026-08-05: 补齐 Pi5 端修复所需接口 ----
     // 设置计算阶段（prefill / decode）
     // SLIM-ARC FIX 2026-08-07: 触发动态 MADV 切换（PREFILL->SEQUENTIAL / DECODE->RANDOM）
-    void set_phase(compute_phase phase) {
-        phase_.store(phase);
-        apply_dynamic_madv(phase);
-    }
+    void set_phase(compute_phase phase);
     // 当前预取窗口大小（供 graph_compute 计算待预取层范围）
     int  effective_window() const { return window_; }
     // 内存预算（供 unified_io_scheduler 分配权重预取额度）
@@ -99,10 +134,15 @@ class prefetch_scheduler {
     void register_expert_tensor(const char * name, void * addr, size_t size, int layer, int n_experts);
     // 缓存该层路由器选中的专家 ID（用于跨层预测）
     void cache_router_experts(int layer, const int * expert_ids, int n);
-    // 获取某层最近缓存的路由专家 ID
-    const int * get_cached_experts(int layer, int * n) const;
-    // 对指定层的给定专家发起 WILLNEED 预取
-    void prefetch_experts(int layer, const int * expert_ids, int n);
+    // 结算指定预取代次；generation 为 0 时只更新预测器，不结算指标。
+    void cache_router_experts(int layer, const int * expert_ids, int n, uint64_t generation);
+    // 终止指定预取代次，并将其成功 issued bytes 一次性记为 waste。
+    void cancel_expert_prefetch(int layer, uint64_t generation);
+    // 获取某层最近缓存的路由专家 ID 的独立副本。
+    std::vector<int> cached_experts_snapshot(int layer) const;
+    // 对指定层的给定专家发起 WILLNEED 预取，并返回不可复用的结算代次。
+    // 0 表示没有可结算的成功预取。
+    uint64_t prefetch_experts(int layer, const int * expert_ids, int n);
 
     // ---- SLIM-ARC FIX 2026-08-09: 专家预取可观测性指标（文献 1：先可观测再优化）----
     // 输出命中率/浪费字节等汇总（析构时调用）
@@ -110,6 +150,22 @@ class prefetch_scheduler {
     size_t expert_prefetch_bytes() const { return expert_prefetch_bytes_.load(); }
     size_t expert_hit_bytes()     const { return expert_hit_bytes_.load(); }
     size_t expert_waste_bytes()   const { return expert_waste_bytes_.load(); }
+    size_t pending_expert_records(int layer) const;
+    expert_reclaim_stats expert_reclaim_statistics() const;
+    bool expert_residency_enabled() const noexcept { return expert_residency_enabled_; }
+    void set_expert_residency_pressure(expert_pressure_state pressure, size_t budget_bytes);
+    expert_pressure_state current_expert_pressure() const;
+    expert_residency_runtime_stats expert_residency_statistics() const noexcept;
+    expert_runtime_metrics expert_runtime_statistics() const noexcept;
+    std::vector<uint32_t> expert_popularity_snapshot(int layer) const;
+    uint64_t popularity_decay_count() const noexcept { return popularity_decay_count_.load(); }
+    uint32_t expert_waste_ewma_milli() const;
+    uint64_t expert_waste_sample_count() const;
+    bool expert_waste_restricted() const;
+    size_t pending_request_count() const;
+    uint64_t dropped_request_count() const { return dropped_requests_.load(); }
+    bool confidence_gating_enabled() const { return conf_gating_; }
+    int popularity_k() const { return pop_k_; }
     // 统一 I/O 预算下发与每步重置（改进 3，供 unified_io_scheduler::tick 调用）
     void set_expert_budget(size_t bytes) {
         expert_budget_.store(bytes);
@@ -119,7 +175,11 @@ class prefetch_scheduler {
 
   private:
     void worker_loop();
-    void issue_expert_willneed(int layer, const int * expert_ids, int n);
+    uint64_t issue_expert_willneed(int layer, const int * expert_ids, int n);
+    void reclaim_wrong_expert_pages(
+        const std::vector<int> & prefetched,
+        const std::vector<int> & selected,
+        const std::vector<expert_tensor_info> & tensors);
 
     int n_threads_;
     int window_;
@@ -127,8 +187,6 @@ class prefetch_scheduler {
     std::atomic<size_t> memory_budget_{0};
     std::atomic<bool>       enabled_{true};
     std::atomic<bool>       stop_{false};
-    std::atomic<int>        current_layer_{-1};
-    std::atomic<uint64_t>   signature_{0};
     std::atomic<size_t>     total_bytes_{0};
     std::atomic<int>        total_calls_{0};
     std::atomic<uint64_t>   budget_requested_bytes_{0};
@@ -141,25 +199,56 @@ class prefetch_scheduler {
     std::atomic<size_t>     expert_prefetch_bytes_{0};  // 实际 WILLNEED 下发字节
     std::atomic<size_t>     expert_hit_bytes_{0};       // 预取且下一 token 使用的字节
     std::atomic<size_t>     expert_waste_bytes_{0};     // 预取但未使用的字节
-    std::atomic<int>        router_samples_{0};         // 统计采样数
+    std::atomic<uint64_t>   router_samples_{0};         // 统计采样数
 
     std::vector<std::thread>          workers_;
-    std::mutex                        mtx_;
+    std::function<void()>             request_claim_hook_;
+    const advice_fn                   advice_;
+    const page_size_query_fn          page_size_query_;
+    const bool                        reclaim_waste_enabled_;
+    const bool                        expert_residency_enabled_;
+    std::mutex                        shutdown_mtx_;
+    mutable std::mutex                mtx_;
     std::condition_variable           cv_;
-    int                               target_layer_{-1};
-    uint64_t                          target_signature_{0};
+    struct prefetch_request {
+        uint64_t generation;
+        int layer;
+    };
+    std::deque<prefetch_request>      pending_requests_;
+    uint64_t                          next_request_generation_{0};
+    static constexpr size_t           max_pending_requests{64};
+    std::atomic<uint64_t>             dropped_requests_{0};
 
     // tensor registry indexed by layer
     std::vector<std::vector<tensor_prefetch_info>> tensors_by_layer_;
+    std::vector<std::pair<void *, size_t>>         mmap_regions_;
     // MoE expert registry indexed by layer
     std::vector<std::vector<expert_tensor_info>>   experts_by_layer_;
+    // Guards the expert registry and router predictor/accounting state.
+    mutable std::mutex                              expert_state_mtx_;
     // Router-selected expert IDs per layer (for next-layer prediction)
-    mutable std::vector<std::vector<int>>          cached_router_experts_;
-    // 最近一次实际下发的预取专家集合（每层，供命中率统计，改进 1）
-    mutable std::vector<std::vector<int>>          last_prefetched_experts_;
+    std::vector<std::vector<int>>                  cached_router_experts_;
+    struct expert_prefetch_record {
+        uint64_t generation;
+        std::vector<int> expert_ids;
+        std::vector<size_t> issued_bytes;
+    };
+    // 每层按 generation 保存有界、尚未结算的预取记录（advice 前占位）。
+    std::vector<std::vector<expert_prefetch_record>> pending_expert_prefetches_;
+    uint64_t                                        next_expert_generation_{1};
+    static constexpr size_t                         max_pending_expert_records_{64};
+    std::atomic<uint64_t>                           expert_pending_rejected_generations_{0};
+    std::atomic<uint64_t>                           expert_unmatched_generations_{0};
+    std::atomic<uint64_t>                           reclaim_candidate_experts_{0};
+    std::atomic<uint64_t>                           reclaim_calls_{0};
+    std::atomic<uint64_t>                           reclaim_reclaimed_bytes_{0};
+    std::atomic<uint64_t>                           reclaim_skipped_bytes_{0};
+    std::atomic<uint64_t>                           reclaim_madvise_failures_{0};
+    std::atomic<uint64_t>                           reclaim_invalid_layouts_{0};
+    std::atomic<uint64_t>                           reclaim_invalid_ids_{0};
     // ---- SLIM-ARC FIX 2026-08-09: 置信度门控（改进 2）----
     // 上一步（t-2）路由，用于"连续两 token 稳定专家"高置信度过滤
-    mutable std::vector<std::vector<int>>          prev_router_experts_;
+    std::vector<std::vector<int>>                  prev_router_experts_;
     // SLIM_ARC_EXPERT_CONF=1 时启用 2-token 稳定性门控
     bool                                           conf_gating_ = false;
 
@@ -174,20 +263,29 @@ class prefetch_scheduler {
     // SLIM_ARC_EXPERT_POP=K：预取 temporal 并集 top-K 热门专家
     int                                            pop_k_ = 0;
     // 每层专家激活频次计数（近窗口）
-    mutable std::vector<std::vector<int>>          expert_pop_counts_;
+    std::vector<std::vector<uint32_t>>             expert_pop_counts_;
+    uint8_t                                         popularity_samples_since_decay_{0};
+    std::atomic<uint64_t>                           popularity_decay_count_{0};
+    uint32_t                                        expert_waste_ewma_milli_{0};
+    bool                                            expert_waste_ewma_initialized_{false};
+    uint64_t                                        expert_waste_samples_{0};
+    expert_pressure_state                           expert_pressure_{expert_pressure_state::missing};
+    size_t                                          expert_residency_budget_{0};
+    bool                                            expert_residency_snapshot_set_{false};
+    expert_waste_controller                         expert_waste_controller_;
+    bool                                            expert_waste_restricted_{false};
+    std::atomic<uint64_t>                           residency_samples_{0};
+    std::atomic<uint64_t>                           residency_admitted_experts_{0};
+    std::atomic<uint64_t>                           residency_admitted_bytes_{0};
+    std::atomic<uint64_t>                           residency_skipped_bytes_{0};
+    std::atomic<uint64_t>                           residency_fallbacks_{0};
+    std::atomic<uint64_t>                           residency_pressure_missing_{0};
+    std::atomic<uint64_t>                           residency_pressure_normal_{0};
+    std::atomic<uint64_t>                           residency_pressure_high_{0};
+    std::atomic<uint64_t>                           residency_pressure_critical_{0};
 };
-
-// Global singleton (set by llama_context during init)
-prefetch_scheduler * get_global_prefetch_scheduler();
-void set_global_prefetch_scheduler(prefetch_scheduler * s);
 
 // Helper: extract layer index from tensor name (blk.%d.*)
 int tensor_layer_from_name(const char * name);
-
-// SLIM-ARC FIX 2026-08-05: mmap 区域注册表（供动态 MADV 切换）。
-// 在 init_mappings 中为 >6GB 模型设置 MADV 建议时调用。
-// SLIM-ARC FIX 2026-08-07: 初始建议由 register_mmap_region 改为 MADV_SEQUENTIAL，
-// 配合 apply_dynamic_madv() 在 prefill/decode 阶段动态切换。
-void register_mmap_region(void * addr, size_t size);
 
 } // namespace slim_arc

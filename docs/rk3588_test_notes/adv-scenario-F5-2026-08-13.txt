@@ -1,0 +1,9 @@
+Running scope as unit: run-r6ab834b5dbcc498181dca29e0eebb70a.scope
+| model                          |       size |     params | backend    | threads | type_k | type_v |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | -----: | -----: | --------------: | -------------------: |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       4 |   q4_0 |   q4_0 |           pp128 |          4.26 ± 0.00 |
+SLIM-ARC KV eviction: ENABLED (sink=4, window=512)
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       4 |   q4_0 |   q4_0 |            tg64 |          2.21 ± 0.00 |
+[SLIM-ARC-METRICS] expert prefetch: samples=3120 issued=53702.6MB hit=20478.4MB waste=34334.4MB hit_rate=37.36% (accounted 54812.7MB)
+
+build: 360e134 (1)

@@ -45,8 +45,14 @@ case "$MODEL_CHOICE" in
         # SLIM-ARC FIX 2026-08-12: 80B MoE 在 4GB 端侧设备上 KV cache 需更小。
         # 原统一参数 -t 4 -c 2048 -np 1 仍可能吃满内存，改用更小 context，
         # 尽量给 mmap+MADV_RANDOM 的按需加载留出空间（4GB 上 OOM 仍属预期）。
+        # SLIM-ARC FIX 2026-08-12: 修复 8GB 设备（RK3588，7.8GiB RAM，swap 未启用
+        # SwapTotal=0）80B 启动 OOM：原 -c 0 会按模型训练上下文 n_ctx_train=262144
+        # （256K）预分配 KV cache ~1.5GB，匿名内存升至 5.8GB 超过物理可用被 OOM
+        # Killed（2026-08-12 实测）。改用 16384：KV cache 仅 96MiB，8GB 设备安全，
+        # 可覆盖 15000 token 长输出 + ~1K prompt。如需更大上下文（如 32768，KV
+        # 192MiB 仍安全）可另行调整，但默认推荐 16384。
         MODEL_THREADS=4
-        MODEL_CTX=1024
+        MODEL_CTX=16384
         MODEL_PARALLEL=1
         ;;
     *)
@@ -104,7 +110,10 @@ export SLIM_ARC_MODEL_SIZE="$MODEL_SIZE"
 export SLIM_ARC_EXPERTS_TOTAL="$EXPERTS_TOTAL"
 export SLIM_ARC_EXPERTS_ACTIVE="$EXPERTS_ACTIVE"
 export SLIM_ARC_MADV=ON
-export SLIM_ARC_KV_TYPE=q4_0
+# SLIM-ARC FIX 2026-08-12: KV 量化参数化（SLIM_ARC_KV_TYPE，实验用）
+# 默认 q4_0；SLIM_ARC_KV_TYPE=f16 时切换为 f16（对照实验用），
+# 不改变默认行为，也不改动 llama.cpp 核心机制。
+export SLIM_ARC_KV_TYPE="${SLIM_ARC_KV_TYPE:-q4_0}"
 export SLIM_ARC_FA=ON
 export SLIM_ARC_REPACK=OFF
 export SLIM_ARC_TIER="32GB warm"
@@ -116,10 +125,12 @@ echo "[1/3] 启动 llama-server..."
 # 疯狂 swap、推理 <0.3 t/s。调整为 -t 4（4 核）、-c 2048、-np 1 显著降低内存。
 # 保留 mmap/MADV 相关开关（--no-repack 等），不破坏 SLIM-ARC 优化链。
 # 可通过环境变量 SLIM_ARC_CTX 覆盖 context（如 SLIM_ARC_CTX=8192 切回大上下文）。
+# SLIM-ARC FIX 2026-08-12: KV 量化参数化（SLIM_ARC_KV_TYPE，实验用），
+# 由上方导出的 $SLIM_ARC_KV_TYPE 决定，默认 q4_0，f16 时用 f16。
 nohup "$LLAMA_DIR/build/bin/llama-server" \
     -m "$MODEL" -t "${MODEL_THREADS:-4}" -c "${SLIM_ARC_CTX:-$MODEL_CTX}" -np "${MODEL_PARALLEL:-1}" \
     --host 0.0.0.0 --port 8080 \
-    -fa auto -ctk q4_0 -ctv q4_0 --no-repack --no-context-shift \
+    -fa auto -ctk "${SLIM_ARC_KV_TYPE:-q4_0}" -ctv "${SLIM_ARC_KV_TYPE:-q4_0}" --no-repack --no-context-shift \
     > "$PROJECT_ROOT/logs/demo-llama-server.log" 2>&1 &
 LLAMA_PID=$!
 echo "  PID: $LLAMA_PID"

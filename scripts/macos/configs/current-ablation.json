@@ -7,51 +7,39 @@
       "env": {}
     },
     {
-      "name": "patched-default",
-      "variant": "patched",
-      "env": {}
-    },
-    {
-      "name": "patched-no-prefetch",
+      "name": "patched-control",
       "variant": "patched",
       "env": {
-        "SLIM_ARC_NO_PREFETCH": "1"
+        "SLIM_ARC_DECODE_MADV": "SEQUENTIAL",
+        "SLIM_ARC_DYNAMIC_MADV": "1"
       }
     },
     {
-      "name": "patched-decode-sequential",
+      "name": "patched-reclaim",
       "variant": "patched",
       "env": {
-        "SLIM_ARC_DECODE_MADV": "SEQUENTIAL"
+        "SLIM_ARC_DECODE_MADV": "SEQUENTIAL",
+        "SLIM_ARC_DYNAMIC_MADV": "1",
+        "SLIM_ARC_EXPERT_RECLAIM_WASTE": "1"
       }
     },
     {
-      "name": "patched-decode-normal",
+      "name": "patched-residency",
       "variant": "patched",
       "env": {
-        "SLIM_ARC_DECODE_MADV": "NORMAL"
+        "SLIM_ARC_DECODE_MADV": "SEQUENTIAL",
+        "SLIM_ARC_DYNAMIC_MADV": "1",
+        "SLIM_ARC_EXPERT_RESIDENCY": "1"
       }
     },
     {
-      "name": "patched-decode-random",
+      "name": "patched-combined",
       "variant": "patched",
       "env": {
-        "SLIM_ARC_DECODE_MADV": "RANDOM"
-      }
-    },
-    {
-      "name": "patched-expert-confidence",
-      "variant": "patched",
-      "env": {
-        "SLIM_ARC_EXPERT_CONF": "1"
-      }
-    },
-    {
-      "name": "patched-expert-budget-confidence",
-      "variant": "patched",
-      "env": {
-        "SLIM_ARC_EXPERT_BUDGET": "1",
-        "SLIM_ARC_EXPERT_CONF": "1"
+        "SLIM_ARC_DECODE_MADV": "SEQUENTIAL",
+        "SLIM_ARC_DYNAMIC_MADV": "1",
+        "SLIM_ARC_EXPERT_RECLAIM_WASTE": "1",
+        "SLIM_ARC_EXPERT_RESIDENCY": "1"
       }
     }
   ]

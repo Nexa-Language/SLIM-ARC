@@ -1,0 +1,113 @@
+\documentclass[a4paper]{article}
+
+\usepackage[UTF8,fontset=none]{ctex}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{fancyhdr}
+\usepackage{lastpage}
+\usepackage{indentfirst}
+\usepackage[dvipsnames,table,xcdraw]{xcolor}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[many]{tcolorbox}
+\usepackage{enumitem}
+\usepackage{xeCJK}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{inconsolata}
+\usepackage{cite}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning}
+
+\setCJKmainfont{Songti SC}
+\setCJKsansfont{Songti SC}
+\setCJKmonofont{Songti SC}
+\setCJKfamilyfont{song}{Songti SC}
+\newcommand{\kaishu}{\CJKfamily{song}}
+\setlength{\parindent}{2em}
+\setlist[itemize]{itemsep=2pt,topsep=4pt,parsep=1pt,leftmargin=3em}
+\newcommand{\projname}{OS挑战赛 Proj59（决赛）}
+\newcommand{\reporttitlelineA}{SLIM-ARC：面向端侧 Agent 的}
+\newcommand{\reporttitlelineB}{低内存 MoE 推理运行时与可复现实验}
+\newcommand{\teamname}{依托Agent答辩OS}
+\newcommand{\members}{欧阳易芃 \quad 马福泉 \quad 刘昊}
+\newcommand{\advisers}{赵帅 \quad 张献伟}
+\newcommand{\schoolname}{中山大学}
+\newcommand{\trackname}{操作系统功能挑战赛}
+\newcommand{\projnum}{Proj 59}
+\newcommand{\labdate}{2026年8月}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\kaishu \projname}
+\fancyhead[C]{\kaishu SLIM-ARC}
+\fancyhead[R]{\kaishu \teamname}
+\fancyfoot[C]{第 \thepage 页，共 \pageref{LastPage} 页}
+\renewcommand{\headrulewidth}{0.4pt}
+\renewcommand{\footrulewidth}{0pt}
+
+\begin{document}
+\InputIfFileExists{sections/generated_finals_results.tex}{}{%
+  \PackageError{SLIM-ARC finals}{Generated finals results are unavailable}{%
+    Run build_finals_report.py after a complete validated finals-results.json exists.
+    The build driver regenerates and hash-verifies sections/generated_finals_results.tex.}%
+}
+\makeatletter
+\@ifundefined{SLIMARCVerifiedBuild}{%
+  \PackageError{SLIM-ARC finals}{Verified JSON proof is unavailable}{%
+    Build only through build_finals_report.py.  Direct XeLaTeX invocation is not a verified build.}%
+}{%
+  \@ifundefined{FinalsResultsJsonSha}{%
+    \PackageError{SLIM-ARC finals}{Generated JSON proof is unavailable}{%
+      Regenerate sections/generated_finals_results.tex through import_finals_results.py.}%
+  }{%
+    \edef\SLIMARCExpectedHash{\SLIMARCVerifiedBuild}%
+    \edef\SLIMARCGeneratedHash{\FinalsResultsJsonSha}%
+    \ifx\SLIMARCExpectedHash\SLIMARCGeneratedHash\else
+      \PackageError{SLIM-ARC finals}{Generated JSON proof does not match this build}{%
+        The current JSON hash and generated TeX hash differ.  Do not build stale results.}%
+    \fi
+  }%
+}
+\makeatother
+
+\begin{titlepage}
+  \centering
+  \includegraphics[width=10cm]{figures/SYSULogo.png}\par
+  \vspace{3em}
+  {\Large \kaishu \projname \par}
+  \vspace{3em}
+  {\fontsize{26pt}{30pt}\kaishu \selectfont \reporttitlelineA \par}
+  \vspace{0.3em}
+  {\fontsize{26pt}{30pt}\kaishu \selectfont \reporttitlelineB \par}
+  \vspace*{\fill}
+  \begin{center}\large
+    \makebox[5em][s]{队名}:\underline{\makebox[15em][c]{\kaishu \teamname}}\\[0.8em]
+    \makebox[5em][s]{组员}:\underline{\makebox[15em][c]{\kaishu \members}}\\[0.8em]
+    \makebox[5em][s]{指导教师}:\underline{\makebox[15em][c]{\kaishu \advisers}}\\[0.8em]
+    \makebox[5em][s]{学校}:\underline{\makebox[15em][c]{\kaishu \schoolname}}\\[0.8em]
+    \makebox[5em][s]{赛道}:\underline{\makebox[15em][c]{\kaishu \trackname}}\\[0.8em]
+    \makebox[5em][s]{选题}:\underline{\makebox[15em][c]{\kaishu \projnum}}\\[0.8em]
+    \makebox[5em][s]{日期}:\underline{\makebox[15em][c]{\kaishu \labdate}}
+  \end{center}
+  \vspace*{\fill}
+\end{titlepage}
+
+\tableofcontents
+\newpage
+\input{sections/01_abstract}
+\input{sections/01b_intro}
+\input{sections/02_background}
+\input{sections/03_core_design}
+\input{sections/04_implementation}
+\input{sections/05_evaluation}
+\input{sections/06_conclusion}
+\input{sections/07_appendix}
+\newpage
+\bibliographystyle{IEEEtran}
+\bibliography{reference}
+\end{document}
