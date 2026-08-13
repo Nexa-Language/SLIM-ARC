@@ -140,19 +140,23 @@ echo "  PID: $HTTP_PID"
 
 echo ""
 echo "等待服务就绪..."
-# 80B 模型加载需要更久（mmap 38GB）
+# 80B 模型加载需要更久（mmap 46GB）
+# SLIM-ARC FIX 2026-08-13: 4GB Pi5 + FUSE/NTFS USB3 盘实测加载耗时约 3 分 52 秒，
+# 原 180s 上限不够（等待循环在模型加载完成前 32s 放弃）。提高到 8 分钟。
 MAX_WAIT=8
 if [ "$MODEL_CHOICE" = "80b" ]; then
-    MAX_WAIT=36  # 36 * 5s = 180s = 3 分钟
+    MAX_WAIT=96  # 96 * 5s = 480s = 8 分钟
 fi
 # 检查 llama-server
 # SLIM-ARC FIX 2026-08-12: 就绪检测必须检查 HTTP 200 状态码。
 # 原实现 `curl -s .../health` 对 HTTP 503（模型仍在加载）仍返回退出码 0，
 # 会把 503 误判为就绪，导致 UI 在 server 未加载完成时就交互并收到 503。
+LLAMA_READY=0
 for i in $(seq 1 $MAX_WAIT); do
     code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/health 2>/dev/null || echo 000)
     if [ "$code" = "200" ]; then
         echo "  llama-server 就绪 ✓ (HTTP 200)"
+        LLAMA_READY=1
         break
     fi
     # 检查进程是否还活着
@@ -164,6 +168,15 @@ for i in $(seq 1 $MAX_WAIT); do
     echo "  等待 llama-server ($i/$MAX_WAIT) 当前 HTTP $code ..."
     sleep 5
 done
+# SLIM-ARC FIX 2026-08-13: 等待超时≠失败。4GB 设备上 80B 加载可能略超时限，
+# 明确提示用户：加载期间 UI 提问返回 503 "Loading model" 属正常，等 /health=200 再用。
+if [ "$LLAMA_READY" = "0" ]; then
+    echo "  ⚠️ llama-server 在 $((MAX_WAIT * 5))s 内未就绪（大概率仍在加载模型，进程还活着）。"
+    echo "     加载期间 UI 提问会收到 503 'Loading model'，这是正常现象，不是故障。"
+    echo "     请另开终端观察: tail -f $PROJECT_ROOT/logs/demo-llama-server.log"
+    echo "     待日志出现 'model loaded'/'listening' 且 curl http://127.0.0.1:8080/health 返回 200 后再使用 UI。"
+    echo "     ⚠️ 加载完成前请勿在启动终端按 Ctrl+C（会连带杀掉正在加载的 llama-server）。"
+fi
 
 # 检查 monitor
 if curl -s http://127.0.0.1:8001/api/health > /dev/null 2>&1; then
