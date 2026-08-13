@@ -1,0 +1,7 @@
+Running scope as unit: run-rc8fe7a4be4f5449180d7551a1db5dee1.scope
+
+[TEST-NOTE 2026-08-13] G3 result: TIMEOUT after 600s (timeout 命令 EXIT=124).
+配置: Baseline (SLIM_ARC_DISABLE=1), MemoryMax=4G, MemorySwapMax=0, -p 8192 -n 128 -t 4
+现象: 600 秒内无任何性能表格输出（进程仍在 pp8192 阶段即超时）。
+root-cause 分析: 与 G1 相同根因，8192 token prompt 计算量为 pp4096 的 2 倍，
+45GB 模型在 4GB cgroup 限制下完全不可能在 600s 内完成。无 OOM kill 事件。

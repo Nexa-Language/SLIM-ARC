@@ -1,0 +1,8 @@
+Running scope as unit: run-r536853d34fcd4b768430ac4ea38411a3.scope
+
+[TEST-NOTE 2026-08-13] G1 result: TIMEOUT after 600s (timeout 命令 EXIT=124).
+配置: Baseline (SLIM_ARC_DISABLE=1), MemoryMax=4G, MemorySwapMax=0, -p 4096 -n 128 -t 4
+现象: 600 秒内无任何性能表格输出（进程仍在 pp4096 阶段即超时）。
+root-cause 分析: 45GB 模型在 4GB cgroup 限制下处理 4096 token prompt，
+mmap 缺页 + page cache 逐出导致极度缓慢（无 prefetch 优化），未能在超时内完成。
+无 OOM kill 事件（cgroup 未触发 oom-killer，进程被 timeout 终止）。

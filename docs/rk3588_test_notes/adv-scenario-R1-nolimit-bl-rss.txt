@@ -1,0 +1,27 @@
+===== RSS 补测 =====
+日期: 2026-08-13 16:01:02 +0800
+日志文件: /home/orangepi/SLIM-ARC/docs/rk3588_test_notes/adv-scenario-R1-nolimit-bl-rss.txt
+ENV: SLIM_ARC_DISABLE=1
+MemoryMax: none
+命令: /home/orangepi/src/llama-upstream/build/bin/llama-bench -m /home/orangepi/ssd/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf -p 128 -n 64 -r 1 --no-warmup
+主机: Linux orangepi5plus 5.10.160-rockchip-rk3588 #1.2.0 SMP Wed Nov 20 18:11:49 CST 2024 aarch64 aarch64 aarch64 GNU/Linux
+               total        used        free      shared  buff/cache   available
+Mem:            7940        1135         867           1        5937        6721
+
+[monitor] bench PID=5004 cgroup=/user.slice/user-1000.slice/session-8.scope
+| model                          |       size |     params | backend    | threads |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --------------: | -------------------: |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       8 |           pp128 |          4.40 ± 0.00 |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       8 |            tg64 |          1.28 ± 0.00 |
+
+build: 360e134 (1)
+
+===== RSS 监控结果 =====
+采样次数: 202（间隔 0.5s）
+进程退出码: 0
+轮询捕获最大 VmRSS: 6171 MB (6319924 kB)
+轮询捕获最大 VmHWM: 6180 MB (6328924 kB)
+进程结束后读到的最终 VmHWM: 不可得（进程已退出）
+cgroup memory.peak: N/A
+cgroup memory.current(结束后): N/A
+结束时间: 2026-08-13 16:02:51 +0800

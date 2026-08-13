@@ -1,0 +1,7 @@
+Running scope as unit: run-r3a2fe39b32d745709c17d867e56e60f6.scope
+| model                          |       size |     params | backend    | threads | type_k | type_v |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | -----: | -----: | --------------: | -------------------: |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       4 |   q4_0 |   q4_0 |           pp128 |          4.13 ± 0.00 |
+| qwen3next 80B.A3B Q4_K - Medium |  45.08 GiB |    79.67 B | CPU        |       4 |   q4_0 |   q4_0 |           tg256 |          1.87 ± 0.00 |
+
+build: 360e134 (1)

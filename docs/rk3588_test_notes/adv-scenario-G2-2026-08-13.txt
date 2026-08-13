@@ -1,0 +1,9 @@
+Running scope as unit: run-rcf394345ca63477a91fe9187052a3925.scope
+
+[TEST-NOTE 2026-08-13] G2 result: TIMEOUT after 600s (timeout 命令 EXIT=124).
+配置: SLIM-ARC + KV_EVICT (sink=4, window=1024), MemoryMax=4G, MemorySwapMax=0, -p 4096 -n 128 -t 4
+现象: 600 秒内无任何性能表格输出（进程仍在 pp4096 阶段即超时）。
+root-cause 分析: 45GB 模型在 4GB cgroup 限制下处理 4096 token prompt 极慢；
+SLIM-ARC prefetch 虽缓解 tg 阶段缺页，但 4096 token 的 pp 阶段计算量 + 逐层
+KV 写入仍远超 600s 预算（对比 F2 pp128 仅约 30s，pp4096 为 32 倍 token 量）。
+KV eviction 在 bench 单 prompt 下不改变 pp 阶段耗时。无 OOM kill 事件。
