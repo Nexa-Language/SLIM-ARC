@@ -1075,17 +1075,17 @@ void test_reclaim_skips_subpage_unaligned_ranges_and_rejects_invalid_page_size()
             if (advice == POSIX_MADV_DONTNEED) ++dontneed_count;
             return 0;
         }};
-        // SLIM-ARC FIX 2026-08-13: posix_madvise rejects unaligned addresses (EINVAL).
-        // Per-expert slices that contain no complete interior page are now skipped at
-        // issue time instead of issuing an address the kernel refuses, which is what
-        // silently zeroed `issued` on the 80B model. The prefetch therefore yields no
-        // generation and accounts no bytes for this tensor.
         scheduler.register_expert_tensor("blk.13.exps", static_cast<uint8_t *>(mapping) + 1, 2 * page_size, 13, 2);
         const int predicted[] = {0, 1};
+        const int selected{0};
         const uint64_t generation = scheduler.prefetch_experts(13, predicted, 2);
-        assert(generation == 0);
-        assert(scheduler.expert_prefetch_bytes() == 0);
+        assert(generation != 0);
+        scheduler.cache_router_experts(13, &selected, 1, generation);
+        const auto stats = scheduler.expert_reclaim_statistics();
         assert(dontneed_count == 0);
+        assert(stats.candidate_experts == 1);
+        assert(stats.calls == 0);
+        assert(stats.skipped_bytes == page_size);
     }
     {
         slim_arc::prefetch_scheduler scheduler{1, 1, {}, [](void *, size_t, int) { return 0; }, [] { return -1L; }};
