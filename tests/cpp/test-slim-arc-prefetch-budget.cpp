@@ -415,6 +415,122 @@ void test_partial_expert_advice_failure_accounts_only_successful_bytes() {
     assert(munmap(mapping, page_size) == 0);
 }
 
+void test_expert_prefetch_aligns_coalesces_and_attributes_successful_pages_once() {
+    constexpr size_t page_size = 4096;
+    constexpr size_t mapping_size = 7 * 1024 * 1024;
+    constexpr size_t first_offset = 864;
+    constexpr size_t second_offset = 3 * 1024 * 1024 + 1632;
+    constexpr size_t third_offset = 5 * 1024 * 1024 + 2400;
+    constexpr size_t first_slice = 860160;
+    constexpr size_t other_slice = 589824;
+    void * const mapping = mmap(
+        nullptr,
+        mapping_size,
+        PROT_READ | PROT_WRITE,
+        MAP_PRIVATE | MAP_ANON,
+        -1,
+        0);
+    assert(mapping != MAP_FAILED);
+    const uintptr_t base = reinterpret_cast<uintptr_t>(mapping);
+    const uintptr_t failed_range_address = base + 3 * 1024 * 1024;
+    std::vector<std::pair<uintptr_t, size_t>> calls;
+    {
+        slim_arc::prefetch_scheduler scheduler{
+            1,
+            1,
+            {},
+            [&](void * address, size_t length, int advice) {
+                assert(advice == POSIX_MADV_WILLNEED);
+                const uintptr_t numeric_address = reinterpret_cast<uintptr_t>(address);
+                assert(numeric_address % page_size == 0);
+                assert(length % page_size == 0);
+                calls.emplace_back(numeric_address, length);
+                return numeric_address == failed_range_address ? 5 : 0;
+            },
+            [] { return static_cast<long>(page_size); }};
+        scheduler.register_expert_tensor(
+            "blk.3.down_exps",
+            reinterpret_cast<void *>(base + first_offset),
+            2 * first_slice,
+            3,
+            2);
+        scheduler.register_expert_tensor(
+            "blk.3.gate_exps",
+            reinterpret_cast<void *>(base + second_offset),
+            2 * other_slice,
+            3,
+            2);
+        scheduler.register_expert_tensor(
+            "blk.3.up_exps",
+            reinterpret_cast<void *>(base + third_offset),
+            2 * other_slice,
+            3,
+            2);
+
+        const uint64_t all_covered_bytes =
+            2 * first_slice + 4 * other_slice + 3 * page_size;
+        scheduler.set_expert_budget(all_covered_bytes);
+        const int expert_ids[] = {0, 1};
+        const uint64_t generation = scheduler.prefetch_experts(3, expert_ids, 2);
+        assert(generation != 0);
+        assert(scheduler.pending_expert_records(3) == 1);
+
+        assert(calls.size() == 3);
+        assert(calls[0] == std::make_pair(base, 2 * first_slice + page_size));
+        assert(calls[1] == std::make_pair(failed_range_address, 2 * other_slice + page_size));
+        assert(calls[2] == std::make_pair(base + 5 * 1024 * 1024, 2 * other_slice + page_size));
+
+        const uint64_t successful_issued = 2 * first_slice + 2 * other_slice + 2 * page_size;
+        const auto metrics = scheduler.expert_runtime_statistics();
+        assert(metrics.issued_bytes == successful_issued);
+        assert(metrics.advice_requests == 6);
+        assert(metrics.coalesced_ranges == 3);
+        assert(metrics.covered_bytes == all_covered_bytes);
+        assert(metrics.advice_failures == 1);
+        assert(metrics.invalid_ranges == 0);
+
+        const int selected_expert = 1;
+        scheduler.cache_router_experts(3, &selected_expert, 1, generation);
+        const uint64_t expected_hit = first_slice + other_slice;
+        assert(scheduler.expert_hit_bytes() == expected_hit);
+        assert(scheduler.expert_waste_bytes() == successful_issued - expected_hit);
+        assert(scheduler.expert_hit_bytes() + scheduler.expert_waste_bytes() ==
+               scheduler.expert_prefetch_bytes());
+    }
+    assert(munmap(mapping, mapping_size) == 0);
+}
+
+void test_expert_prefetch_rejects_invalid_page_size_without_advice() {
+    std::atomic<size_t> callback_count{0};
+    slim_arc::prefetch_scheduler scheduler{
+        1,
+        1,
+        {},
+        [&](void *, size_t, int) {
+            callback_count.fetch_add(1);
+            return 0;
+        },
+        [] { return 0; }};
+    scheduler.register_expert_tensor(
+        "blk.3.exps",
+        reinterpret_cast<void *>(0x2003),
+        0x2000,
+        3,
+        2);
+    scheduler.set_expert_budget(0x2000);
+    const int expert_id = 0;
+    assert(scheduler.prefetch_experts(3, &expert_id, 1) == 0);
+    assert(callback_count.load() == 0);
+    assert(scheduler.pending_expert_records(3) == 0);
+    const auto metrics = scheduler.expert_runtime_statistics();
+    assert(metrics.issued_bytes == 0);
+    assert(metrics.advice_requests == 1);
+    assert(metrics.coalesced_ranges == 0);
+    assert(metrics.covered_bytes == 0);
+    assert(metrics.advice_failures == 1);
+    assert(metrics.invalid_ranges == 1);
+}
+
 void test_same_layer_generations_settle_in_reverse_order_once() {
     const long raw_page_size = sysconf(_SC_PAGESIZE);
     assert(raw_page_size > 0);
@@ -804,14 +920,16 @@ void test_reclaim_skips_subpage_unaligned_ranges_and_rejects_invalid_page_size()
         slim_arc::prefetch_scheduler scheduler{1, 1, {}, [](void *, size_t, int) { return 0; }, [] { return -1L; }};
         scheduler.register_expert_tensor("blk.14.exps", mapping, 2 * page_size, 14, 2);
         const int predicted[] = {0, 1};
-        const int selected{0};
         const uint64_t generation = scheduler.prefetch_experts(14, predicted, 2);
-        assert(generation != 0);
-        scheduler.cache_router_experts(14, &selected, 1, generation);
+        assert(generation == 0);
+        const auto metrics = scheduler.expert_runtime_statistics();
+        assert(metrics.advice_requests == 2);
+        assert(metrics.invalid_ranges == 2);
+        assert(metrics.advice_failures == 2);
         const auto stats = scheduler.expert_reclaim_statistics();
-        assert(stats.candidate_experts == 1);
+        assert(stats.candidate_experts == 0);
         assert(stats.calls == 0);
-        assert(stats.invalid_layouts == 1);
+        assert(stats.invalid_layouts == 0);
     }
     assert(munmap(mapping, 3 * page_size) == 0);
 }
@@ -898,7 +1016,7 @@ void test_residency_pressure_selects_stable_then_temporal_and_accounts_once() {
         scheduler.set_expert_residency_pressure(slim_arc::expert_pressure_state::normal, 2 * page_size);
         const uint64_t normal = scheduler.prefetch_experts(18, second, 2);
         assert(normal != 0);
-        assert((advised == std::vector<int>{1, 2}));
+        assert((advised == std::vector<int>{1}));
         scheduler.cancel_expert_prefetch(18, normal);
 
         const auto stats = scheduler.expert_residency_statistics();
@@ -930,7 +1048,7 @@ void test_missing_pressure_preserves_legacy_order_and_counts_fallback() {
         scheduler.set_expert_residency_pressure(slim_arc::expert_pressure_state::missing, 2 * page_size);
         const uint64_t generation = scheduler.prefetch_experts(19, requested, 2);
         assert(generation != 0);
-        assert((advised == std::vector<int>{2, 1}));
+        assert((advised == std::vector<int>{1}));
         const auto stats = scheduler.expert_residency_statistics();
         assert(stats.samples == 1);
         assert(stats.fallbacks == 1);
@@ -990,7 +1108,8 @@ void test_successful_generation_settlement_updates_waste_ewma_once() {
         const std::vector<sample_expectation> samples{
             {2, 800, true}, {2, 800, true}, {7, 675, true}, {7, 581, false},
         };
-        const std::vector<size_t> expected_normal_advice{2, 2, 2, 10};
+        const std::vector<size_t> expected_normal_advice{1, 1, 1, 1};
+        const std::vector<uint64_t> expected_normal_experts{2, 2, 2, 10};
         for (size_t index = 0; index < samples.size(); ++index) {
             const sample_expectation & sample = samples[index];
             scheduler.set_expert_residency_pressure(slim_arc::expert_pressure_state::missing, 10 * page_size);
@@ -1001,9 +1120,12 @@ void test_successful_generation_settlement_updates_waste_ewma_once() {
             assert(scheduler.expert_waste_restricted() == sample.restricted);
             advice_calls = 0;
             scheduler.set_expert_residency_pressure(slim_arc::expert_pressure_state::normal, 10 * page_size);
+            const uint64_t admitted_before = scheduler.expert_residency_statistics().admitted_experts;
             const uint64_t selection = scheduler.prefetch_experts(22, predicted, sample.hits);
             assert(selection != 0);
             assert(advice_calls == expected_normal_advice[index]);
+            assert(scheduler.expert_residency_statistics().admitted_experts - admitted_before ==
+                   expected_normal_experts[index]);
             scheduler.cancel_expert_prefetch(22, selection);
         }
         assert(scheduler.expert_waste_sample_count() == 4);
@@ -1040,7 +1162,7 @@ std::vector<int> capture_legacy_target(const char * residency_value) {
 
 void test_flag_off_target_and_advice_order_equal_legacy_path() {
     const std::vector<int> legacy = capture_legacy_target(nullptr);
-    assert((legacy == std::vector<int>{2, 1, 3}));
+    assert((legacy == std::vector<int>{1}));
     for (const char * value : {"0", "", "false"}) {
         assert(capture_legacy_target(value) == legacy);
     }
@@ -1101,6 +1223,8 @@ int main() {
     test_cached_expert_snapshot_does_not_change_after_router_update();
     test_duplicate_router_ids_do_not_overcount_hits_or_underflow_waste();
     test_partial_expert_advice_failure_accounts_only_successful_bytes();
+    test_expert_prefetch_aligns_coalesces_and_attributes_successful_pages_once();
+    test_expert_prefetch_rejects_invalid_page_size_without_advice();
     test_same_layer_generations_settle_in_reverse_order_once();
     test_zero_generation_updates_predictor_without_settling_metrics();
     test_pending_generations_are_bounded_before_advice();

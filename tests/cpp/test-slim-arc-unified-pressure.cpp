@@ -198,21 +198,25 @@ void test_injected_critical_high_normal_and_invalid_snapshots_drive_selection() 
     const integrated_result critical = run_integrated_selection(
         {slim_arc::cgroup_memory_status::ok, 96, 100});
     assert(critical.advised.empty());
+    assert(critical.stats.admitted_experts == 0);
     assert(critical.stats.pressure_critical == 1);
 
     const integrated_result high = run_integrated_selection(
         {slim_arc::cgroup_memory_status::ok, 86, 100});
     assert((high.advised == std::vector<int>{1}));
+    assert(high.stats.admitted_experts == 1);
     assert(high.stats.pressure_high == 1);
 
     const integrated_result normal = run_integrated_selection(
         {slim_arc::cgroup_memory_status::ok, 70, 100});
-    assert((normal.advised == std::vector<int>{1, 2}));
+    assert((normal.advised == std::vector<int>{1}));
+    assert(normal.stats.admitted_experts == 2);
     assert(normal.stats.pressure_normal == 1);
 
     const integrated_result invalid = run_integrated_selection(
         {slim_arc::cgroup_memory_status::invalid_value, 99, 100});
-    assert((invalid.advised == std::vector<int>{1, 2}));
+    assert((invalid.advised == std::vector<int>{1}));
+    assert(invalid.stats.admitted_experts == 2);
     assert(invalid.stats.pressure_missing == 1);
     assert(invalid.stats.fallbacks == 1);
     clear_pressure_environment();
@@ -242,7 +246,8 @@ void test_normal_budget_can_admit_hot_candidate_beyond_requested_count() {
         scheduler.tick(0, 1);
         const uint64_t generation = prefetcher.prefetch_experts(8, &requested, 1);
         assert(generation != 0);
-        assert((advised == std::vector<int>{1, 2}));
+        assert((advised == std::vector<int>{1}));
+        assert(prefetcher.expert_residency_statistics().admitted_experts == 2);
     }
     assert(munmap(mapping, 3 * page_size) == 0);
     clear_pressure_environment();

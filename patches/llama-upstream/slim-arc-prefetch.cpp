@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
+#include <map>
 #include <string_view>
 #include <sys/mman.h>
 #include <system_error>
@@ -79,6 +80,72 @@ uint32_t ratio_permille(uint64_t numerator, uint64_t denominator) noexcept {
         }
     }
     return low;
+}
+
+struct expert_page_candidate {
+    int expert_id;
+    page_range range;
+};
+
+struct expert_page_owner {
+    uintptr_t address;
+    size_t length;
+    int expert_id;
+};
+
+std::vector<expert_page_owner> assign_page_owners(
+    const std::vector<expert_page_candidate> & candidates) {
+    struct event {
+        uintptr_t position;
+        int expert_id;
+        int delta;
+    };
+    std::vector<event> events;
+    events.reserve(candidates.size() * 2);
+    for (const expert_page_candidate & candidate : candidates) {
+        events.push_back({candidate.range.address, candidate.expert_id, 1});
+        events.push_back({
+            candidate.range.address + candidate.range.length,
+            candidate.expert_id,
+            -1});
+    }
+    std::sort(events.begin(), events.end(), [](const event & left, const event & right) {
+        if (left.position != right.position) return left.position < right.position;
+        if (left.expert_id != right.expert_id) return left.expert_id < right.expert_id;
+        return left.delta < right.delta;
+    });
+
+    std::vector<expert_page_owner> owners;
+    if (events.empty()) return owners;
+    std::map<int, size_t> active;
+    uintptr_t previous = events.front().position;
+    size_t index = 0;
+    while (index < events.size()) {
+        const uintptr_t position = events[index].position;
+        if (position > previous && !active.empty()) {
+            const int owner = active.begin()->first;
+            const size_t length = static_cast<size_t>(position - previous);
+            if (!owners.empty() &&
+                owners.back().expert_id == owner &&
+                owners.back().address + owners.back().length == previous) {
+                owners.back().length += length;
+            } else {
+                owners.push_back({previous, length, owner});
+            }
+        }
+        while (index < events.size() && events[index].position == position) {
+            const event & current = events[index];
+            if (current.delta > 0) {
+                ++active[current.expert_id];
+            } else {
+                const auto found = active.find(current.expert_id);
+                if (found != active.end() && --found->second == 0) active.erase(found);
+            }
+            ++index;
+        }
+        previous = position;
+    }
+    return owners;
 }
 }
 
@@ -566,6 +633,11 @@ expert_runtime_metrics prefetch_scheduler::expert_runtime_statistics() const noe
         static_cast<uint64_t>(expert_prefetch_bytes_.load()),
         static_cast<uint64_t>(expert_hit_bytes_.load()),
         static_cast<uint64_t>(expert_waste_bytes_.load()),
+        expert_advice_requests_.load(),
+        expert_coalesced_ranges_.load(),
+        expert_covered_bytes_.load(),
+        expert_advice_failures_.load(),
+        expert_invalid_ranges_.load(),
     };
 }
 
@@ -806,6 +878,65 @@ uint64_t prefetch_scheduler::issue_expert_willneed(int layer, const int * expert
         target = std::move(decision.expert_ids);
     }
     if (target.empty()) return 0;
+
+    const long raw_page_size = page_size_query_();
+    const size_t page_size = raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 0;
+    uint64_t advice_requests = 0;
+    uint64_t invalid_ranges = 0;
+    std::vector<expert_page_candidate> page_candidates;
+    page_candidates.reserve(target.size() * exps.size());
+    for (const int eid : target) {
+        for (const expert_tensor_info & expert : exps) {
+            if (expert.addr == nullptr || expert.n_experts <= 0 || eid >= expert.n_experts ||
+                expert.size % static_cast<size_t>(expert.n_experts) != 0) continue;
+            const size_t per_expert = expert.size / static_cast<size_t>(expert.n_experts);
+            if (per_expert == 0) continue;
+            advice_requests = saturating_add(advice_requests, uint64_t{1});
+            if (static_cast<size_t>(eid) > std::numeric_limits<size_t>::max() / per_expert) {
+                invalid_ranges = saturating_add(invalid_ranges, uint64_t{1});
+                continue;
+            }
+            const size_t offset = static_cast<size_t>(eid) * per_expert;
+            const uintptr_t base = reinterpret_cast<uintptr_t>(expert.addr);
+            if (offset > std::numeric_limits<uintptr_t>::max() - base) {
+                invalid_ranges = saturating_add(invalid_ranges, uint64_t{1});
+                continue;
+            }
+            const page_range range = covering_page_range(base + offset, per_expert, page_size);
+            if (!range.valid) {
+                invalid_ranges = saturating_add(invalid_ranges, uint64_t{1});
+                continue;
+            }
+            page_candidates.push_back({eid, range});
+        }
+    }
+
+    std::vector<page_range> candidate_ranges;
+    candidate_ranges.reserve(page_candidates.size());
+    for (const expert_page_candidate & candidate : page_candidates) {
+        candidate_ranges.push_back(candidate.range);
+    }
+    page_range_set coalesced = coalesce_page_ranges(std::move(candidate_ranges));
+    if (!coalesced.valid) {
+        invalid_ranges = saturating_add(
+            invalid_ranges,
+            static_cast<uint64_t>(coalesced.input_ranges));
+        coalesced.ranges.clear();
+        page_candidates.clear();
+    }
+    uint64_t covered_bytes = 0;
+    for (const page_range & range : coalesced.ranges) {
+        covered_bytes = saturating_add(covered_bytes, static_cast<uint64_t>(range.length));
+    }
+    atomic_saturating_add(expert_advice_requests_, advice_requests);
+    atomic_saturating_add(
+        expert_coalesced_ranges_,
+        static_cast<uint64_t>(coalesced.ranges.size()));
+    atomic_saturating_add(expert_covered_bytes_, covered_bytes);
+    atomic_saturating_add(expert_invalid_ranges_, invalid_ranges);
+    atomic_saturating_add(expert_advice_failures_, invalid_ranges);
+    if (coalesced.ranges.empty()) return 0;
+
     uint64_t generation = 0;
     {
         std::lock_guard<std::mutex> lock(expert_state_mtx_);
@@ -821,64 +952,60 @@ uint64_t prefetch_scheduler::issue_expert_willneed(int layer, const int * expert
             atomic_saturating_add(expert_pending_rejected_generations_, uint64_t{1});
             return 0;
         }
-        // Reserve the I/O budget only after the bounded pending slot is known
-        // available, so a rejected generation cannot consume this step's budget.
         if (expert_budget_enabled_.load()) {
             const size_t budget = expert_budget_.load();
-            size_t per_expert_total = 0;
-            for (const expert_tensor_info & expert : exps) {
-                const size_t item_size = expert.size / static_cast<size_t>(expert.n_experts);
-                per_expert_total = saturating_add(per_expert_total, item_size);
-            }
-            if (budget == 0 || per_expert_total == 0) return 0;
-
+            if (budget == 0 || covered_bytes > std::numeric_limits<size_t>::max()) return 0;
+            const size_t reservation = static_cast<size_t>(covered_bytes);
             size_t used = expert_budget_used_.load();
             while (true) {
-                if (used >= budget) return 0;
-                const size_t capacity = (budget - used) / per_expert_total;
-                if (capacity == 0) return 0;
-                if (capacity < target.size()) target.resize(capacity);
-                if (target.empty()) return 0;
-                const size_t reservation = target.size() * per_expert_total;
-                if (expert_budget_used_.compare_exchange_weak(used, used + reservation)) {
-                    break;
-                }
+                if (used > budget || reservation > budget - used) return 0;
+                if (expert_budget_used_.compare_exchange_weak(used, used + reservation)) break;
             }
         }
         generation = next_expert_generation_++;
         pending.push_back({generation, {}, {}});
     }
 
+    const std::vector<expert_page_owner> owners = assign_page_owners(page_candidates);
+    std::vector<bool> successful_ranges(coalesced.ranges.size(), false);
     size_t bytes = 0;
+    uint64_t callback_failures = 0;
+    for (size_t index = 0; index < coalesced.ranges.size(); ++index) {
+        const page_range & range = coalesced.ranges[index];
+        if (advice_(reinterpret_cast<void *>(range.address), range.length, POSIX_MADV_WILLNEED) == 0) {
+            successful_ranges[index] = true;
+            bytes = saturating_add(bytes, range.length);
+        } else {
+            callback_failures = saturating_add(callback_failures, uint64_t{1});
+        }
+    }
+    atomic_saturating_add(expert_advice_failures_, callback_failures);
+
+    std::map<int, size_t> bytes_by_expert;
+    size_t range_index = 0;
+    for (const expert_page_owner & owner : owners) {
+        while (range_index < coalesced.ranges.size() &&
+               coalesced.ranges[range_index].address + coalesced.ranges[range_index].length <= owner.address) {
+            ++range_index;
+        }
+        if (range_index >= coalesced.ranges.size() || !successful_ranges[range_index]) continue;
+        const page_range & range = coalesced.ranges[range_index];
+        if (owner.address < range.address || owner.length >
+            range.address + range.length - owner.address) continue;
+        bytes_by_expert[owner.expert_id] = saturating_add(
+            bytes_by_expert[owner.expert_id],
+            owner.length);
+    }
+
     std::vector<int> issued_experts;
     std::vector<size_t> issued_expert_bytes;
     issued_experts.reserve(target.size());
     issued_expert_bytes.reserve(target.size());
-    for (int eid : target) {
-        bool issued = false;
-        size_t expert_bytes = 0;
-        for (const expert_tensor_info & e : exps) {
-            if (e.addr == nullptr || e.n_experts <= 0 ||
-                e.size % static_cast<size_t>(e.n_experts) != 0) continue;
-            const size_t per_expert = e.size / static_cast<size_t>(e.n_experts);
-            if (per_expert == 0 || eid >= e.n_experts) continue;
-            if (static_cast<size_t>(eid) > std::numeric_limits<size_t>::max() / per_expert) continue;
-            const size_t off = static_cast<size_t>(eid) * per_expert;
-            const uintptr_t base = reinterpret_cast<uintptr_t>(e.addr);
-            if (off > std::numeric_limits<uintptr_t>::max() - base) continue;
-            const uintptr_t address = base + off;
-            if (per_expert > std::numeric_limits<uintptr_t>::max() - address) continue;
-            void * const addr = reinterpret_cast<void *>(address);
-            if (advice_(addr, per_expert, POSIX_MADV_WILLNEED) == 0) {
-                expert_bytes = saturating_add(expert_bytes, per_expert);
-                issued = true;
-            }
-        }
-        if (issued) {
-            issued_experts.push_back(eid);
-            issued_expert_bytes.push_back(expert_bytes);
-            bytes = saturating_add(bytes, expert_bytes);
-        }
+    for (const int eid : target) {
+        const auto found = bytes_by_expert.find(eid);
+        if (found == bytes_by_expert.end() || found->second == 0) continue;
+        issued_experts.push_back(eid);
+        issued_expert_bytes.push_back(found->second);
     }
     {
         std::lock_guard<std::mutex> lock(expert_state_mtx_);

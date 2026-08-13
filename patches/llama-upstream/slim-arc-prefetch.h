@@ -84,6 +84,11 @@ struct expert_runtime_metrics {
     uint64_t issued_bytes{0};
     uint64_t hit_bytes{0};
     uint64_t waste_bytes{0};
+    uint64_t advice_requests{0};
+    uint64_t coalesced_ranges{0};
+    uint64_t covered_bytes{0};
+    uint64_t advice_failures{0};
+    uint64_t invalid_ranges{0};
 };
 
 std::vector<size_t> select_prefetch_items(
@@ -208,6 +213,11 @@ class prefetch_scheduler {
     std::atomic<size_t>     expert_hit_bytes_{0};       // 预取且下一 token 使用的字节
     std::atomic<size_t>     expert_waste_bytes_{0};     // 预取但未使用的字节
     std::atomic<uint64_t>   router_samples_{0};         // 统计采样数
+    std::atomic<uint64_t>   expert_advice_requests_{0};
+    std::atomic<uint64_t>   expert_coalesced_ranges_{0};
+    std::atomic<uint64_t>   expert_covered_bytes_{0};
+    std::atomic<uint64_t>   expert_advice_failures_{0};
+    std::atomic<uint64_t>   expert_invalid_ranges_{0};
 
     std::vector<std::thread>          workers_;
     std::function<void()>             request_claim_hook_;
