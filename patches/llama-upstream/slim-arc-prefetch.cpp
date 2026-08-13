@@ -9,6 +9,7 @@
 #include "slim-arc-page-range.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <charconv>
 #include <cstdio>
 #include <cstdlib>
@@ -17,6 +18,9 @@
 #include <map>
 #include <string_view>
 #include <sys/mman.h>
+#if defined(__linux__)
+#include <sys/syscall.h>
+#endif
 #include <system_error>
 #include <unistd.h>
 
@@ -66,6 +70,25 @@ long system_page_size() {
 bool env_exact_one(const char * name) noexcept {
     const char * const value = std::getenv(name);
     return value != nullptr && std::strcmp(value, "1") == 0;
+}
+
+enum class page_lock_mode {
+    failed,
+    eager,
+    on_fault,
+};
+
+page_lock_mode lock_shared_pages(void * address, size_t length) noexcept {
+#if defined(__linux__) && defined(SYS_mlock2)
+    constexpr int mlock_on_fault = 0x01;
+    if (syscall(SYS_mlock2, address, length, mlock_on_fault) == 0) {
+        return page_lock_mode::on_fault;
+    }
+    if (errno != ENOSYS && errno != EINVAL) {
+        return page_lock_mode::failed;
+    }
+#endif
+    return mlock(address, length) == 0 ? page_lock_mode::eager : page_lock_mode::failed;
 }
 
 void update_atomic_peak(std::atomic<uint64_t> & peak, uint64_t candidate) noexcept {
@@ -328,9 +351,15 @@ void prefetch_scheduler::register_tensor(const char * name, void * addr, size_t 
             reinterpret_cast<uintptr_t>(addr),
             size,
             raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 0);
-        if (range.valid && mlock(reinterpret_cast<void *>(range.address), range.length) == 0) {
+        const page_lock_mode mode = range.valid
+            ? lock_shared_pages(reinterpret_cast<void *>(range.address), range.length)
+            : page_lock_mode::failed;
+        if (mode != page_lock_mode::failed) {
             shared_locked_ranges_.push_back(range);
             atomic_saturating_add(shared_locked_bytes_, static_cast<uint64_t>(range.length));
+            if (mode == page_lock_mode::on_fault) {
+                atomic_saturating_add(shared_onfault_locked_bytes_, static_cast<uint64_t>(range.length));
+            }
         } else {
             atomic_saturating_add(shared_lock_failures_, uint64_t{1});
         }
@@ -1184,8 +1213,9 @@ void prefetch_scheduler::dump_metrics() const {
     if (shared_mlock_enabled_) {
         std::fprintf(
             stderr,
-            "[SLIM-ARC-SHARED] locked_bytes=%llu lock_failures=%llu\n",
+            "[SLIM-ARC-SHARED] locked_bytes=%llu onfault_bytes=%llu lock_failures=%llu\n",
             static_cast<unsigned long long>(shared_locked_bytes_.load()),
+            static_cast<unsigned long long>(shared_onfault_locked_bytes_.load()),
             static_cast<unsigned long long>(shared_lock_failures_.load()));
     }
     if (expert_random_madv_enabled_ || expert_normal_madv_enabled_) {
