@@ -1,0 +1,2 @@
+[SLIM-ARC-RUNTIME] schema=1 expert_samples=1680 expert_issued_bytes=15217475584 expert_hit_bytes=10119184384 expert_waste_bytes=5098291200 reclaim_candidates=0 reclaim_calls=0 reclaimed_bytes=0 reclaim_skipped_bytes=0 reclaim_failures=0 residency_samples=1632 residency_admitted_experts=8885 residency_admitted_bytes=16920158208 residency_skipped_bytes=0 residency_fallbacks=1632 pressure_normal=0 pressure_high=0 pressure_critical=0
+[SLIM-ARC-METRICS] expert prefetch: samples=1680 issued=14512.5MB hit=9650.4MB waste=4862.1MB hit_rate=66.50% (accounted 14512.5MB)
