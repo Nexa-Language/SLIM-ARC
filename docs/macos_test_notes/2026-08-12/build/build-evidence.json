@@ -1,0 +1,16 @@
+{
+  "build_context_sha256": "146d72290fd470f91a43b500371321706a411614d2bd46bf65e0b17076eb3a93",
+  "git_commit": "dbec00e8d25af93219dc0d70079ea08603f0e860",
+  "image_ids": {
+    "baseline": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+    "patched": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6"
+  },
+  "llama_commit": "360e134",
+  "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "patched_source_sha256": "cef025d8d26fe9e357457ad787e7ca545442fc47f6c919d168202b272a94167c",
+  "schema_version": 1,
+  "variant_linkage": {
+    "baseline": "verified",
+    "patched": "verified"
+  }
+}

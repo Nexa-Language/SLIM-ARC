@@ -216,6 +216,19 @@ __marimo__/
 
 # ===== SLIM-ARC Project Specific =====
 
+# Local Finder and agent-workspace state
+.DS_Store
+**/.DS_Store
+.omo/
+
+# Reproducible report and presentation inspection outputs
+reports/Competition_Report*/main.aux
+reports/Competition_Report*/main.bbl
+reports/Competition_Report*/main.blg
+reports/Competition_Report*/main.out
+reports/Competition_Report*/main.toc
+*.pptx.inspect.ndjson
+
 # C/C++ Build artifacts
 *.o
 *.a

@@ -96,13 +96,34 @@ def test_rejects_noncanonical_paths(raw: str) -> None:
         prepare._safe_relative(raw)
 
 
-@pytest.mark.parametrize("relative", [".env", "docs/design/model.gguf", "docs/design/build/object.o", "docs/design/node_modules/pkg/index.js"])
+@pytest.mark.parametrize(
+    "relative",
+    [
+        ".env",
+        "docs/design/model.gguf",
+        "docs/design/build/object.o",
+        "docs/design/node_modules/pkg/index.js",
+    ],
+)
 def test_rejects_denied_reachable_artifacts(tmp_path: Path, relative: str) -> None:
     source = tmp_path / "source"
     _write(source / "README.md", "safe\n")
     _write(source / relative, "denied\n")
     with pytest.raises(prepare.ReleaseError, match="denied"):
         prepare.build_source_manifest(source, 1024)
+
+
+def test_internal_agent_files_are_omitted_from_release_tree(tmp_path: Path) -> None:
+    source, output = tmp_path / "source", tmp_path / "release"
+    _write(source / "README.md", "safe\n")
+    _write(source / "AGENT.md", "root instructions\n")
+    _write(source / "scripts" / "AGENTS.md", "nested instructions\n")
+
+    manifest = prepare.stage(source, output, max_file_bytes=1024)
+
+    assert [entry["path"] for entry in manifest["files"]] == ["README.md"]
+    assert not (output / "AGENT.md").exists()
+    assert not (output / "scripts" / "AGENTS.md").exists()
 
 
 @pytest.mark.parametrize("payload, match", [(b"\x7fELFfake", "ELF"), (b"\xcf\xfa\xed\xfe", "Mach-O")])

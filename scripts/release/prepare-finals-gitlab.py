@@ -29,7 +29,7 @@ MAX_PPTX_MEMBERS = 1024
 MAX_PPTX_MEMBER_BYTES = 64 * 1024 * 1024
 MAX_PPTX_TOTAL_BYTES = 128 * 1024 * 1024
 MAX_PPTX_COMPRESSION_RATIO = 100
-ALLOWED_ROOT_FILES = {"AGENT.md", ".gitattributes", ".gitignore", "CHANGELOG.md", "CMakeLists.txt", "LICENSE", "Makefile", "NOTICE", "README.md", "ROADMAP.md", "pyproject.toml", "requirements.txt"}
+ALLOWED_ROOT_FILES = {".gitattributes", ".gitignore", "CHANGELOG.md", "CMakeLists.txt", "LICENSE", "Makefile", "NOTICE", "README.md", "ROADMAP.md", "pyproject.toml", "requirements.txt"}
 TEXT_SUFFIXES = {".c", ".cc", ".cpp", ".csv", ".h", ".hpp", ".json", ".jsonl", ".md", ".py", ".sh", ".toml", ".txt", ".yaml", ".yml"}
 SOURCE_SUFFIXES = TEXT_SUFFIXES | {".css", ".html", ".js"}
 IMAGE_SUFFIXES = {".jpeg", ".jpg", ".png", ".svg"}
@@ -37,7 +37,7 @@ REPORT_DIRS = {"Competition_Report", "Competition_Report_Finals", "Finals_Compet
 FINAL_PPTX = {"SLIM-ARC展示PPT.pptx", "SLIM-ARC决赛展示PPT.pptx"}
 FINAL_PDF = {"SLIM-ARC展示PPT.pdf", "SLIM-ARC决赛展示PPT.pdf"}
 FINAL_DOCS = {"docs/moe_cpu_memory_limited_survey.pdf", "docs/macos_test_notes/2026-08-12/finals-evidence.csv", "docs/macos_test_notes/2026-08-12/finals-evidence.json", "docs/macos_test_notes/2026-08-12/finals-validated-summary.md"}
-DENIED_COMPONENTS = {".cache", ".git", ".svn", ".venv", "__pycache__", "build", "cache", "dist", "downloads", "models", "node_modules", "target"}
+DENIED_COMPONENTS = {".agent", ".agents", ".cache", ".claude", ".codex", ".git", ".omo", ".roo", ".svn", ".venv", "__pycache__", "build", "cache", "dist", "downloads", "models", "node_modules", "superpowers", "target"}
 DENIED_SUFFIXES = {".a", ".bin", ".bz2", ".class", ".dll", ".dmg", ".dylib", ".exe", ".gguf", ".gz", ".iso", ".o", ".obj", ".onnx", ".pt", ".pth", ".pyc", ".rar", ".safetensors", ".so", ".tar", ".tgz", ".xz", ".zip", ".7z"}
 MACHO_MAGICS = {b"\xce\xfa\xed\xfe", b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xce", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca", b"\xca\xfe\xba\xbf", b"\xbf\xba\xfe\xca"}
 SECRET_PATTERNS = (
@@ -82,6 +82,8 @@ def _safe_relative(raw_path: str) -> PurePosixPath:
 def _denied_reason(relative: PurePosixPath) -> str | None:
     parts = [part.lower() for part in relative.parts]
     name = parts[-1]
+    if name in {"agent.md", "agents.md"}:
+        return "internal agent instructions are denied"
     if name == ".ds_store" or name.startswith(".env"):
         return "environment or Finder state is denied"
     if any(part in DENIED_COMPONENTS for part in parts):
@@ -126,6 +128,10 @@ def _may_contain_allowed(relative: PurePosixPath) -> bool:
 def _must_fail_when_seen(relative: PurePosixPath) -> bool:
     name = relative.name.lower()
     return name == ".ds_store" or name.startswith(".env") or re.search(r"(?:^|[_.-])(?:credential|cookie|token|secret)(?:$|[_.-])", name) is not None or name.endswith((".key", ".pem")) or name in {"id_rsa", "known_hosts"}
+
+
+def _internal_agent_file(relative: PurePosixPath) -> bool:
+    return relative.name.lower() in {"agent.md", "agents.md"}
 
 
 def _ensure_directory(path: Path, label: str) -> Path:
@@ -296,7 +302,7 @@ def _scan_source(root: Path, max_file_bytes: int) -> list[dict[str, object]]:
             reason = _denied_reason(relative)
             if relative.parts == (".git",):
                 continue
-            if reason and (_must_fail_when_seen(relative) or _may_contain_allowed(relative)):
+            if reason and not _internal_agent_file(relative) and (_must_fail_when_seen(relative) or _may_contain_allowed(relative)):
                 raise ReleaseError(f"denied source path {relative}: {reason}")
             if not reason:
                 kept.append(name)
@@ -308,7 +314,7 @@ def _scan_source(root: Path, max_file_bytes: int) -> list[dict[str, object]]:
                 raise ReleaseError(f"symlink is denied: {relative}")
             reason = _denied_reason(relative)
             if reason:
-                if _must_fail_when_seen(relative) or _may_contain_allowed(relative):
+                if not _internal_agent_file(relative) and (_must_fail_when_seen(relative) or _may_contain_allowed(relative)):
                     raise ReleaseError(f"denied source path {relative}: {reason}")
                 continue
             if not child.is_file():

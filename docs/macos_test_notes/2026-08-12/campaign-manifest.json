@@ -1,0 +1,397 @@
+{
+  "benchmark_contract": {
+    "load_mode": "mmap",
+    "n_depth": 0,
+    "n_gen": 16,
+    "n_prompt": 64,
+    "no_warmup": true,
+    "offline": true,
+    "threads": 4
+  },
+  "context_tokens": 80,
+  "runs": {
+    "runs/ablation-r1-baseline-cold-20260812t142422z-4f3c02": {
+      "cache_state": "cold",
+      "configuration": "baseline",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 1,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r1-baseline-warm-20260812t142533z-cc0e3a": {
+      "cache_state": "warm",
+      "configuration": "baseline",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 1,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r1-patched-combined-cold-20260812t143243z-00a19a": {
+      "cache_state": "cold",
+      "configuration": "patched-combined",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 1,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r1-patched-combined-warm-20260812t143351z-811320": {
+      "cache_state": "warm",
+      "configuration": "patched-combined",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 1,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r1-patched-control-cold-20260812t142627z-2af570": {
+      "cache_state": "cold",
+      "configuration": "patched-control",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 1,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r1-patched-control-warm-20260812t142735z-be5369": {
+      "cache_state": "warm",
+      "configuration": "patched-control",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 1,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r1-patched-reclaim-cold-20260812t142831z-fe064c": {
+      "cache_state": "cold",
+      "configuration": "patched-reclaim",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 1,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r1-patched-reclaim-warm-20260812t142934z-c74064": {
+      "cache_state": "warm",
+      "configuration": "patched-reclaim",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 1,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r1-patched-residency-cold-20260812t143034z-960fd8": {
+      "cache_state": "cold",
+      "configuration": "patched-residency",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 1,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r1-patched-residency-warm-20260812t143141z-27a535": {
+      "cache_state": "warm",
+      "configuration": "patched-residency",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 1,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r2-baseline-cold-20260812t143449z-622899": {
+      "cache_state": "cold",
+      "configuration": "baseline",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 2,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r2-baseline-warm-20260812t143602z-98eec9": {
+      "cache_state": "warm",
+      "configuration": "baseline",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 2,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r2-patched-combined-cold-20260812t144333z-50f384": {
+      "cache_state": "cold",
+      "configuration": "patched-combined",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 2,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r2-patched-combined-warm-20260812t144508z-0fae77": {
+      "cache_state": "warm",
+      "configuration": "patched-combined",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 2,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r2-patched-control-cold-20260812t143656z-4b1f50": {
+      "cache_state": "cold",
+      "configuration": "patched-control",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 2,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r2-patched-control-warm-20260812t143805z-8ff85f": {
+      "cache_state": "warm",
+      "configuration": "patched-control",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 2,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r2-patched-reclaim-cold-20260812t143911z-84c4c2": {
+      "cache_state": "cold",
+      "configuration": "patched-reclaim",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 2,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r2-patched-reclaim-warm-20260812t144018z-5b127e": {
+      "cache_state": "warm",
+      "configuration": "patched-reclaim",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 2,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r2-patched-residency-cold-20260812t144118z-ac9b89": {
+      "cache_state": "cold",
+      "configuration": "patched-residency",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 2,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    },
+    "runs/ablation-r2-patched-residency-warm-20260812t144227z-de70de": {
+      "cache_state": "warm",
+      "configuration": "patched-residency",
+      "image_id": "sha256:508d51ad8576a00182edbdfd50680f650f4307d228a3daabd9ced6d2838187d6",
+      "outcome": "success",
+      "round": 2,
+      "workload_contract": {
+        "context_tokens": 80,
+        "load_mode": "mmap",
+        "n_depth": 0,
+        "n_gen": 16,
+        "n_prompt": 64,
+        "no_warmup": true,
+        "offline": true,
+        "seed": 1,
+        "seed_source": "implicit_c_rand_default",
+        "threads": 4
+      }
+    }
+  },
+  "schema_version": 1,
+  "seed": 1,
+  "seed_source": "implicit_c_rand_default"
+}
