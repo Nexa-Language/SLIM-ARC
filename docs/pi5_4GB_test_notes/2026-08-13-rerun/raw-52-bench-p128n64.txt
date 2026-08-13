@@ -1,0 +1,13 @@
+Thu Aug 13 14:32:49 CST 2026
+               total        used        free      shared  buff/cache   available
+Mem:           4.0Gi       1.1Gi       347Mi        11Mi       2.6Gi       2.9Gi
+Swap:          2.0Gi       394Mi       1.6Gi
+bash: warning: setlocale: LC_ALL: cannot change locale (en_US.UTF-8): No such file or directory
+| model                          |       size |     params | backend    | threads |            test |                  t/s |
+| ------------------------------ | ---------: | ---------: | ---------- | ------: | --------------: | -------------------: |
+| qwen3 4B Q4_K - Medium         |   2.32 GiB |     4.02 B | CPU        |       4 |           pp128 |         12.37 ± 0.05 |
+| qwen3 4B Q4_K - Medium         |   2.32 GiB |     4.02 B | CPU        |       4 |            tg64 |          4.42 ± 0.03 |
+
+build: 70dfba5 (106)
+[SLIM-ARC-METRICS] expert prefetch: samples=0 issued=0.0MB hit=0.0MB waste=0.0MB hit_rate=0.00% (accounted 0.0MB)
+EXIT=0

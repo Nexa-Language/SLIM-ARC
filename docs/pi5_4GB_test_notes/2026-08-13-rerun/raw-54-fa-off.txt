@@ -1,0 +1,39 @@
+bash: warning: setlocale: LC_ALL: cannot change locale (en_US.UTF-8): No such file or directory
+
+
+Loading model... |-\|/-\|/-\|/-\|/ 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b106-70dfba5
+model      : data/models/Qwen3-4B-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+[1m[32m
+> The capital of China is
+[0m[90m
+[Start thinking]
+
+Okay, the user asked, "The capital of China is..." and I need to provide the correct answer. Let me start by recalling what I know[0m
+[35m
+[ Prompt: 11.3 t/s | Generation: 4.3 t/s ]
+[0m
+
+Exiting...
+[SLIM-ARC-METRICS] expert prefetch: samples=0 issued=0.0MB hit=0.0MB waste=0.0MB hit_rate=0.00% (accounted 0.0MB)
+EXIT=0

@@ -1,0 +1,49 @@
+Thu Aug 13 14:30:00 CST 2026
+=== 测试前内存 ===
+               total        used        free      shared  buff/cache   available
+Mem:           4.0Gi       1.0Gi       412Mi        11Mi       2.6Gi       2.9Gi
+Swap:          2.0Gi       394Mi       1.6Gi
+bash: warning: setlocale: LC_ALL: cannot change locale (en_US.UTF-8): No such file or directory
+
+
+Loading model... |-\|/-\|/-\|/-\|/ 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b106-70dfba5
+model      : data/models/Qwen3-4B-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+[1m[32m
+> The capital of China is
+[0m[90m
+[Start thinking]
+
+Okay, the user is asking "The capital of China is..." and they probably want the answer to be Beijing. But I should make sure that's[0m
+[35m
+[ Prompt: 12.2 t/s | Generation: 4.6 t/s ]
+[0m
+
+Exiting...
+[SLIM-ARC-METRICS] expert prefetch: samples=0 issued=0.0MB hit=0.0MB waste=0.0MB hit_rate=0.00% (accounted 0.0MB)
+EXIT_COLD=0
+Thu Aug 13 14:30:10 CST 2026
+=== 测试后内存 ===
+               total        used        free      shared  buff/cache   available
+Mem:           4.0Gi       1.0Gi       382Mi        11Mi       2.6Gi       2.9Gi
+Swap:          2.0Gi       394Mi       1.6Gi

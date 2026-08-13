@@ -1,0 +1,40 @@
+Script started on 2026-08-13 14:28:13+08:00 [COMMAND="SLIM_ARC_DISABLE=1 timeout 300 ./src/llama-upstream/build/bin/llama-cli -m data/models/Qwen3-4B-Q4_K_M.gguf -t 4 -c 128 -p "Hi" -n 8 --single-turn < /dev/null" <not executed on terminal>]
+bash: warning: setlocale: LC_ALL: cannot change locale (en_US.UTF-8): No such file or directory
+
+
+Loading model... |-\|/-\|/-\|/-\|/ 
+
+▄▄ ▄▄
+██ ██
+██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄
+██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██
+██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀
+                                    ██    ██
+                                    ▀▀    ▀▀
+
+build      : b106-70dfba5
+model      : data/models/Qwen3-4B-Q4_K_M.gguf
+ftype      : Q4_K - Medium
+modalities : text
+
+available commands:
+  /exit or Ctrl+C     stop or exit
+  /regen              regenerate the last response
+  /clear              clear the chat history
+  /read <file>        add a text file
+  /glob <pattern>     add text files using globbing pattern
+
+
+[1m[32m
+> Hi
+[0m[90m
+[Start thinking]
+
+Okay, the user said "[0m
+[35m
+[ Prompt: 10.0 t/s | Generation: 5.4 t/s ]
+[0m
+
+Exiting...
+
+Script done on 2026-08-13 14:28:17+08:00 [COMMAND_EXIT_CODE="0"]

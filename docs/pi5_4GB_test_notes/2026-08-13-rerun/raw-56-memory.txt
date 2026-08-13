@@ -1,0 +1,12 @@
+Thu Aug 13 14:37:54 CST 2026
+=== 测试前内存 ===
+               total        used        free      shared  buff/cache   available
+Mem:           4.0Gi       1.1Gi       412Mi        11Mi       2.6Gi       2.9Gi
+Swap:          2.0Gi       412Mi       1.6Gi
+PEAK_RSS_KB=2543104
+EXIT=0
+=== 测试后内存 ===
+               total        used        free      shared  buff/cache   available
+Mem:           4.0Gi       1.1Gi       397Mi        11Mi       2.6Gi       2.9Gi
+Swap:          2.0Gi       412Mi       1.6Gi
+Thu Aug 13 14:38:04 CST 2026
