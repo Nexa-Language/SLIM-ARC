@@ -17,8 +17,12 @@ image_tag="slim-arc-llama:360e134"
 test_image_tag="slim-arc-llama-test:360e134"
 build_context="$(mktemp -d /tmp/slim-arc-llama-incremental.XXXXXX)"
 build_archive="${build_context}.tar"
+base_image_tag=""
 
 cleanup() {
+    if [[ -n "${base_image_tag}" ]]; then
+        docker --context "${docker_context}" image rm "${base_image_tag}" >/dev/null 2>&1 || true
+    fi
     case "${build_context}" in /tmp/slim-arc-llama-incremental.*) rm -rf -- "${build_context}" ;; esac
     case "${build_archive}" in /tmp/slim-arc-llama-incremental.*.tar) rm -f -- "${build_archive}" ;; esac
 }
@@ -35,6 +39,9 @@ if ! git -C "${repo_root}" merge-base --is-ancestor "${base_commit}" "${head_com
     printf 'Current image is not an ancestor of HEAD\n' >&2
     exit 1
 fi
+base_image_id="$(docker --context "${docker_context}" image inspect "${image_tag}" --format '{{.Id}}')"
+base_image_tag="slim-arc-incremental-base:${base_commit:0:12}"
+docker --context "${docker_context}" image tag "${base_image_id}" "${base_image_tag}"
 
 context_paths=(
     scripts/macos/Dockerfile.llama.incremental
@@ -67,7 +74,7 @@ PY
 )"
 
 build_args=(
-    --build-arg "BASE_IMAGE=${image_tag}"
+    --build-arg "BASE_IMAGE=${base_image_tag}"
     --build-arg "SLIM_ARC_BASE_GIT_COMMIT=${base_commit}"
     --build-arg "SLIM_ARC_GIT_COMMIT=${head_commit}"
     --build-arg "SLIM_ARC_BUILD_CONTEXT_SHA256=${context_sha}"
