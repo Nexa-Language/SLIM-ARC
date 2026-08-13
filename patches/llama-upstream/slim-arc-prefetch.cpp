@@ -260,6 +260,7 @@ prefetch_scheduler::prefetch_scheduler(
     , router_prefetch_enabled_(env_exact_one("SLIM_ARC_ROUTER_PREFETCH"))
     , router_mlock_enabled_(env_exact_one("SLIM_ARC_ROUTER_MLOCK"))
     , shared_mlock_enabled_(env_exact_one("SLIM_ARC_SHARED_MLOCK"))
+    , small_mlock_enabled_(env_exact_one("SLIM_ARC_SMALL_MLOCK"))
     , expert_prefetch_disabled_(env_exact_one("SLIM_ARC_NO_EXPERT_PREFETCH"))
     , expert_random_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_RANDOM"))
     , expert_normal_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_NORMAL"))
@@ -290,15 +291,20 @@ prefetch_scheduler::~prefetch_scheduler() {
     dump_metrics();
     std::vector<page_range> locked;
     std::vector<page_range> shared_locked;
+    std::vector<page_range> small_locked;
     {
         std::lock_guard<std::mutex> lock(mtx_);
         locked.swap(router_locked_ranges_);
         shared_locked.swap(shared_locked_ranges_);
+        small_locked.swap(small_locked_ranges_);
     }
     for (const page_range & range : locked) {
         (void) munlock(reinterpret_cast<void *>(range.address), range.length);
     }
     for (const page_range & range : shared_locked) {
+        (void) munlock(reinterpret_cast<void *>(range.address), range.length);
+    }
+    for (const page_range & range : small_locked) {
         (void) munlock(reinterpret_cast<void *>(range.address), range.length);
     }
 }
@@ -333,6 +339,21 @@ void prefetch_scheduler::register_tensor(const char * name, void * addr, size_t 
             atomic_saturating_add(shared_locked_bytes_, static_cast<uint64_t>(range.length));
         } else {
             atomic_saturating_add(shared_lock_failures_, uint64_t{1});
+        }
+    }
+    if (small_mlock_enabled_ && name != nullptr && size <= (1ULL << 20) &&
+        std::strstr(name, "_exps") == nullptr && std::strstr(name, "_shexp") == nullptr &&
+        std::strstr(name, "ffn_gate_inp") == nullptr) {
+        const long raw_page_size = page_size_query_();
+        const page_range range = covering_page_range(
+            reinterpret_cast<uintptr_t>(addr),
+            size,
+            raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 0);
+        if (range.valid && mlock(reinterpret_cast<void *>(range.address), range.length) == 0) {
+            small_locked_ranges_.push_back(range);
+            atomic_saturating_add(small_locked_bytes_, static_cast<uint64_t>(range.length));
+        } else {
+            atomic_saturating_add(small_lock_failures_, uint64_t{1});
         }
     }
     if (router_prefetch_enabled_ || router_mlock_enabled_) {
@@ -1187,6 +1208,13 @@ void prefetch_scheduler::dump_metrics() const {
             "[SLIM-ARC-SHARED] locked_bytes=%llu lock_failures=%llu\n",
             static_cast<unsigned long long>(shared_locked_bytes_.load()),
             static_cast<unsigned long long>(shared_lock_failures_.load()));
+    }
+    if (small_mlock_enabled_) {
+        std::fprintf(
+            stderr,
+            "[SLIM-ARC-SMALL] locked_bytes=%llu lock_failures=%llu\n",
+            static_cast<unsigned long long>(small_locked_bytes_.load()),
+            static_cast<unsigned long long>(small_lock_failures_.load()));
     }
     if (expert_random_madv_enabled_ || expert_normal_madv_enabled_) {
         std::fprintf(

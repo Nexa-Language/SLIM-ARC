@@ -54,6 +54,7 @@ SLIM_ARC_ENV_ALLOWLIST = frozenset(
         "SLIM_ARC_ROUTER_MLOCK",
         "SLIM_ARC_ROUTER_PREFETCH",
         "SLIM_ARC_SHARED_MLOCK",
+        "SLIM_ARC_SMALL_MLOCK",
         "SLIM_ARC_SLOW_STORAGE",
     }
 )
@@ -102,6 +103,7 @@ class RunConfig:
                 "SLIM_ARC_ROUTER_MLOCK",
                 "SLIM_ARC_ROUTER_PREFETCH",
                 "SLIM_ARC_SHARED_MLOCK",
+                "SLIM_ARC_SMALL_MLOCK",
                 "SLIM_ARC_SLOW_STORAGE",
             } and value != "1":
                 raise ValueError(f"{name} must be exactly 1")
