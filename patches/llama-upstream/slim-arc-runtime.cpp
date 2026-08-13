@@ -1,5 +1,8 @@
 #include "slim-arc-runtime.h"
 
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <utility>
 
 namespace slim_arc {
@@ -93,6 +96,33 @@ runtime_lease acquire_runtime() noexcept {
     if (!owner->accepting_calls_) return {};
     ++owner->active_calls_;
     return runtime_lease{owner};
+}
+
+// SLIM-ARC OPT 2026-08-13: SLIM_ARC_TOTAL_BUDGET_MB 覆盖统一调度器总预算。
+// 严格解析：仅接受十进制数字；范围 [16, 1048576] MiB；任何非法输入回退
+// 历史默认 1GiB，保证默认行为与既有部署完全一致。
+size_t default_runtime_budget_bytes() noexcept {
+    constexpr uint64_t fallback = 1ULL << 30;
+    const char * const raw = std::getenv("SLIM_ARC_TOTAL_BUDGET_MB");
+    if (raw == nullptr || *raw == '\0') return static_cast<size_t>(fallback);
+    uint64_t value = 0;
+    for (const char * cursor = raw; *cursor != '\0'; ++cursor) {
+        if (*cursor < '0' || *cursor > '9') {
+            std::fprintf(stderr, "SLIM-ARC: invalid SLIM_ARC_TOTAL_BUDGET_MB '%s'; expected decimal MiB, using default\n", raw);
+            return static_cast<size_t>(fallback);
+        }
+        if (value > (UINT64_MAX - static_cast<uint64_t>(*cursor - '0')) / 10) {
+            std::fprintf(stderr, "SLIM-ARC: SLIM_ARC_TOTAL_BUDGET_MB '%s' overflows; using default\n", raw);
+            return static_cast<size_t>(fallback);
+        }
+        value = value * 10 + static_cast<uint64_t>(*cursor - '0');
+    }
+    if (value < 16 || value > 1048576) {
+        std::fprintf(stderr, "SLIM-ARC: SLIM_ARC_TOTAL_BUDGET_MB=%llu out of range [16,1048576] MiB; using default\n",
+                     static_cast<unsigned long long>(value));
+        return static_cast<size_t>(fallback);
+    }
+    return static_cast<size_t>(value) << 20;
 }
 
 } // namespace slim_arc

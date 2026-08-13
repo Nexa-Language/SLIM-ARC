@@ -49,6 +49,12 @@ def patch_model_loader(filepath: str) -> None:
 
 def transform_model(content: str) -> str:
     """Validate the complete pinned state, then return the installed source."""
+    # SLIM-ARC OPT 2026-08-13: migrate previously generated trees in memory so
+    # the stricter state validation below still accepts them (idempotent).
+    legacy_budget_setup = "auto runtime = std::make_unique<slim_arc::runtime_owner>(1ULL << 30);"
+    budget_setup = "auto runtime = std::make_unique<slim_arc::runtime_owner>(slim_arc::default_runtime_budget_bytes());"
+    if legacy_budget_setup in content:
+        content = content.replace(legacy_budget_setup, budget_setup)
     final_member = "    std::vector<float> tensor_split_owned;"
     runtime_member = "    std::unique_ptr<slim_arc::runtime_owner> slim_arc_runtime;"
     unpatched_members = final_member + "\n};"
@@ -87,7 +93,7 @@ def transform_model(content: str) -> str:
             slim_arc_weight_bytes += bytes;
         }
         if (slim_arc_weights_valid && slim_arc_weight_bytes > (6ULL << 30)) {
-            auto runtime = std::make_unique<slim_arc::runtime_owner>(1ULL << 30);
+            auto runtime = std::make_unique<slim_arc::runtime_owner>(slim_arc::default_runtime_budget_bytes());
             for (const auto & mapping : pimpl->mappings) {
                 if (mapping == nullptr || !runtime->register_mapping(mapping->addr(), mapping->size())) {
                     slim_arc_weights_valid = false;

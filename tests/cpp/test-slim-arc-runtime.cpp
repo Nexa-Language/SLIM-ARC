@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <cstdlib>
 #include <future>
 #include <sys/mman.h>
 #include <thread>
@@ -119,6 +120,62 @@ void test_mapping_and_tensor_registration_are_owner_lifetime_bound() {
     assert(munmap(mapping, page_size) == 0);
 }
 
+// SLIM-ARC OPT 2026-08-13: SLIM_ARC_TOTAL_BUDGET_MB 覆盖测试。
+class scoped_budget_env {
+public:
+    explicit scoped_budget_env(const char * value) {
+        if (value == nullptr) {
+            unsetenv("SLIM_ARC_TOTAL_BUDGET_MB");
+        } else {
+            setenv("SLIM_ARC_TOTAL_BUDGET_MB", value, 1);
+        }
+    }
+    ~scoped_budget_env() { unsetenv("SLIM_ARC_TOTAL_BUDGET_MB"); }
+};
+
+void test_default_runtime_budget_unset_and_empty_fall_back_to_one_gib() {
+    {
+        scoped_budget_env guard{nullptr};
+        assert(slim_arc::default_runtime_budget_bytes() == (1ULL << 30));
+    }
+    {
+        scoped_budget_env guard{""};
+        assert(slim_arc::default_runtime_budget_bytes() == (1ULL << 30));
+    }
+}
+
+void test_default_runtime_budget_parses_valid_mebibytes() {
+    {
+        scoped_budget_env guard{"256"};
+        assert(slim_arc::default_runtime_budget_bytes() == (256ULL << 20));
+    }
+    {
+        scoped_budget_env guard{"16"}; // lower bound inclusive
+        assert(slim_arc::default_runtime_budget_bytes() == (16ULL << 20));
+    }
+    {
+        scoped_budget_env guard{"1048576"}; // upper bound inclusive (1 TiB)
+        assert(slim_arc::default_runtime_budget_bytes() == (1048576ULL << 20));
+    }
+}
+
+void test_default_runtime_budget_rejects_invalid_values() {
+    const char * const invalid[] = {
+        "abc",       // non-decimal
+        "12x",       // trailing garbage
+        "-256",      // negative sign rejected
+        "15",        // below range
+        "1048577",   // above range
+        " 256",      // leading whitespace
+        "256 ",       // trailing whitespace
+        "99999999999999999999999999", // overflow
+    };
+    for (const char * value : invalid) {
+        scoped_budget_env guard{value};
+        assert(slim_arc::default_runtime_budget_bytes() == (1ULL << 30));
+    }
+}
+
 } // namespace
 
 int main() {
@@ -127,5 +184,8 @@ int main() {
     test_lease_moves_release_each_owner_once();
     test_conflicting_owner_cannot_take_over_active_registry();
     test_mapping_and_tensor_registration_are_owner_lifetime_bound();
+    test_default_runtime_budget_unset_and_empty_fall_back_to_one_gib();
+    test_default_runtime_budget_parses_valid_mebibytes();
+    test_default_runtime_budget_rejects_invalid_values();
     return 0;
 }

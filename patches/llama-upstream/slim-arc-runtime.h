@@ -69,4 +69,11 @@ class runtime_owner {
 
 runtime_lease acquire_runtime() noexcept;
 
+// SLIM-ARC OPT 2026-08-13: 运行时总 I/O 预算（统一调度器每 tick 额度）。
+// 默认 1GiB（历史硬编码值）；SLIM_ARC_TOTAL_BUDGET_MB=N（16..1048576 MiB，
+// 仅十进制数字）时覆盖。非法/越界/空值一律回退默认，保证三线默认行为不变。
+// 背景：4GB 端侧（Pi5）上每 step 614MB 专家预算挤占页缓存，
+// 允许按机器内存缩放（如 SLIM_ARC_TOTAL_BUDGET_MB=256）。
+size_t default_runtime_budget_bytes() noexcept;
+
 } // namespace slim_arc
