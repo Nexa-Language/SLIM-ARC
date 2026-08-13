@@ -35,7 +35,7 @@
       "small_resident":{"sample_count":2,"prefill_tps":4.7211945,"decode_tps":0.918171,"wall_seconds":50.415,"major_faults":459014,"filesystem_input_blocks":195180964},
       "candidate_relative_percent":{"prefill_tps":0.688239,"decode_tps":0.108758,"wall_seconds":-0.365613,"major_faults":-3.057503,"filesystem_input_blocks":-0.787684}
     },
-    "decision": "promote_at_2g"
+    "decision": "short_workload_candidate_superseded_by_a14"
   },
   "one_gib": {
     "control":{"run":"a13-small-control-1g-cold","prefill_tps":4.653601,"decode_tps":0.892864,"wall_seconds":50.33,"major_faults":507086,"filesystem_input_blocks":201762848},
@@ -43,5 +43,5 @@
     "candidate_relative_percent":{"prefill_tps":-5.783736,"decode_tps":-3.080984,"wall_seconds":2.920723,"major_faults":-2.127055,"filesystem_input_blocks":-0.413468},
     "decision": "disable_at_1g"
   },
-  "decision": "promote_at_2g_disable_at_1g"
+  "decision": "do_not_enable_by_default_after_a14"
 }

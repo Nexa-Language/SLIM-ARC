@@ -17,7 +17,8 @@ eight/six phase threads, poll 50, 128 KB readahead, and cold `pp64/tg16`.
 The small resident path improved median prefill by 0.69%, decode by 0.11%,
 wall time by 0.37%, major faults by 3.06%, and input blocks by 0.79%. The TPS
 gain is modest, but every median metric moves in the desired direction and the
-resident footprint is only about 24 MiB. A13 is promoted at 2 GiB.
+resident footprint is only about 24 MiB. This was the short-workload candidate;
+the later A14 `tg64` result supersedes its promotion decision.
 
 ## 1 GiB boundary
 
@@ -28,5 +29,7 @@ time by 2.92%. Even this smaller locked set displaces more valuable dynamic
 pages at the 1 GiB tier, so both resident policies remain disabled there.
 
 The result supports a tiered resident-set policy rather than indiscriminate
-hot-page pinning: no pinned set at 1 GiB; shared plus small paths at 2 GiB;
-shared residency already remains promoted at 4 GiB.
+hot-page pinning. A14 showed that the small set also regresses sustained decode
+at 2 GiB, so the finalist enables no pinned set at 1 GiB and only the shared
+resident path at 2/4 GiB. `SLIM_ARC_SMALL_MLOCK` remains an experimental,
+strictly opt-in switch for workload-specific profiling.

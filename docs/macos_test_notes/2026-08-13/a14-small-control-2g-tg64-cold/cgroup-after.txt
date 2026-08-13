@@ -1,0 +1,99 @@
+CGROUP_RELATIVE=/
+=== memory.current ===
+1889566720
+=== memory.max ===
+2147483648
+=== memory.peak ===
+2147483648
+=== memory.events ===
+low 0
+high 0
+max 403321
+oom 0
+oom_kill 0
+oom_group_kill 0
+=== memory.stat ===
+anon 1249280
+file 1842835456
+kernel 45010944
+kernel_stack 32768
+pagetables 102400
+sec_pagetables 0
+percpu 0
+sock 0
+vmalloc 8192
+shmem 0
+zswap 0
+zswapped 0
+file_mapped 2351104
+file_dirty 0
+file_writeback 0
+swapcached 0
+anon_thp 0
+file_thp 0
+shmem_thp 0
+inactive_anon 0
+active_anon 1216512
+inactive_file 186478592
+active_file 1656356864
+unevictable 0
+slab_reclaimable 44016032
+slab_unreclaimable 247192
+slab 44263224
+workingset_refault_anon 0
+workingset_refault_file 35223960
+workingset_activate_anon 0
+workingset_activate_file 35212750
+workingset_restore_anon 0
+workingset_restore_file 0
+workingset_nodereclaim 214844
+pgscan 63487185
+pgsteal 51826190
+pgscan_kswapd 0
+pgscan_direct 63487185
+pgscan_khugepaged 0
+pgsteal_kswapd 0
+pgsteal_direct 51826190
+pgsteal_khugepaged 0
+pgfault 5996943
+pgmajfault 1385339
+pgrefill 854
+pgactivate 89010
+pgdeactivate 0
+pglazyfree 0
+pglazyfreed 0
+zswpin 0
+zswpout 0
+zswpwb 0
+thp_fault_alloc 0
+thp_collapse_alloc 0
+thp_swpout 0
+thp_swpout_fallback 0
+=== memory.swap.current ===
+0
+=== memory.swap.max ===
+0
+=== memory.pressure ===
+some avg10=18.25 avg60=13.15 avg300=4.48 total=15751795
+full avg10=18.25 avg60=13.15 avg300=4.48 total=15751795
+=== cpu.max ===
+800000 100000
+=== cpu.stat ===
+usage_usec 207845339
+user_usec 27364180
+system_usec 180481158
+core_sched.force_idle_usec 0
+nr_periods 965
+nr_throttled 0
+throttled_usec 0
+nr_bursts 0
+burst_usec 0
+=== cpu.pressure ===
+some avg10=1.00 avg60=0.72 avg300=0.23 total=1317951
+full avg10=1.00 avg60=0.72 avg300=0.23 total=1307084
+=== io.stat ===
+253:16 rbytes=214122803200 wbytes=0 rios=4142034 wios=0 dbytes=0 dios=0
+253:0 rbytes=65536 wbytes=0 rios=1 wios=0 dbytes=0 dios=0
+=== io.pressure ===
+some avg10=41.06 avg60=34.16 avg300=11.90 total=41043096
+full avg10=41.06 avg60=34.15 avg300=11.89 total=41022950
