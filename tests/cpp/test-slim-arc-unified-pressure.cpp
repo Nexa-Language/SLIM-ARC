@@ -68,11 +68,11 @@ void test_each_model_owned_runtime_emits_its_exact_machine_line_once() {
     assert(waitpid(child, &status, 0) == child);
     assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
     const std::string common_suffix =
-        " expert_issued_bytes=0 expert_hit_bytes=0 expert_waste_bytes=0 reclaim_candidates=0 reclaim_calls=0 reclaimed_bytes=0 reclaim_skipped_bytes=0 reclaim_failures=0 residency_samples=0 residency_admitted_experts=0 residency_admitted_bytes=0 residency_skipped_bytes=0 residency_fallbacks=0 pressure_normal=0 pressure_high=0 pressure_critical=0\n";
+        " expert_issued_bytes=0 expert_hit_bytes=0 expert_waste_bytes=0 expert_advice_requests=0 expert_coalesced_ranges=0 expert_covered_bytes=0 expert_advice_failures=0 expert_invalid_ranges=0 weight_requested_bytes=0 weight_covered_bytes=0 weight_issued_bytes=0 weight_skipped_bytes=0 weight_advice_requests=0 weight_coalesced_ranges=0 weight_invalid_ranges=0 weight_advice_failures=0 weight_rounds_throttled=0 weight_stale_requests=0 weight_stale_bytes=0 weight_inflight_peak_bytes=0 reclaim_candidates=0 reclaim_calls=0 reclaimed_bytes=0 reclaim_skipped_bytes=0 reclaim_failures=0 residency_samples=0 residency_admitted_experts=0 residency_admitted_bytes=0 residency_skipped_bytes=0 residency_fallbacks=0 pressure_normal=0 pressure_high=0 pressure_critical=0\n";
     const std::string first_expected =
-        "[SLIM-ARC-RUNTIME] schema=1 expert_samples=1" + common_suffix;
+        "[SLIM-ARC-RUNTIME] schema=3 expert_samples=1" + common_suffix;
     const std::string second_expected =
-        "[SLIM-ARC-RUNTIME] schema=1 expert_samples=2" + common_suffix;
+        "[SLIM-ARC-RUNTIME] schema=3 expert_samples=2" + common_suffix;
     const size_t first = output.find(first_expected);
     const size_t second = output.find(second_expected);
     assert(first != std::string::npos);
@@ -198,21 +198,25 @@ void test_injected_critical_high_normal_and_invalid_snapshots_drive_selection() 
     const integrated_result critical = run_integrated_selection(
         {slim_arc::cgroup_memory_status::ok, 96, 100});
     assert(critical.advised.empty());
+    assert(critical.stats.admitted_experts == 0);
     assert(critical.stats.pressure_critical == 1);
 
     const integrated_result high = run_integrated_selection(
         {slim_arc::cgroup_memory_status::ok, 86, 100});
     assert((high.advised == std::vector<int>{1}));
+    assert(high.stats.admitted_experts == 1);
     assert(high.stats.pressure_high == 1);
 
     const integrated_result normal = run_integrated_selection(
         {slim_arc::cgroup_memory_status::ok, 70, 100});
-    assert((normal.advised == std::vector<int>{1, 2}));
+    assert((normal.advised == std::vector<int>{1}));
+    assert(normal.stats.admitted_experts == 2);
     assert(normal.stats.pressure_normal == 1);
 
     const integrated_result invalid = run_integrated_selection(
         {slim_arc::cgroup_memory_status::invalid_value, 99, 100});
-    assert((invalid.advised == std::vector<int>{1, 2}));
+    assert((invalid.advised == std::vector<int>{1}));
+    assert(invalid.stats.admitted_experts == 2);
     assert(invalid.stats.pressure_missing == 1);
     assert(invalid.stats.fallbacks == 1);
     clear_pressure_environment();
@@ -242,7 +246,8 @@ void test_normal_budget_can_admit_hot_candidate_beyond_requested_count() {
         scheduler.tick(0, 1);
         const uint64_t generation = prefetcher.prefetch_experts(8, &requested, 1);
         assert(generation != 0);
-        assert((advised == std::vector<int>{1, 2}));
+        assert((advised == std::vector<int>{1}));
+        assert(prefetcher.expert_residency_statistics().admitted_experts == 2);
     }
     assert(munmap(mapping, 3 * page_size) == 0);
     clear_pressure_environment();

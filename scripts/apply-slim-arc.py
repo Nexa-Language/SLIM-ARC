@@ -185,6 +185,25 @@ def patch_context(filepath: str) -> None:
             content = replace_required(content, "#include <limits>",
                                        f"#include <limits>\n#include {header}", f"context {header} include")
 
+    thread_marker = "// SLIM-ARC: phase-specific CPU thread override."
+    thread_anchor = "    int n_threads        = batched ? cparams.n_threads_batch : cparams.n_threads;"
+    thread_override = r'''
+    // SLIM-ARC: phase-specific CPU thread override.
+    const auto slim_arc_phase_threads = [](const char * raw, int fallback) {
+        if (raw == nullptr || *raw == '\0') return fallback;
+        char * end = nullptr;
+        const long parsed = std::strtol(raw, &end, 10);
+        return end != raw && *end == '\0' && parsed > 0 && parsed <= 256
+            ? static_cast<int>(parsed) : fallback;
+    };
+    n_threads = slim_arc_phase_threads(
+        std::getenv(batched ? "SLIM_ARC_PREFILL_THREADS" : "SLIM_ARC_DECODE_THREADS"),
+        n_threads);
+'''
+    if thread_marker not in content:
+        content = replace_required(content, thread_anchor, thread_anchor + thread_override,
+                                   "phase thread override")
+
     compute = "    auto status = ggml_backend_sched_graph_compute_async(sched.get(), gf);"
     precompute = r'''    auto slim_arc_runtime = slim_arc::acquire_runtime();
     std::vector<uint64_t> expert_generation_tokens;
@@ -209,10 +228,12 @@ def patch_context(filepath: str) -> None:
             expert_generation_tokens.resize(static_cast<size_t>(max_layer) + 1, 0);
             auto & scheduler = slim_arc_runtime.prefetch();
             auto & unified = slim_arc_runtime.unified();
+            const char * slow_storage_raw = std::getenv("SLIM_ARC_SLOW_STORAGE");
+            const bool slow_storage = slow_storage_raw != nullptr && std::strcmp(slow_storage_raw, "1") == 0;
             scheduler.set_phase(batched ? slim_arc::compute_phase::PREFILL : slim_arc::compute_phase::DECODE);
             unified.set_phase(batched ? slim_arc::runtime_phase::PREFILL_SHORT : slim_arc::runtime_phase::MOE_DECODE);
             unified.tick(min_layer, 3);
-            if (!batched && max_layer > min_layer) {
+            if (!slow_storage && !batched && max_layer > min_layer) {
                 for (int layer = min_layer + scheduler.effective_window() + 1; layer <= max_layer; ++layer) scheduler.notify_layer_compute(layer);
             }
             for (int layer = min_layer; layer <= max_layer; ++layer) {

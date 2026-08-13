@@ -49,10 +49,25 @@ def test_no_swap_docker_limits_are_exact(tmp_path: Path) -> None:
     assert ["--cpus", "4"] == command[
         command.index("--cpus") : command.index("--cpus") + 2
     ]
+    assert ["--ulimit", "memlock=536870912:536870912"] == command[
+        command.index("--ulimit") : command.index("--ulimit") + 2
+    ]
     assert (
         "type=bind,source=/var/lib/slim-arc/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf,target=/models/model.gguf,readonly"
         in command
     )
+
+
+def test_allows_one_gib_extreme_memory_diagnostic(tmp_path: Path) -> None:
+    command = run_constrained.build_docker_command(
+        config(memory_gib=1),
+        tmp_path,
+        container_name="slim-arc-run-test",
+        image_id=image_id(),
+    )
+
+    assert command[command.index("--memory") + 1] == "1g"
+    assert command[command.index("--memory-swap") + 1] == "1g"
 
 
 def image_id() -> str:
@@ -85,7 +100,7 @@ def test_rejects_malformed_inspected_image_identity(monkeypatch: pytest.MonkeyPa
     "cfg",
     [
         config(memory_gib=17),
-        config(memory_gib=1),
+        config(memory_gib=0),
         config(cpus=9),
         config(timeout_seconds=1),
         config(variant="unknown"),
@@ -215,7 +230,14 @@ def test_pressure_environment_is_allowlisted() -> None:
     ("name", "value"),
     [
         (name, value)
-        for name in ("SLIM_ARC_EXPERT_RECLAIM_WASTE", "SLIM_ARC_EXPERT_RESIDENCY")
+        for name in (
+            "SLIM_ARC_EXPERT_RECLAIM_WASTE",
+            "SLIM_ARC_EXPERT_RESIDENCY",
+            "SLIM_ARC_NO_EXPERT_PREFETCH",
+            "SLIM_ARC_ROUTER_MLOCK",
+            "SLIM_ARC_ROUTER_PREFETCH",
+            "SLIM_ARC_SLOW_STORAGE",
+        )
         for value in ("0", "2", "true", "", "01")
     ],
 )
@@ -231,6 +253,10 @@ def test_allows_finalist_policy_flags_only_when_enabled() -> None:
         env={
             "SLIM_ARC_EXPERT_RECLAIM_WASTE": "1",
             "SLIM_ARC_EXPERT_RESIDENCY": "1",
+            "SLIM_ARC_NO_EXPERT_PREFETCH": "1",
+            "SLIM_ARC_ROUTER_MLOCK": "1",
+            "SLIM_ARC_ROUTER_PREFETCH": "1",
+            "SLIM_ARC_SLOW_STORAGE": "1",
         }
     )
 
@@ -242,6 +268,10 @@ def test_docker_command_carries_each_enabled_finalist_policy(tmp_path: Path) -> 
         env={
             "SLIM_ARC_EXPERT_RECLAIM_WASTE": "1",
             "SLIM_ARC_EXPERT_RESIDENCY": "1",
+            "SLIM_ARC_NO_EXPERT_PREFETCH": "1",
+            "SLIM_ARC_ROUTER_MLOCK": "1",
+            "SLIM_ARC_ROUTER_PREFETCH": "1",
+            "SLIM_ARC_SLOW_STORAGE": "1",
         }
     )
 
@@ -251,3 +281,7 @@ def test_docker_command_carries_each_enabled_finalist_policy(tmp_path: Path) -> 
 
     assert command.count("SLIM_ARC_EXPERT_RECLAIM_WASTE=1") == 1
     assert command.count("SLIM_ARC_EXPERT_RESIDENCY=1") == 1
+    assert command.count("SLIM_ARC_NO_EXPERT_PREFETCH=1") == 1
+    assert command.count("SLIM_ARC_ROUTER_MLOCK=1") == 1
+    assert command.count("SLIM_ARC_ROUTER_PREFETCH=1") == 1
+    assert command.count("SLIM_ARC_SLOW_STORAGE=1") == 1

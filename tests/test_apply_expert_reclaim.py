@@ -112,6 +112,9 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert "get_cached_experts" not in context
     assert "tensor->name == nullptr" not in context
     assert "auto slim_arc_runtime = slim_arc::acquire_runtime();" in context
+    assert context.count('std::getenv("SLIM_ARC_SLOW_STORAGE")') == 1
+    assert context.count('std::strcmp(slow_storage_raw, "1") == 0') == 1
+    assert "if (!slow_storage && !batched && max_layer > min_layer)" in context
     assert context.index("if (slim_arc_runtime) {") < context.index("ggml_graph_n_nodes(gf)")
     assert "get_global_prefetch_scheduler" not in context
     assert "get_global_unified_scheduler" not in context

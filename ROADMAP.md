@@ -47,6 +47,47 @@
 
 ---
 
+## 2026-08-13 A0 实机闭环与 A1 最新代调度
+
+### 变更描述
+- A0 在 Linux/Colima 的 2 GiB、4 CPU、no-swap、80A3B 冷缓存运行中消除了普通权重和 expert `WILLNEED` 的 invalid range 与 advice failure；单次诊断成功且完整记录 cgroup、I/O、page fault、构建和模型身份。
+- 诊断同时测得普通权重请求约 2.05 TB、实际 advice 151.8 GB、块设备读取 115.6 GB，以及 expert 13.8 GB issued / 9.56 GB waste，确认 A1 的目标是消除 graph-wide 过取而不是继续扩大窗口。
+- 新增严格 `SLIM_ARC_SLOW_STORAGE=1` 模式：强制单 worker、window=1、单 pending generation、latest-wins 替换和同层去重；发布时冻结完整 page-range 计划与预算，已领取 syscall 不尝试取消。
+- 生成的 llama.cpp graph hook 在该模式下不再遍历并发布剩余全部 layer；flag-off 保留原路径。机器指标升级到 schema v3，新增 stale request/bytes 与 in-flight peak。
+
+### 涉及文件
+- `patches/llama-upstream/slim-arc-prefetch.h`
+- `patches/llama-upstream/slim-arc-prefetch.cpp`
+- `patches/llama-upstream/slim-arc-unified-scheduler.cpp`
+- `scripts/apply-slim-arc.py`
+- `scripts/macos/`
+- `tests/cpp/`
+- `tests/macos/`
+- `docs/macos_test_notes/2026-08-13/`
+
+### 决策原因
+- A0 已证明页对齐正确性，但 2 GiB 下仍有 397,366 次 major fault、I/O pressure `avg10=34.70%`；继续保留 705 个 graph-wide throttled rounds 会把慢盘带宽消耗在远未来层和重复请求上。
+- latest-wins 只丢弃尚未领取的旧 generation，不伪装 syscall 可取消性；严格 opt-in 使现有设备和历史配置保持兼容，并允许用同一镜像做可审计 A/B。
+
+---
+
+## 2026-08-13 慢存储 I/O 重构阶段启动
+
+### 变更描述
+- 依据 2 GiB、4 CPU、no-swap、冷缓存和限速块设备诊断，确认当前细粒度普通/expert `WILLNEED` 使用未页对齐 GGUF tensor 地址，Linux 返回 `EINVAL`，expert issued 长期为零。
+- 将执行顺序冻结为 A0 页范围正确性、A1 有界/合并/可取消预取、A2 反馈控制、B 显式 expert resident slots、C 证据驱动的 packed file 与直接 I/O。
+- 固定慢存储实验矩阵、远端设备预检、结构化指标和晋级门禁；最终报告与 PPT 只在 2026-08-17 引用通过门禁的真实增量。
+
+### 涉及文件
+- `plan/28-v1-slow-storage-io-redesign.md`
+- `ROADMAP.md`
+
+### 决策原因
+- 当前 patched 相对 baseline 的诊断差异主要来自整映射访问 hint，不能证明细粒度预取有效；继续调 window 或 router 参数会掩盖页对齐根因并放大慢盘随机 I/O。
+- 先修 correctness 和可观测性，再限制 queue depth/预算，才能将论文中的异步预取、热 expert 缓存和多级驻留方向转化为可复现、可审计的系统增量。
+
+---
+
 ## 2026-08-12 决赛证据、材料与双远端发布阶段启动
 
 ### 变更描述

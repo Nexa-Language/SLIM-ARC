@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "slim_arc_git_commit": "4f48438e79764c6b04d0f3d3456d1f9968b4a06d",
+    "llama_commit": "360e134",
+    "patched_source_sha256": "e5fa7d6202eefdad4e619575b33f960bc906f769aa1fb6e4610df3a582c5afed",
+    "image_id": "sha256:061f538668209893c72b4de714c6eac9a4727e53d8621eac104f7ae76313643a",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "model_inventory": {
+    "tensor_count": 807,
+    "sparse_expert_bytes": 46808432640,
+    "shared_expert_bytes": 91619328,
+    "router_bytes": 201523200
+  },
+  "contract": {
+    "memory_gib": 2,
+    "cpu_limit": 8,
+    "prefill_threads": 8,
+    "decode_threads": 6,
+    "poll": 50,
+    "read_ahead_kb": 128,
+    "swap_bytes": 0,
+    "n_prompt": 64,
+    "n_gen": 16,
+    "cache_state": "cold"
+  },
+  "control_runs": [
+    {"run":"a8-shared-control-2g-cold","prefill_tps":4.355892,"decode_tps":0.831333,"wall_seconds":56.98,"major_faults":486337,"filesystem_input_blocks":199390528},
+    {"run":"a8-shared-control-r2-2g-cold","prefill_tps":4.572939,"decode_tps":0.888552,"wall_seconds":51.92,"major_faults":490800,"filesystem_input_blocks":199719880}
+  ],
+  "candidate_runs": [
+    {"run":"a8-shared-mlock-2g-cold","prefill_tps":4.605800,"decode_tps":0.900856,"wall_seconds":51.60,"major_faults":479134,"filesystem_input_blocks":197900456,"locked_bytes":92405760,"lock_failures":0},
+    {"run":"a8-shared-mlock-r2-2g-cold","prefill_tps":4.673965,"decode_tps":0.871874,"wall_seconds":51.42,"major_faults":468973,"filesystem_input_blocks":195925792,"locked_bytes":92405760,"lock_failures":0}
+  ],
+  "median_comparison": {
+    "control":{"sample_count":2,"prefill_tps":4.4644155,"decode_tps":0.8599425,"wall_seconds":54.45,"major_faults":488568.5,"filesystem_input_blocks":199555204},
+    "shared_resident":{"sample_count":2,"prefill_tps":4.6398825,"decode_tps":0.886365,"wall_seconds":51.51,"major_faults":474053.5,"filesystem_input_blocks":196913124},
+    "candidate_relative_percent":{"prefill_tps":3.930347,"decode_tps":3.072589,"wall_seconds":-5.399449,"major_faults":-2.970924,"filesystem_input_blocks":-1.323985}
+  },
+  "decision": "promote_shared_residency_for_2g"
+}

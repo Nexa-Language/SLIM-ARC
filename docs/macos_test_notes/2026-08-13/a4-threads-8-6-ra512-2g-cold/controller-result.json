@@ -1,0 +1,65 @@
+{
+  "cold_cache": true,
+  "config": {
+    "cpus": 8,
+    "env": {
+      "SLIM_ARC_DECODE_THREADS": "6",
+      "SLIM_ARC_PREFILL_THREADS": "8",
+      "SLIM_ARC_PRESSURE_ADMISSION": "1",
+      "SLIM_ARC_PRESSURE_RESERVE_MB": "512",
+      "SLIM_ARC_SLOW_STORAGE": "1"
+    },
+    "memory_gib": 2,
+    "pp": 64,
+    "repetitions": 1,
+    "tg": 16,
+    "timeout_seconds": 120,
+    "variant": "patched"
+  },
+  "container_name": "slim-arc-run-20260813t141813z-624cc627",
+  "container_state": {
+    "Dead": false,
+    "Error": "",
+    "ExitCode": 0,
+    "FinishedAt": "2026-08-13T14:19:13.58322375Z",
+    "OOMKilled": false,
+    "Paused": false,
+    "Pid": 0,
+    "Restarting": false,
+    "Running": false,
+    "StartedAt": "2026-08-13T14:18:13.660300705Z",
+    "Status": "exited"
+  },
+  "created_at": "2026-08-13T14:19:13.642578+00:00",
+  "image_id": "sha256:835c9d3d2b95ef6bbfd29dbe4042c7f5b3adda2ee91a36177bf6fc205ffb6f33",
+  "llama_commit": "360e134",
+  "memory_limit_bytes": 2147483648,
+  "memory_swap_limit_bytes": 0,
+  "model": {
+    "actual_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+    "expected_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+    "filename": "Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf",
+    "repo_id": "Qwen/Qwen3-Next-80B-A3B-Instruct-GGUF",
+    "revision": "4c8630cf7af926a9c5095cb4bbbbc65d36e20f77",
+    "size": 48410988384,
+    "verified_at": "2026-08-11T14:17:16.915666+00:00"
+  },
+  "outcome": "success",
+  "return_code": 0,
+  "run_id": "a4-threads-8-6-ra512-2g-cold",
+  "schema_version": 1,
+  "stderr_summary": "",
+  "timed_out": false,
+  "workload_contract": {
+    "context_tokens": 80,
+    "load_mode": "mmap",
+    "n_depth": 0,
+    "n_gen": 16,
+    "n_prompt": 64,
+    "no_warmup": true,
+    "offline": true,
+    "seed": 1,
+    "seed_source": "implicit_c_rand_default",
+    "threads": 8
+  }
+}

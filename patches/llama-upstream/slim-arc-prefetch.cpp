@@ -14,6 +14,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
+#include <map>
 #include <string_view>
 #include <sys/mman.h>
 #include <system_error>
@@ -62,6 +63,17 @@ long system_page_size() {
     return sysconf(_SC_PAGESIZE);
 }
 
+bool env_exact_one(const char * name) noexcept {
+    const char * const value = std::getenv(name);
+    return value != nullptr && std::strcmp(value, "1") == 0;
+}
+
+void update_atomic_peak(std::atomic<uint64_t> & peak, uint64_t candidate) noexcept {
+    uint64_t current = peak.load();
+    while (current < candidate && !peak.compare_exchange_weak(current, candidate)) {
+    }
+}
+
 uint32_t ratio_permille(uint64_t numerator, uint64_t denominator) noexcept {
     if (denominator == 0 || numerator == 0) return 0;
     if (numerator >= denominator) return 1000;
@@ -79,6 +91,72 @@ uint32_t ratio_permille(uint64_t numerator, uint64_t denominator) noexcept {
         }
     }
     return low;
+}
+
+struct expert_page_candidate {
+    int expert_id;
+    page_range range;
+};
+
+struct expert_page_owner {
+    uintptr_t address;
+    size_t length;
+    int expert_id;
+};
+
+std::vector<expert_page_owner> assign_page_owners(
+    const std::vector<expert_page_candidate> & candidates) {
+    struct event {
+        uintptr_t position;
+        int expert_id;
+        int delta;
+    };
+    std::vector<event> events;
+    events.reserve(candidates.size() * 2);
+    for (const expert_page_candidate & candidate : candidates) {
+        events.push_back({candidate.range.address, candidate.expert_id, 1});
+        events.push_back({
+            candidate.range.address + candidate.range.length,
+            candidate.expert_id,
+            -1});
+    }
+    std::sort(events.begin(), events.end(), [](const event & left, const event & right) {
+        if (left.position != right.position) return left.position < right.position;
+        if (left.expert_id != right.expert_id) return left.expert_id < right.expert_id;
+        return left.delta < right.delta;
+    });
+
+    std::vector<expert_page_owner> owners;
+    if (events.empty()) return owners;
+    std::map<int, size_t> active;
+    uintptr_t previous = events.front().position;
+    size_t index = 0;
+    while (index < events.size()) {
+        const uintptr_t position = events[index].position;
+        if (position > previous && !active.empty()) {
+            const int owner = active.begin()->first;
+            const size_t length = static_cast<size_t>(position - previous);
+            if (!owners.empty() &&
+                owners.back().expert_id == owner &&
+                owners.back().address + owners.back().length == previous) {
+                owners.back().length += length;
+            } else {
+                owners.push_back({previous, length, owner});
+            }
+        }
+        while (index < events.size() && events[index].position == position) {
+            const event & current = events[index];
+            if (current.delta > 0) {
+                ++active[current.expert_id];
+            } else {
+                const auto found = active.find(current.expert_id);
+                if (found != active.end() && --found->second == 0) active.erase(found);
+            }
+            ++index;
+        }
+        previous = position;
+    }
+    return owners;
 }
 }
 
@@ -137,6 +215,24 @@ void prefetch_scheduler::set_phase(compute_phase phase) {
     for (const auto & region : regions) {
         (void) advice_(region.first, region.second, advice);
     }
+    if (phase == compute_phase::DECODE && (expert_random_madv_enabled_ || expert_normal_madv_enabled_)) {
+        std::vector<page_range> expert_ranges;
+        {
+            std::lock_guard<std::mutex> lock(expert_state_mtx_);
+            expert_ranges = expert_madv_ranges_;
+        }
+        const int expert_advice = expert_random_madv_enabled_ ? POSIX_MADV_RANDOM : POSIX_MADV_NORMAL;
+        for (const page_range & range : expert_ranges) {
+            atomic_saturating_add(expert_madv_advice_calls_, uint64_t{1});
+            if (advice_(reinterpret_cast<void *>(range.address), range.length, expert_advice) == 0) {
+                atomic_saturating_add(
+                    expert_madv_advice_bytes_,
+                    static_cast<uint64_t>(range.length));
+            } else {
+                atomic_saturating_add(expert_madv_advice_failures_, uint64_t{1});
+            }
+        }
+    }
 }
 
 int tensor_layer_from_name(const char * name) {
@@ -160,8 +256,15 @@ prefetch_scheduler::prefetch_scheduler(
     std::function<void()> request_claim_hook,
     advice_fn advice,
     page_size_query_fn page_size_query)
-    : n_threads_(std::max(1, n_threads))
-    , window_(std::max(1, window))
+    : slow_storage_enabled_(env_exact_one("SLIM_ARC_SLOW_STORAGE"))
+    , router_prefetch_enabled_(env_exact_one("SLIM_ARC_ROUTER_PREFETCH"))
+    , router_mlock_enabled_(env_exact_one("SLIM_ARC_ROUTER_MLOCK"))
+    , shared_mlock_enabled_(env_exact_one("SLIM_ARC_SHARED_MLOCK"))
+    , expert_prefetch_disabled_(env_exact_one("SLIM_ARC_NO_EXPERT_PREFETCH"))
+    , expert_random_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_RANDOM"))
+    , expert_normal_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_NORMAL"))
+    , n_threads_(slow_storage_enabled_ ? 1 : std::max(1, n_threads))
+    , window_(slow_storage_enabled_ ? 1 : std::max(1, window))
     , request_claim_hook_(std::move(request_claim_hook))
     , advice_(advice ? std::move(advice) : advice_fn{system_advice})
     , page_size_query_(page_size_query ? std::move(page_size_query) : page_size_query_fn{system_page_size})
@@ -185,6 +288,19 @@ prefetch_scheduler::prefetch_scheduler(
 prefetch_scheduler::~prefetch_scheduler() {
     shutdown();
     dump_metrics();
+    std::vector<page_range> locked;
+    std::vector<page_range> shared_locked;
+    {
+        std::lock_guard<std::mutex> lock(mtx_);
+        locked.swap(router_locked_ranges_);
+        shared_locked.swap(shared_locked_ranges_);
+    }
+    for (const page_range & range : locked) {
+        (void) munlock(reinterpret_cast<void *>(range.address), range.length);
+    }
+    for (const page_range & range : shared_locked) {
+        (void) munlock(reinterpret_cast<void *>(range.address), range.length);
+    }
 }
 
 void prefetch_scheduler::shutdown() noexcept {
@@ -202,10 +318,44 @@ void prefetch_scheduler::shutdown() noexcept {
     }
 }
 
-void prefetch_scheduler::register_tensor(const char *, void * addr, size_t size, int layer) {
+void prefetch_scheduler::register_tensor(const char * name, void * addr, size_t size, int layer) {
     if (layer < 0 || addr == nullptr || size == 0) return;
     std::lock_guard<std::mutex> lock(mtx_);
     if (stop_.load()) return;
+    if (shared_mlock_enabled_ && name != nullptr && std::strstr(name, "_shexp") != nullptr) {
+        const long raw_page_size = page_size_query_();
+        const page_range range = covering_page_range(
+            reinterpret_cast<uintptr_t>(addr),
+            size,
+            raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 0);
+        if (range.valid && mlock(reinterpret_cast<void *>(range.address), range.length) == 0) {
+            shared_locked_ranges_.push_back(range);
+            atomic_saturating_add(shared_locked_bytes_, static_cast<uint64_t>(range.length));
+        } else {
+            atomic_saturating_add(shared_lock_failures_, uint64_t{1});
+        }
+    }
+    if (router_prefetch_enabled_ || router_mlock_enabled_) {
+        const bool is_router = name != nullptr && std::strstr(name, ".ffn_gate_inp") != nullptr &&
+            std::strstr(name, ".weight") != nullptr;
+        if (is_router && router_prefetch_enabled_) {
+            router_tensors_.push_back({addr, size, layer, 0});
+        }
+        if (is_router && router_mlock_enabled_) {
+            const long raw_page_size = page_size_query_();
+            const page_range range = covering_page_range(
+                reinterpret_cast<uintptr_t>(addr),
+                size,
+                raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 0);
+            if (range.valid && mlock(reinterpret_cast<void *>(range.address), range.length) == 0) {
+                router_locked_ranges_.push_back(range);
+                atomic_saturating_add(router_locked_bytes_, static_cast<uint64_t>(range.length));
+            } else {
+                atomic_saturating_add(router_lock_failures_, uint64_t{1});
+            }
+        }
+        return;
+    }
     if ((size_t)layer >= tensors_by_layer_.size()) {
         tensors_by_layer_.resize(layer + 1);
     }
@@ -228,20 +378,93 @@ bool prefetch_scheduler::register_mapping(void * addr, size_t size) {
 
 void prefetch_scheduler::notify_layer_compute(int current_layer) {
     if (!enabled_.load()) return;
+    prefetch_request request = plan_request(current_layer);
     {
         std::lock_guard<std::mutex> lk(mtx_);
         if (stop_.load()) return;
-        if (pending_requests_.size() == max_pending_requests) {
-            pending_requests_.pop_front();
-            atomic_saturating_add(dropped_requests_, uint64_t{1});
-        }
         if (next_request_generation_ == std::numeric_limits<uint64_t>::max()) {
             atomic_saturating_add(dropped_requests_, uint64_t{1});
             return;
         }
-        pending_requests_.push_back({++next_request_generation_, current_layer});
+        if (slow_storage_enabled_) {
+            if (!pending_requests_.empty() && pending_requests_.back().layer == current_layer) {
+                return;
+            }
+            for (const prefetch_request & stale : pending_requests_) {
+                atomic_saturating_add(budget_stale_requests_, uint64_t{1});
+                atomic_saturating_add(budget_stale_bytes_, stale.covered_bytes);
+            }
+            pending_requests_.clear();
+        } else if (pending_requests_.size() == max_pending_requests) {
+            pending_requests_.pop_front();
+            atomic_saturating_add(dropped_requests_, uint64_t{1});
+        }
+        request.generation = ++next_request_generation_;
+        pending_requests_.push_back(std::move(request));
     }
     cv_.notify_one();
+}
+
+prefetch_scheduler::prefetch_request prefetch_scheduler::plan_request(int current_layer) {
+    prefetch_request request;
+    request.layer = current_layer;
+    request.memory_budget = memory_budget_.load();
+    std::vector<tensor_prefetch_info> items;
+    {
+        std::lock_guard<std::mutex> lock(mtx_);
+        if (stop_.load()) return request;
+        if (router_prefetch_enabled_) {
+            items = router_tensors_;
+        } else {
+            for (int offset = 1; offset <= window_; ++offset) {
+                const int layer = current_layer + offset;
+                if (layer < 0 || static_cast<size_t>(layer) >= tensors_by_layer_.size()) continue;
+                for (const tensor_prefetch_info & tensor : tensors_by_layer_[layer]) {
+                    if (tensor.addr != nullptr && tensor.size > 0) items.push_back(tensor);
+                }
+            }
+        }
+    }
+
+    for (const tensor_prefetch_info & item : items) {
+        request.requested_bytes = saturating_add(
+            request.requested_bytes,
+            static_cast<uint64_t>(item.size));
+    }
+    request.advice_requests = static_cast<uint64_t>(items.size());
+    const long raw_page_size = page_size_query_();
+    if (raw_page_size <= 0) {
+        request.invalid_ranges = request.advice_requests;
+        return request;
+    }
+    request.page_size = static_cast<size_t>(raw_page_size);
+    std::vector<page_range> planned_ranges;
+    planned_ranges.reserve(items.size());
+    for (const tensor_prefetch_info & item : items) {
+        const page_range range = covering_page_range(
+            reinterpret_cast<uintptr_t>(item.addr),
+            item.size,
+            request.page_size);
+        if (!range.valid) {
+            request.invalid_ranges = saturating_add(request.invalid_ranges, uint64_t{1});
+            continue;
+        }
+        planned_ranges.push_back(range);
+    }
+    page_range_set coalesced = coalesce_page_ranges(std::move(planned_ranges));
+    if (!coalesced.valid) {
+        request.invalid_ranges = saturating_add(
+            request.invalid_ranges,
+            static_cast<uint64_t>(coalesced.input_ranges));
+        return request;
+    }
+    request.ranges = std::move(coalesced.ranges);
+    for (const page_range & range : request.ranges) {
+        request.covered_bytes = saturating_add(
+            request.covered_bytes,
+            static_cast<uint64_t>(range.length));
+    }
+    return request;
 }
 
 size_t prefetch_scheduler::pending_request_count() const {
@@ -256,65 +479,67 @@ prefetch_budget_stats prefetch_scheduler::budget_stats() const {
         budget_skipped_bytes_.load(),
         budget_rounds_throttled_.load(),
         budget_madvise_failures_.load(),
+        budget_advice_requests_.load(),
+        budget_coalesced_ranges_.load(),
+        budget_covered_bytes_.load(),
+        budget_invalid_ranges_.load(),
+        budget_stale_requests_.load(),
+        budget_stale_bytes_.load(),
+        budget_inflight_peak_bytes_.load(),
     };
 }
 
 void prefetch_scheduler::worker_loop() {
     while (true) {
-        int target_layer;
-        std::vector<tensor_prefetch_info> items;
+        prefetch_request request;
         {
             std::unique_lock<std::mutex> lk(mtx_);
             cv_.wait(lk, [this] { return stop_.load() || !pending_requests_.empty(); });
             if (stop_) return;
-            const prefetch_request request = pending_requests_.front();
+            request = std::move(pending_requests_.front());
             pending_requests_.pop_front();
-            target_layer = request.layer;
-            for (int w = 1; w <= window_; ++w) {
-                const int layer = target_layer + w;
-                if (layer < 0 || static_cast<size_t>(layer) >= tensors_by_layer_.size()) continue;
-                for (const auto & tensor : tensors_by_layer_[layer]) {
-                    if (tensor.addr != nullptr && tensor.size > 0) items.push_back(tensor);
-                }
-            }
         }
         if (request_claim_hook_) request_claim_hook_();
-        std::vector<size_t> item_sizes;
-        item_sizes.reserve(items.size());
-        for (const auto & item : items) item_sizes.push_back(item.size);
 
-        uint64_t requested{0};
+        std::vector<page_range> selected;
+        selected.reserve(request.ranges.size());
         uint64_t skipped{0};
-        const uint64_t budget = memory_budget_.load();
-        const auto selected = select_prefetch_items(item_sizes, budget, &requested, &skipped);
-        uint64_t issued{0};
-        uint64_t failures{0};
-        // SLIM-ARC FIX 2026-08-13: posix_madvise 要求页对齐地址。GGUF 张量地址通常
-        // 带 2KB 偏移，直接对原始张量地址下发 WILLNEED 会 EINVAL，预取完全失效
-        // （issued=0 回归）。先取内部整页区间（与 reclaim 路径同一规则）。
-        const long raw_page_size = page_size_query_();
-        const size_t page_size =
-            raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 4096;
-        for (const size_t index : selected) {
-            const tensor_prefetch_info & tensor = items[index];
-            const page_range range = interior_page_range(
-                reinterpret_cast<uintptr_t>(tensor.addr), tensor.size, page_size);
-            if (!range.valid || range.length == 0) {
-                ++failures;
-                continue;
+        uint64_t selected_bytes{0};
+        uint64_t remaining = request.memory_budget;
+        for (const page_range & range : request.ranges) {
+            const uint64_t available = std::min<uint64_t>(remaining, range.length);
+            const uint64_t admitted = request.page_size == 0 ? 0 : available - available % request.page_size;
+            if (admitted > 0) {
+                selected.push_back({range.address, static_cast<size_t>(admitted), 0, true, 0});
+                remaining -= admitted;
+                selected_bytes = saturating_add(selected_bytes, admitted);
             }
-            void * const addr = reinterpret_cast<void *>(range.address);
-            if (advice_(addr, range.length, POSIX_MADV_WILLNEED) == 0) {
-                issued = saturating_add(issued, static_cast<uint64_t>(range.length));
-            } else {
-                ++failures;
-            }
+            skipped = saturating_add(skipped, static_cast<uint64_t>(range.length) - admitted);
         }
 
-        atomic_saturating_add(budget_requested_bytes_, requested);
+        const uint64_t inflight = budget_inflight_bytes_.fetch_add(selected_bytes) + selected_bytes;
+        update_atomic_peak(budget_inflight_peak_bytes_, inflight);
+        uint64_t issued{0};
+        uint64_t failures = request.invalid_ranges;
+        for (const page_range & range : selected) {
+            if (advice_(reinterpret_cast<void *>(range.address), range.length, POSIX_MADV_WILLNEED) == 0) {
+                issued = saturating_add(issued, static_cast<uint64_t>(range.length));
+            } else {
+                failures = saturating_add(failures, uint64_t{1});
+            }
+        }
+        budget_inflight_bytes_.fetch_sub(selected_bytes);
+
+        atomic_saturating_add(budget_requested_bytes_, request.requested_bytes);
         atomic_saturating_add(budget_issued_bytes_, issued);
         atomic_saturating_add(budget_skipped_bytes_, skipped);
         atomic_saturating_add(budget_madvise_failures_, failures);
+        atomic_saturating_add(budget_advice_requests_, request.advice_requests);
+        atomic_saturating_add(
+            budget_coalesced_ranges_,
+            static_cast<uint64_t>(request.ranges.size()));
+        atomic_saturating_add(budget_covered_bytes_, request.covered_bytes);
+        atomic_saturating_add(budget_invalid_ranges_, request.invalid_ranges);
         if (skipped > 0) {
             atomic_saturating_add(budget_rounds_throttled_, uint64_t{1});
         }
@@ -327,11 +552,20 @@ void prefetch_scheduler::worker_loop() {
 void prefetch_scheduler::register_expert_tensor(const char *, void * addr, size_t size, int layer, int n_experts) {
     if (addr == nullptr || size == 0 || n_experts < 1 || layer < 0) return;
     if (size % static_cast<size_t>(n_experts) != 0) return;
+    page_range random_range;
+    if (expert_random_madv_enabled_ || expert_normal_madv_enabled_) {
+        const long raw_page_size = page_size_query_();
+        random_range = covering_page_range(
+            reinterpret_cast<uintptr_t>(addr),
+            size,
+            raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 0);
+    }
     std::lock_guard<std::mutex> lock(expert_state_mtx_);
     if ((size_t)layer >= experts_by_layer_.size()) {
         experts_by_layer_.resize(layer + 1);
     }
     experts_by_layer_[layer].push_back({addr, size, n_experts});
+    if (random_range.valid) expert_madv_ranges_.push_back(random_range);
 }
 
 void prefetch_scheduler::cache_router_experts(int layer, const int * expert_ids, int n) {
@@ -524,6 +758,11 @@ expert_runtime_metrics prefetch_scheduler::expert_runtime_statistics() const noe
         static_cast<uint64_t>(expert_prefetch_bytes_.load()),
         static_cast<uint64_t>(expert_hit_bytes_.load()),
         static_cast<uint64_t>(expert_waste_bytes_.load()),
+        expert_advice_requests_.load(),
+        expert_coalesced_ranges_.load(),
+        expert_covered_bytes_.load(),
+        expert_advice_failures_.load(),
+        expert_invalid_ranges_.load(),
     };
 }
 
@@ -588,6 +827,7 @@ void prefetch_scheduler::reclaim_wrong_expert_pages(
 }
 
 uint64_t prefetch_scheduler::prefetch_experts(int layer, const int * expert_ids, int n) {
+    if (expert_prefetch_disabled_) return 0;
     return issue_expert_willneed(layer, expert_ids, n);
 }
 
@@ -764,6 +1004,65 @@ uint64_t prefetch_scheduler::issue_expert_willneed(int layer, const int * expert
         target = std::move(decision.expert_ids);
     }
     if (target.empty()) return 0;
+
+    const long raw_page_size = page_size_query_();
+    const size_t page_size = raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 0;
+    uint64_t advice_requests = 0;
+    uint64_t invalid_ranges = 0;
+    std::vector<expert_page_candidate> page_candidates;
+    page_candidates.reserve(target.size() * exps.size());
+    for (const int eid : target) {
+        for (const expert_tensor_info & expert : exps) {
+            if (expert.addr == nullptr || expert.n_experts <= 0 || eid >= expert.n_experts ||
+                expert.size % static_cast<size_t>(expert.n_experts) != 0) continue;
+            const size_t per_expert = expert.size / static_cast<size_t>(expert.n_experts);
+            if (per_expert == 0) continue;
+            advice_requests = saturating_add(advice_requests, uint64_t{1});
+            if (static_cast<size_t>(eid) > std::numeric_limits<size_t>::max() / per_expert) {
+                invalid_ranges = saturating_add(invalid_ranges, uint64_t{1});
+                continue;
+            }
+            const size_t offset = static_cast<size_t>(eid) * per_expert;
+            const uintptr_t base = reinterpret_cast<uintptr_t>(expert.addr);
+            if (offset > std::numeric_limits<uintptr_t>::max() - base) {
+                invalid_ranges = saturating_add(invalid_ranges, uint64_t{1});
+                continue;
+            }
+            const page_range range = covering_page_range(base + offset, per_expert, page_size);
+            if (!range.valid) {
+                invalid_ranges = saturating_add(invalid_ranges, uint64_t{1});
+                continue;
+            }
+            page_candidates.push_back({eid, range});
+        }
+    }
+
+    std::vector<page_range> candidate_ranges;
+    candidate_ranges.reserve(page_candidates.size());
+    for (const expert_page_candidate & candidate : page_candidates) {
+        candidate_ranges.push_back(candidate.range);
+    }
+    page_range_set coalesced = coalesce_page_ranges(std::move(candidate_ranges));
+    if (!coalesced.valid) {
+        invalid_ranges = saturating_add(
+            invalid_ranges,
+            static_cast<uint64_t>(coalesced.input_ranges));
+        coalesced.ranges.clear();
+        page_candidates.clear();
+    }
+    uint64_t covered_bytes = 0;
+    for (const page_range & range : coalesced.ranges) {
+        covered_bytes = saturating_add(covered_bytes, static_cast<uint64_t>(range.length));
+    }
+    atomic_saturating_add(expert_advice_requests_, advice_requests);
+    atomic_saturating_add(
+        expert_coalesced_ranges_,
+        static_cast<uint64_t>(coalesced.ranges.size()));
+    atomic_saturating_add(expert_covered_bytes_, covered_bytes);
+    atomic_saturating_add(expert_invalid_ranges_, invalid_ranges);
+    atomic_saturating_add(expert_advice_failures_, invalid_ranges);
+    if (coalesced.ranges.empty()) return 0;
+
     uint64_t generation = 0;
     {
         std::lock_guard<std::mutex> lock(expert_state_mtx_);
@@ -779,72 +1078,60 @@ uint64_t prefetch_scheduler::issue_expert_willneed(int layer, const int * expert
             atomic_saturating_add(expert_pending_rejected_generations_, uint64_t{1});
             return 0;
         }
-        // Reserve the I/O budget only after the bounded pending slot is known
-        // available, so a rejected generation cannot consume this step's budget.
         if (expert_budget_enabled_.load()) {
             const size_t budget = expert_budget_.load();
-            size_t per_expert_total = 0;
-            for (const expert_tensor_info & expert : exps) {
-                const size_t item_size = expert.size / static_cast<size_t>(expert.n_experts);
-                per_expert_total = saturating_add(per_expert_total, item_size);
-            }
-            if (budget == 0 || per_expert_total == 0) return 0;
-
+            if (budget == 0 || covered_bytes > std::numeric_limits<size_t>::max()) return 0;
+            const size_t reservation = static_cast<size_t>(covered_bytes);
             size_t used = expert_budget_used_.load();
             while (true) {
-                if (used >= budget) return 0;
-                const size_t capacity = (budget - used) / per_expert_total;
-                if (capacity == 0) return 0;
-                if (capacity < target.size()) target.resize(capacity);
-                if (target.empty()) return 0;
-                const size_t reservation = target.size() * per_expert_total;
-                if (expert_budget_used_.compare_exchange_weak(used, used + reservation)) {
-                    break;
-                }
+                if (used > budget || reservation > budget - used) return 0;
+                if (expert_budget_used_.compare_exchange_weak(used, used + reservation)) break;
             }
         }
         generation = next_expert_generation_++;
         pending.push_back({generation, {}, {}});
     }
 
-    const long raw_page_size = page_size_query_();
-    const size_t page_size =
-        raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 4096;
+    const std::vector<expert_page_owner> owners = assign_page_owners(page_candidates);
+    std::vector<bool> successful_ranges(coalesced.ranges.size(), false);
     size_t bytes = 0;
+    uint64_t callback_failures = 0;
+    for (size_t index = 0; index < coalesced.ranges.size(); ++index) {
+        const page_range & range = coalesced.ranges[index];
+        if (advice_(reinterpret_cast<void *>(range.address), range.length, POSIX_MADV_WILLNEED) == 0) {
+            successful_ranges[index] = true;
+            bytes = saturating_add(bytes, range.length);
+        } else {
+            callback_failures = saturating_add(callback_failures, uint64_t{1});
+        }
+    }
+    atomic_saturating_add(expert_advice_failures_, callback_failures);
+
+    std::map<int, size_t> bytes_by_expert;
+    size_t range_index = 0;
+    for (const expert_page_owner & owner : owners) {
+        while (range_index < coalesced.ranges.size() &&
+               coalesced.ranges[range_index].address + coalesced.ranges[range_index].length <= owner.address) {
+            ++range_index;
+        }
+        if (range_index >= coalesced.ranges.size() || !successful_ranges[range_index]) continue;
+        const page_range & range = coalesced.ranges[range_index];
+        if (owner.address < range.address || owner.length >
+            range.address + range.length - owner.address) continue;
+        bytes_by_expert[owner.expert_id] = saturating_add(
+            bytes_by_expert[owner.expert_id],
+            owner.length);
+    }
+
     std::vector<int> issued_experts;
     std::vector<size_t> issued_expert_bytes;
     issued_experts.reserve(target.size());
     issued_expert_bytes.reserve(target.size());
-    for (int eid : target) {
-        bool issued = false;
-        size_t expert_bytes = 0;
-        for (const expert_tensor_info & e : exps) {
-            if (e.addr == nullptr || e.n_experts <= 0 ||
-                e.size % static_cast<size_t>(e.n_experts) != 0) continue;
-            const size_t per_expert = e.size / static_cast<size_t>(e.n_experts);
-            if (per_expert == 0 || eid >= e.n_experts) continue;
-            if (static_cast<size_t>(eid) > std::numeric_limits<size_t>::max() / per_expert) continue;
-            const size_t off = static_cast<size_t>(eid) * per_expert;
-            const uintptr_t base = reinterpret_cast<uintptr_t>(e.addr);
-            if (off > std::numeric_limits<uintptr_t>::max() - base) continue;
-            const uintptr_t address = base + off;
-            if (per_expert > std::numeric_limits<uintptr_t>::max() - address) continue;
-            // SLIM-ARC FIX 2026-08-13: posix_madvise 要求页对齐地址；专家切片继承
-            // GGUF 张量的未对齐偏移，直接对切片地址下发 WILLNEED 会 EINVAL，
-            // 导致 issued=0 回归。与 reclaim 路径一致，取内部整页区间下发。
-            const page_range range = interior_page_range(address, per_expert, page_size);
-            if (!range.valid || range.length == 0) continue;
-            void * const addr = reinterpret_cast<void *>(range.address);
-            if (advice_(addr, range.length, POSIX_MADV_WILLNEED) == 0) {
-                expert_bytes = saturating_add(expert_bytes, range.length);
-                issued = true;
-            }
-        }
-        if (issued) {
-            issued_experts.push_back(eid);
-            issued_expert_bytes.push_back(expert_bytes);
-            bytes = saturating_add(bytes, expert_bytes);
-        }
+    for (const int eid : target) {
+        const auto found = bytes_by_expert.find(eid);
+        if (found == bytes_by_expert.end() || found->second == 0) continue;
+        issued_experts.push_back(eid);
+        issued_expert_bytes.push_back(found->second);
     }
     {
         std::lock_guard<std::mutex> lock(expert_state_mtx_);
@@ -887,6 +1174,29 @@ void prefetch_scheduler::dump_metrics() const {
             static_cast<unsigned long long>(router_samples_.load()),
             issued / 1048576.0, hit / 1048576.0, waste / 1048576.0, hr,
             total / 1048576.0);
+    if (router_mlock_enabled_) {
+        std::fprintf(
+            stderr,
+            "[SLIM-ARC-ROUTER] locked_bytes=%llu lock_failures=%llu\n",
+            static_cast<unsigned long long>(router_locked_bytes_.load()),
+            static_cast<unsigned long long>(router_lock_failures_.load()));
+    }
+    if (shared_mlock_enabled_) {
+        std::fprintf(
+            stderr,
+            "[SLIM-ARC-SHARED] locked_bytes=%llu lock_failures=%llu\n",
+            static_cast<unsigned long long>(shared_locked_bytes_.load()),
+            static_cast<unsigned long long>(shared_lock_failures_.load()));
+    }
+    if (expert_random_madv_enabled_ || expert_normal_madv_enabled_) {
+        std::fprintf(
+            stderr,
+            "[SLIM-ARC-EXPERT-MADV] mode=%s calls=%llu bytes=%llu failures=%llu\n",
+            expert_random_madv_enabled_ ? "RANDOM" : "NORMAL",
+            static_cast<unsigned long long>(expert_madv_advice_calls_.load()),
+            static_cast<unsigned long long>(expert_madv_advice_bytes_.load()),
+            static_cast<unsigned long long>(expert_madv_advice_failures_.load()));
+    }
 }
 
 } // namespace slim_arc

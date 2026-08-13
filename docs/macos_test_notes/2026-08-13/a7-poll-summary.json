@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "slim_arc_git_commit": "f7f2de1fe10295cef34f56ea1564d0400dfed46f",
+    "llama_commit": "360e134",
+    "patched_source_sha256": "3f1b862d7a258027528c4b97ce7574e99c0754d7b11ac22b94691fa4c91a18eb",
+    "image_id": "sha256:9262a44aa8afcd3f7e66998bc12b02aeea0534b1eb05b0cca45bfe223da85f42",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "contract": {
+    "memory_gib": 2,
+    "cpu_limit": 8,
+    "prefill_threads": 8,
+    "decode_threads": 6,
+    "read_ahead_kb": 128,
+    "swap_bytes": 0,
+    "n_prompt": 64,
+    "n_gen": 16,
+    "cache_state": "cold"
+  },
+  "poll_50": {
+    "run": "a7-poll50-control-2g-cold",
+    "prefill_tps": 4.451482,
+    "decode_tps": 0.861519,
+    "wall_seconds": 53.39,
+    "major_faults": 488742,
+    "filesystem_input_blocks": 199342224
+  },
+  "poll_100": {
+    "run": "a7-poll100-candidate-2g-cold",
+    "prefill_tps": 4.335867,
+    "decode_tps": 0.741505,
+    "wall_seconds": 58.42,
+    "major_faults": 489088,
+    "filesystem_input_blocks": 200111440
+  },
+  "candidate_relative_percent": {
+    "prefill_tps": -2.597225,
+    "decode_tps": -13.930511,
+    "wall_seconds": 9.421240,
+    "major_faults": 0.070794,
+    "filesystem_input_blocks": 0.385877
+  },
+  "decision": "keep_poll_50_default"
+}

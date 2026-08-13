@@ -83,7 +83,7 @@ def _cgroup(directory: Path, peak: int) -> Path:
 def _runtime_line(waste: int) -> str:
     values = {name: 0 for name in manifest.RUNTIME_COUNTER_FIELDS}
     values["expert_waste_bytes"] = waste
-    return "[SLIM-ARC-RUNTIME] " + " ".join(["schema=1", *(f"{name}={value}" for name, value in values.items())])
+    return "[SLIM-ARC-RUNTIME] " + " ".join(["schema=3", *(f"{name}={value}" for name, value in values.items())])
 
 
 def _write_run(
@@ -330,6 +330,23 @@ def test_rejects_success_with_missing_required_artifact(tmp_path: Path, artifact
     build, campaign = _matrix(tmp_path)
     (tmp_path / "runs/patched-control-cold-r1" / artifact).unlink()
     with pytest.raises(ValueError):
+        tool.build_finals_evidence(tmp_path, build, campaign)
+
+
+def test_rejects_finalist_patched_success_without_collected_runtime_metrics(
+    tmp_path: Path,
+) -> None:
+    build, campaign = _matrix(tmp_path)
+    manifest_path = tmp_path / "runs/patched-control-cold-r1/run-manifest.json"
+    wrapper = _json(manifest_path)
+    wrapper["runtime_metrics"] = []
+    wrapper["runtime_metrics_summary"] = {
+        name: 0 for name in manifest.RUNTIME_COUNTER_FIELDS
+    }
+    wrapper["runtime_metrics_status"] = "disabled"
+    _write_json(manifest_path, wrapper)
+
+    with pytest.raises(ValueError, match="runtime"):
         tool.build_finals_evidence(tmp_path, build, campaign)
 
 

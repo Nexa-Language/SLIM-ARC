@@ -35,6 +35,8 @@ SLIM_ARC_ENV_ALLOWLIST = frozenset(
         "SLIM_ARC_DYNAMIC_MADV",
         "SLIM_ARC_EXPERT_BUDGET",
         "SLIM_ARC_EXPERT_CONF",
+        "SLIM_ARC_EXPERT_MADV_RANDOM",
+        "SLIM_ARC_EXPERT_MADV_NORMAL",
         "SLIM_ARC_EXPERT_POP",
         "SLIM_ARC_EXPERT_RECLAIM_WASTE",
         "SLIM_ARC_EXPERT_RESIDENCY",
@@ -42,9 +44,17 @@ SLIM_ARC_ENV_ALLOWLIST = frozenset(
         "SLIM_ARC_KV_SINK",
         "SLIM_ARC_KV_WINDOW",
         "SLIM_ARC_NO_MADV_RANDOM",
+        "SLIM_ARC_NO_EXPERT_PREFETCH",
         "SLIM_ARC_NO_PREFETCH",
+        "SLIM_ARC_POLL",
+        "SLIM_ARC_PREFILL_THREADS",
         "SLIM_ARC_PRESSURE_ADMISSION",
         "SLIM_ARC_PRESSURE_RESERVE_MB",
+        "SLIM_ARC_DECODE_THREADS",
+        "SLIM_ARC_ROUTER_MLOCK",
+        "SLIM_ARC_ROUTER_PREFETCH",
+        "SLIM_ARC_SHARED_MLOCK",
+        "SLIM_ARC_SLOW_STORAGE",
     }
 )
 
@@ -64,8 +74,8 @@ class RunConfig:
         object.__setattr__(self, "env", MappingProxyType(dict(self.env)))
 
     def validate(self) -> None:
-        if not 2 <= self.memory_gib <= 16:
-            raise ValueError("memory_gib must be between 2 and 16")
+        if not 1 <= self.memory_gib <= 16:
+            raise ValueError("memory_gib must be between 1 and 16")
         if not 1 <= self.cpus <= 8:
             raise ValueError("cpus must be between 1 and 8")
         if not 1 <= self.pp <= 512 or not 1 <= self.tg <= 128:
@@ -85,9 +95,24 @@ class RunConfig:
                 raise ValueError(f"unsupported SLIM-ARC environment variable: {name}")
             if name in {
                 "SLIM_ARC_EXPERT_RECLAIM_WASTE",
+                "SLIM_ARC_EXPERT_MADV_RANDOM",
+                "SLIM_ARC_EXPERT_MADV_NORMAL",
                 "SLIM_ARC_EXPERT_RESIDENCY",
+                "SLIM_ARC_NO_EXPERT_PREFETCH",
+                "SLIM_ARC_ROUTER_MLOCK",
+                "SLIM_ARC_ROUTER_PREFETCH",
+                "SLIM_ARC_SHARED_MLOCK",
+                "SLIM_ARC_SLOW_STORAGE",
             } and value != "1":
                 raise ValueError(f"{name} must be exactly 1")
+            if name in {"SLIM_ARC_PREFILL_THREADS", "SLIM_ARC_DECODE_THREADS"} and (
+                not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 256
+            ):
+                raise ValueError(f"{name} must be an integer between 1 and 256")
+            if name == "SLIM_ARC_POLL" and (
+                not value.isascii() or not value.isdecimal() or not 0 <= int(value) <= 100
+            ):
+                raise ValueError("SLIM_ARC_POLL must be an integer between 0 and 100")
             if ENV_VALUE_PATTERN.fullmatch(value) is None:
                 raise ValueError(f"unsafe value for {name}")
 
@@ -138,6 +163,8 @@ def build_docker_command(
         f"{config.memory_gib}g",
         "--cpus",
         str(config.cpus),
+        "--ulimit",
+        "memlock=536870912:536870912",
         "--env",
         f"VARIANT={config.variant}",
         "--env",

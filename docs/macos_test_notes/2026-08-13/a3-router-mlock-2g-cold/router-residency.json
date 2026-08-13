@@ -1,0 +1,6 @@
+{
+  "lock_failures": 0,
+  "locked_bytes": 201916416,
+  "mechanism": "mlock",
+  "source": "rep-1.stderr.log"
+}

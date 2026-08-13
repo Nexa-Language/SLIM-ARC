@@ -1,0 +1,98 @@
+CGROUP_RELATIVE=/
+=== memory.current ===
+1890758656
+=== memory.max ===
+2147483648
+=== memory.peak ===
+2147483648
+=== memory.events ===
+low 0
+high 0
+max 187666
+oom 0
+oom_kill 0
+oom_group_kill 0
+=== memory.stat ===
+anon 1191936
+file 1844461568
+kernel 44654592
+kernel_stack 32768
+pagetables 102400
+sec_pagetables 0
+percpu 0
+sock 0
+vmalloc 8192
+shmem 0
+zswap 0
+zswapped 0
+file_mapped 2359296
+file_dirty 0
+file_writeback 0
+swapcached 0
+anon_thp 0
+file_thp 0
+shmem_thp 0
+inactive_anon 4096
+active_anon 1175552
+inactive_file 358780928
+active_file 1485680640
+unevictable 0
+slab_reclaimable 43764536
+slab_unreclaimable 227328
+slab 43991864
+workingset_refault_anon 0
+workingset_refault_file 8841597
+workingset_activate_anon 0
+workingset_activate_file 8841329
+workingset_restore_anon 0
+workingset_restore_file 0
+workingset_nodereclaim 193588
+pgscan 35927847
+pgsteal 24321967
+pgscan_kswapd 0
+pgscan_direct 35927847
+pgscan_khugepaged 0
+pgsteal_kswapd 0
+pgsteal_direct 24321967
+pgsteal_khugepaged 0
+pgfault 2803877
+pgmajfault 431428
+pgrefill 629
+pgactivate 145711
+pgdeactivate 0
+pglazyfree 0
+pglazyfreed 0
+zswpin 0
+zswpout 0
+zswpwb 0
+thp_fault_alloc 0
+thp_collapse_alloc 0
+thp_swpout 0
+thp_swpout_fallback 0
+=== memory.swap.current ===
+0
+=== memory.swap.max ===
+0
+=== memory.pressure ===
+some avg10=11.98 avg60=7.52 avg300=2.35 total=8185338
+full avg10=11.98 avg60=7.52 avg300=2.35 total=8185338
+=== cpu.max ===
+800000 100000
+=== cpu.stat ===
+usage_usec 88044669
+user_usec 13671245
+system_usec 74373423
+core_sched.force_idle_usec 0
+nr_periods 652
+nr_throttled 0
+throttled_usec 0
+nr_bursts 0
+burst_usec 0
+=== cpu.pressure ===
+some avg10=0.97 avg60=0.58 avg300=0.16 total=835678
+full avg10=0.95 avg60=0.56 avg300=0.16 total=824767
+=== io.stat ===
+253:16 rbytes=101467193344 wbytes=0 rios=1531877 wios=0 dbytes=0 dios=0
+=== io.pressure ===
+some avg10=40.69 avg60=27.08 avg300=7.81 total=25292485
+full avg10=40.69 avg60=27.08 avg300=7.81 total=25270938
