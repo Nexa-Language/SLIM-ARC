@@ -68,11 +68,11 @@ void test_each_model_owned_runtime_emits_its_exact_machine_line_once() {
     assert(waitpid(child, &status, 0) == child);
     assert(WIFEXITED(status) && WEXITSTATUS(status) == 0);
     const std::string common_suffix =
-        " expert_issued_bytes=0 expert_hit_bytes=0 expert_waste_bytes=0 reclaim_candidates=0 reclaim_calls=0 reclaimed_bytes=0 reclaim_skipped_bytes=0 reclaim_failures=0 residency_samples=0 residency_admitted_experts=0 residency_admitted_bytes=0 residency_skipped_bytes=0 residency_fallbacks=0 pressure_normal=0 pressure_high=0 pressure_critical=0\n";
+        " expert_issued_bytes=0 expert_hit_bytes=0 expert_waste_bytes=0 expert_advice_requests=0 expert_coalesced_ranges=0 expert_covered_bytes=0 expert_advice_failures=0 expert_invalid_ranges=0 weight_requested_bytes=0 weight_covered_bytes=0 weight_issued_bytes=0 weight_skipped_bytes=0 weight_advice_requests=0 weight_coalesced_ranges=0 weight_invalid_ranges=0 weight_advice_failures=0 weight_rounds_throttled=0 reclaim_candidates=0 reclaim_calls=0 reclaimed_bytes=0 reclaim_skipped_bytes=0 reclaim_failures=0 residency_samples=0 residency_admitted_experts=0 residency_admitted_bytes=0 residency_skipped_bytes=0 residency_fallbacks=0 pressure_normal=0 pressure_high=0 pressure_critical=0\n";
     const std::string first_expected =
-        "[SLIM-ARC-RUNTIME] schema=1 expert_samples=1" + common_suffix;
+        "[SLIM-ARC-RUNTIME] schema=2 expert_samples=1" + common_suffix;
     const std::string second_expected =
-        "[SLIM-ARC-RUNTIME] schema=1 expert_samples=2" + common_suffix;
+        "[SLIM-ARC-RUNTIME] schema=2 expert_samples=2" + common_suffix;
     const size_t first = output.find(first_expected);
     const size_t second = output.find(second_expected);
     assert(first != std::string::npos);

@@ -37,6 +37,20 @@ RUNTIME_COUNTER_FIELDS = (
     "expert_issued_bytes",
     "expert_hit_bytes",
     "expert_waste_bytes",
+    "expert_advice_requests",
+    "expert_coalesced_ranges",
+    "expert_covered_bytes",
+    "expert_advice_failures",
+    "expert_invalid_ranges",
+    "weight_requested_bytes",
+    "weight_covered_bytes",
+    "weight_issued_bytes",
+    "weight_skipped_bytes",
+    "weight_advice_requests",
+    "weight_coalesced_ranges",
+    "weight_invalid_ranges",
+    "weight_advice_failures",
+    "weight_rounds_throttled",
     "reclaim_candidates",
     "reclaim_calls",
     "reclaimed_bytes",
@@ -157,7 +171,7 @@ def parse_runtime_metric_line(line: str) -> dict[str, int]:
         fields[name] = value
     if set(fields) != set(RUNTIME_FIELD_NAMES):
         raise ValueError("runtime metric fields do not match the required schema")
-    if fields["schema"] != 1:
+    if fields["schema"] != 2:
         raise ValueError("unsupported runtime metric schema")
     return fields
 
@@ -184,8 +198,13 @@ def _runtime_metrics_summary(metrics: Sequence[Mapping[str, int]]) -> dict[str, 
 
 
 def _runtime_metrics(
-    *, variant: str, outcome: str, repetitions: int, runtime_logs: Sequence[Path]
-) -> list[dict[str, int]]:
+    *,
+    variant: str,
+    outcome: str,
+    repetitions: int,
+    environment: Mapping[str, str],
+    runtime_logs: Sequence[Path],
+) -> tuple[list[dict[str, int]], str]:
     if variant == "baseline":
         for path in runtime_logs:
             if not path.is_file():
@@ -195,12 +214,28 @@ def _runtime_metrics(
                 for line in path.read_text(encoding="utf-8").splitlines()
             ):
                 raise ValueError("baseline runtime log must not contain metrics")
-        return []
+        return [], "not_applicable"
     if outcome != "success":
-        return []
+        return [], "unavailable"
+    runtime_disabled = any(
+        environment.get(name) == "1"
+        for name in ("SLIM_ARC_DISABLE", "SLIM_ARC_NO_PREFETCH")
+    )
+    if runtime_disabled:
+        if len(runtime_logs) not in {0, repetitions}:
+            raise ValueError("runtime-disabled log count must be zero or equal repetitions")
+        for path in runtime_logs:
+            if not path.is_file():
+                raise ValueError(f"runtime log is missing: {path}")
+            if any(
+                line.startswith(RUNTIME_LINE_PREFIX)
+                for line in path.read_text(encoding="utf-8").splitlines()
+            ):
+                raise ValueError("runtime-disabled log must not contain metrics")
+        return [], "disabled"
     if len(runtime_logs) != repetitions:
         raise ValueError("patched success runtime log count must equal repetitions")
-    return [parse_runtime_log(path) for path in runtime_logs]
+    return [parse_runtime_log(path) for path in runtime_logs], "collected"
 
 
 def build_manifest(
@@ -236,10 +271,12 @@ def build_manifest(
     build = _read_build_manifest(build_manifest_path)
     peak_path = cgroup_dir / "memory.peak"
     memory_peak = _read_int(peak_path) if peak_path.is_file() else None
-    runtime_metrics = _runtime_metrics(
+    slim_arc_environment = collect_slim_arc_environment(environment)
+    runtime_metrics, runtime_metrics_status = _runtime_metrics(
         variant=variant,
         outcome=outcome,
         repetitions=repetitions,
+        environment=slim_arc_environment,
         runtime_logs=runtime_logs,
     )
 
@@ -277,8 +314,9 @@ def build_manifest(
         "slim_arc_git_commit": build["SLIM_ARC_GIT_COMMIT"],
         "slim_arc_build_context_sha256": build["SLIM_ARC_BUILD_CONTEXT_SHA256"],
         "patched_source_sha256": build["PATCHED_SOURCE_SHA256"],
-        "environment": collect_slim_arc_environment(environment),
+        "environment": slim_arc_environment,
         "runtime_metrics": runtime_metrics,
+        "runtime_metrics_status": runtime_metrics_status,
         "runtime_metrics_summary": _runtime_metrics_summary(runtime_metrics),
     }
 

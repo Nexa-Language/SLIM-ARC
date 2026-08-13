@@ -17,7 +17,7 @@ CACHES = ("cold", "warm")
 TERMINAL_OUTCOMES = frozenset({"success", "oom", "timeout", "error"})
 CAMPAIGN_OUTCOMES = TERMINAL_OUTCOMES | {"interrupted"}
 COUNTERS = (
-    "expert_samples", "expert_issued_bytes", "expert_hit_bytes", "expert_waste_bytes", "reclaim_candidates", "reclaim_calls", "reclaimed_bytes", "reclaim_skipped_bytes", "reclaim_failures", "residency_samples", "residency_admitted_experts", "residency_admitted_bytes", "residency_skipped_bytes", "residency_fallbacks", "pressure_normal", "pressure_high", "pressure_critical",
+    "expert_samples", "expert_issued_bytes", "expert_hit_bytes", "expert_waste_bytes", "expert_advice_requests", "expert_coalesced_ranges", "expert_covered_bytes", "expert_advice_failures", "expert_invalid_ranges", "weight_requested_bytes", "weight_covered_bytes", "weight_issued_bytes", "weight_skipped_bytes", "weight_advice_requests", "weight_coalesced_ranges", "weight_invalid_ranges", "weight_advice_failures", "weight_rounds_throttled", "reclaim_candidates", "reclaim_calls", "reclaimed_bytes", "reclaim_skipped_bytes", "reclaim_failures", "residency_samples", "residency_admitted_experts", "residency_admitted_bytes", "residency_skipped_bytes", "residency_fallbacks", "pressure_normal", "pressure_high", "pressure_critical",
 )
 SHA1 = re.compile(r"^[0-9a-f]{40}$")
 SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -295,12 +295,15 @@ def _success_metrics(directory: Path, wrapper: Mapping[str, object], variant: st
     if [path.name for path in stdout] != ["rep-1.stdout.log"] or [path.name for path in timing] != ["rep-1.time.txt"]:
         raise ValueError("repetition artifact mismatch")
     metrics = wrapper.get("runtime_metrics")
+    expected_status = "not_applicable" if variant == "baseline" else "collected"
+    if wrapper.get("runtime_metrics_status") != expected_status:
+        raise ValueError("invalid runtime metrics status")
     if not isinstance(metrics, list) or (variant == "baseline" and metrics) or (variant == "patched" and len(metrics) != 1):
         raise ValueError("runtime metrics repetition mismatch")
     waste = 0.0
     if metrics:
         metric = _obj(metrics[0], "runtime metric")
-        if set(metric) != {"schema", *COUNTERS} or metric.get("schema") != 1:
+        if set(metric) != {"schema", *COUNTERS} or metric.get("schema") != 2:
             raise ValueError("invalid runtime metric schema")
         for name in COUNTERS:
             _int(metric, name)

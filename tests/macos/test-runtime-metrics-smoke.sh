@@ -119,7 +119,7 @@ from pathlib import Path
 manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert manifest["schema_version"] == 1
 assert len(manifest["runtime_metrics"]) == 1
-assert manifest["runtime_metrics"][0]["schema"] == 1
+assert manifest["runtime_metrics"][0]["schema"] == 2
 assert manifest["runtime_metrics_summary"]["expert_samples"] == 0
 assert manifest["memory_swap_limit_bytes"] == 0
 assert manifest["image_id"].startswith("sha256:")

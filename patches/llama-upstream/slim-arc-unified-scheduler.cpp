@@ -86,15 +86,30 @@ unified_io_scheduler::unified_io_scheduler(size_t total_budget_bytes,
 unified_io_scheduler::~unified_io_scheduler() {
     if (weight_prefetcher_ != nullptr) {
         const expert_runtime_metrics expert = weight_prefetcher_->expert_runtime_statistics();
+        const prefetch_budget_stats weight = weight_prefetcher_->budget_stats();
         const expert_reclaim_stats reclaim = weight_prefetcher_->expert_reclaim_statistics();
         const expert_residency_runtime_stats residency = weight_prefetcher_->expert_residency_statistics();
         std::fprintf(
             stderr,
-            "[SLIM-ARC-RUNTIME] schema=1 expert_samples=%llu expert_issued_bytes=%llu expert_hit_bytes=%llu expert_waste_bytes=%llu reclaim_candidates=%llu reclaim_calls=%llu reclaimed_bytes=%llu reclaim_skipped_bytes=%llu reclaim_failures=%llu residency_samples=%llu residency_admitted_experts=%llu residency_admitted_bytes=%llu residency_skipped_bytes=%llu residency_fallbacks=%llu pressure_normal=%llu pressure_high=%llu pressure_critical=%llu\n",
+            "[SLIM-ARC-RUNTIME] schema=2 expert_samples=%llu expert_issued_bytes=%llu expert_hit_bytes=%llu expert_waste_bytes=%llu expert_advice_requests=%llu expert_coalesced_ranges=%llu expert_covered_bytes=%llu expert_advice_failures=%llu expert_invalid_ranges=%llu weight_requested_bytes=%llu weight_covered_bytes=%llu weight_issued_bytes=%llu weight_skipped_bytes=%llu weight_advice_requests=%llu weight_coalesced_ranges=%llu weight_invalid_ranges=%llu weight_advice_failures=%llu weight_rounds_throttled=%llu reclaim_candidates=%llu reclaim_calls=%llu reclaimed_bytes=%llu reclaim_skipped_bytes=%llu reclaim_failures=%llu residency_samples=%llu residency_admitted_experts=%llu residency_admitted_bytes=%llu residency_skipped_bytes=%llu residency_fallbacks=%llu pressure_normal=%llu pressure_high=%llu pressure_critical=%llu\n",
             static_cast<unsigned long long>(expert.samples),
             static_cast<unsigned long long>(expert.issued_bytes),
             static_cast<unsigned long long>(expert.hit_bytes),
             static_cast<unsigned long long>(expert.waste_bytes),
+            static_cast<unsigned long long>(expert.advice_requests),
+            static_cast<unsigned long long>(expert.coalesced_ranges),
+            static_cast<unsigned long long>(expert.covered_bytes),
+            static_cast<unsigned long long>(expert.advice_failures),
+            static_cast<unsigned long long>(expert.invalid_ranges),
+            static_cast<unsigned long long>(weight.requested_bytes),
+            static_cast<unsigned long long>(weight.covered_bytes),
+            static_cast<unsigned long long>(weight.issued_bytes),
+            static_cast<unsigned long long>(weight.skipped_bytes),
+            static_cast<unsigned long long>(weight.advice_requests),
+            static_cast<unsigned long long>(weight.coalesced_ranges),
+            static_cast<unsigned long long>(weight.invalid_ranges),
+            static_cast<unsigned long long>(weight.madvise_failures),
+            static_cast<unsigned long long>(weight.rounds_throttled),
             static_cast<unsigned long long>(reclaim.candidate_experts),
             static_cast<unsigned long long>(reclaim.calls),
             static_cast<unsigned long long>(reclaim.reclaimed_bytes),
