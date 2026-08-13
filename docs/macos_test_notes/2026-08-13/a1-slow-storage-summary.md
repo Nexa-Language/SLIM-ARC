@@ -33,6 +33,7 @@ repetition.
 | A1 decode NORMAL, 2 GiB | cold | pressure policy, decode-only `MADV_NORMAL` | 74.94 s | 3.311175 t/s | 0.546979 t/s | 112.060 GB | 297,675 | success, negative |
 | A1 normal | cold | same as A1 pressure, dynamic advice disabled | 64.62 s | 3.499077 t/s | 0.682863 t/s | 117.127 GB | 251,503 | success, negative |
 | A1 random | cold | latest-wins + decode `MADV_RANDOM` | >120 s | NA | NA | NA | NA | stopped, negative |
+| A2 router-only, 2 GiB | cold | all-router prefetch + no expert prefetch | 68.76 s | 3.638826 t/s | 0.703270 t/s | 102.698 GB | 409,570 | success, negative |
 
 The best cold diagnostic reduced wall time by 18.88%, increased prefill by
 12.28%, increased decode throughput by 36.00%, and reduced device reads by
@@ -53,6 +54,13 @@ Confidence plus budget reduced expert advice from 13.80 GB to 3.97 GB and
 raised its byte hit rate from 30.72% to 47.67%, but it still lost to issuing no
 speculative expert advice. Decode-only `MADV_NORMAL` was also clearly
 negative; the initial and decode `SEQUENTIAL` hints remain the candidate.
+
+A2 isolated the deterministic router path: 201.7 MB per graph, 3.43 GB of
+successful advice over 17 graphs, and zero expert advice. Reissuing the whole
+router path every graph increased wall time by 20.29% and reduced decode by
+12.05% relative to the 2 GiB pressure candidate despite nearly identical
+device-read bytes. The next experiment therefore changes this path from
+repeated `WILLNEED` to a one-time bounded resident set.
 
 ## Interpretation
 
