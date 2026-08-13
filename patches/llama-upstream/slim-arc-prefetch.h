@@ -51,6 +51,10 @@ struct prefetch_budget_stats {
     uint64_t skipped_bytes{0};
     uint64_t rounds_throttled{0};
     uint64_t madvise_failures{0};
+    uint64_t advice_requests{0};
+    uint64_t coalesced_ranges{0};
+    uint64_t covered_bytes{0};
+    uint64_t invalid_ranges{0};
 };
 
 struct expert_reclaim_stats {
@@ -194,6 +198,10 @@ class prefetch_scheduler {
     std::atomic<uint64_t>   budget_skipped_bytes_{0};
     std::atomic<uint64_t>   budget_rounds_throttled_{0};
     std::atomic<uint64_t>   budget_madvise_failures_{0};
+    std::atomic<uint64_t>   budget_advice_requests_{0};
+    std::atomic<uint64_t>   budget_coalesced_ranges_{0};
+    std::atomic<uint64_t>   budget_covered_bytes_{0};
+    std::atomic<uint64_t>   budget_invalid_ranges_{0};
 
     // ---- SLIM-ARC FIX 2026-08-09: 专家预取可观测性指标（改进 1）----
     std::atomic<size_t>     expert_prefetch_bytes_{0};  // 实际 WILLNEED 下发字节

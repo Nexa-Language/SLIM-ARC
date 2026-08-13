@@ -208,6 +208,124 @@ void test_scheduler_enforces_budget_and_counts_success() {
     assert(munmap(mapping, 2 * page_size) == 0);
 }
 
+void test_scheduler_aligns_and_coalesces_overlapping_tensor_ranges() {
+    const long raw_page_size = sysconf(_SC_PAGESIZE);
+    assert(raw_page_size > 0);
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+    void * const mapping = mmap(
+        nullptr,
+        3 * page_size,
+        PROT_READ | PROT_WRITE,
+        MAP_PRIVATE | MAP_ANON,
+        -1,
+        0);
+    assert(mapping != MAP_FAILED);
+    const uintptr_t base = reinterpret_cast<uintptr_t>(mapping);
+    std::atomic<size_t> callback_count{0};
+    {
+        slim_arc::prefetch_scheduler scheduler{
+            1,
+            1,
+            {},
+            [&](void * address, size_t length, int advice) {
+                assert(advice == POSIX_MADV_WILLNEED);
+                assert(reinterpret_cast<uintptr_t>(address) == base);
+                assert(length == 2 * page_size);
+                assert(reinterpret_cast<uintptr_t>(address) % page_size == 0);
+                assert(length % page_size == 0);
+                callback_count.fetch_add(1);
+                return 0;
+            },
+            [raw_page_size] { return raw_page_size; }};
+        scheduler.register_tensor(
+            "blk.1.first",
+            reinterpret_cast<void *>(base + 32),
+            page_size,
+            1);
+        scheduler.register_tensor(
+            "blk.1.second",
+            reinterpret_cast<void *>(base + page_size + 128),
+            page_size / 2,
+            1);
+        scheduler.set_memory_budget(2 * page_size);
+        scheduler.notify_layer_compute(0);
+        wait_for_rounds(scheduler, 1);
+        scheduler.shutdown();
+
+        const auto stats = scheduler.budget_stats();
+        assert(callback_count.load() == 1);
+        assert(stats.requested_bytes == page_size + page_size / 2);
+        assert(stats.covered_bytes == 2 * page_size);
+        assert(stats.issued_bytes == 2 * page_size);
+        assert(stats.skipped_bytes == 0);
+        assert(stats.advice_requests == 2);
+        assert(stats.coalesced_ranges == 1);
+        assert(stats.invalid_ranges == 0);
+        assert(stats.madvise_failures == 0);
+    }
+    assert(munmap(mapping, 3 * page_size) == 0);
+}
+
+void test_scheduler_counts_aligned_advice_failure_without_issued_bytes() {
+    constexpr long page_size = 4096;
+    std::atomic<size_t> callback_count{0};
+    slim_arc::prefetch_scheduler scheduler{
+        1,
+        1,
+        {},
+        [&](void * address, size_t length, int advice) {
+            assert(advice == POSIX_MADV_WILLNEED);
+            assert(reinterpret_cast<uintptr_t>(address) == 0x2000);
+            assert(length == 0x2000);
+            callback_count.fetch_add(1);
+            return 22;
+        },
+        [] { return page_size; }};
+    scheduler.register_tensor("blk.1.unaligned", reinterpret_cast<void *>(0x2003), 0x1000, 1);
+    scheduler.set_memory_budget(0x2000);
+    scheduler.notify_layer_compute(0);
+    wait_for_rounds(scheduler, 1);
+    scheduler.shutdown();
+
+    const auto stats = scheduler.budget_stats();
+    assert(callback_count.load() == 1);
+    assert(stats.requested_bytes == 0x1000);
+    assert(stats.covered_bytes == 0x2000);
+    assert(stats.issued_bytes == 0);
+    assert(stats.advice_requests == 1);
+    assert(stats.coalesced_ranges == 1);
+    assert(stats.invalid_ranges == 0);
+    assert(stats.madvise_failures == 1);
+}
+
+void test_scheduler_rejects_invalid_page_size_without_advice() {
+    std::atomic<size_t> callback_count{0};
+    slim_arc::prefetch_scheduler scheduler{
+        1,
+        1,
+        {},
+        [&](void *, size_t, int) {
+            callback_count.fetch_add(1);
+            return 0;
+        },
+        [] { return 0; }};
+    scheduler.register_tensor("blk.1.weight", reinterpret_cast<void *>(0x2000), 0x1000, 1);
+    scheduler.set_memory_budget(0x1000);
+    scheduler.notify_layer_compute(0);
+    wait_for_rounds(scheduler, 1);
+    scheduler.shutdown();
+
+    const auto stats = scheduler.budget_stats();
+    assert(callback_count.load() == 0);
+    assert(stats.requested_bytes == 0x1000);
+    assert(stats.covered_bytes == 0);
+    assert(stats.issued_bytes == 0);
+    assert(stats.advice_requests == 1);
+    assert(stats.coalesced_ranges == 0);
+    assert(stats.invalid_ranges == 1);
+    assert(stats.madvise_failures == 1);
+}
+
 void test_scheduler_counts_madvise_failure_without_issuing_bytes() {
     const long raw_page_size = sysconf(_SC_PAGESIZE);
     assert(raw_page_size > 0);
@@ -975,6 +1093,9 @@ int main() {
     test_confidence_flag_requires_exact_one();
     test_popularity_accepts_only_complete_range_zero_to_sixty_four();
     test_scheduler_enforces_budget_and_counts_success();
+    test_scheduler_aligns_and_coalesces_overlapping_tensor_ranges();
+    test_scheduler_counts_aligned_advice_failure_without_issued_bytes();
+    test_scheduler_rejects_invalid_page_size_without_advice();
     test_scheduler_counts_madvise_failure_without_issuing_bytes();
     test_zero_expert_budget_disables_expert_prefetch();
     test_cached_expert_snapshot_does_not_change_after_router_update();

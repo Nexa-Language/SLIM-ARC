@@ -6,6 +6,7 @@
 #include "slim-arc-prefetch.h"
 
 #include "slim-arc-expert-reclaim.h"
+#include "slim-arc-page-range.h"
 
 #include <algorithm>
 #include <charconv>
@@ -255,6 +256,10 @@ prefetch_budget_stats prefetch_scheduler::budget_stats() const {
         budget_skipped_bytes_.load(),
         budget_rounds_throttled_.load(),
         budget_madvise_failures_.load(),
+        budget_advice_requests_.load(),
+        budget_coalesced_ranges_.load(),
+        budget_covered_bytes_.load(),
+        budget_invalid_ranges_.load(),
     };
 }
 
@@ -278,22 +283,67 @@ void prefetch_scheduler::worker_loop() {
             }
         }
         if (request_claim_hook_) request_claim_hook_();
-        std::vector<size_t> item_sizes;
-        item_sizes.reserve(items.size());
-        for (const auto & item : items) item_sizes.push_back(item.size);
-
         uint64_t requested{0};
+        for (const tensor_prefetch_info & item : items) {
+            requested = saturating_add(requested, static_cast<uint64_t>(item.size));
+        }
+        const uint64_t advice_requests = static_cast<uint64_t>(items.size());
+        uint64_t invalid_ranges{0};
+        std::vector<page_range> planned_ranges;
+        planned_ranges.reserve(items.size());
+        const long raw_page_size = page_size_query_();
+        if (raw_page_size <= 0) {
+            invalid_ranges = advice_requests;
+        } else {
+            const size_t page_size = static_cast<size_t>(raw_page_size);
+            for (const tensor_prefetch_info & item : items) {
+                const page_range range = covering_page_range(
+                    reinterpret_cast<uintptr_t>(item.addr),
+                    item.size,
+                    page_size);
+                if (!range.valid) {
+                    invalid_ranges = saturating_add(invalid_ranges, uint64_t{1});
+                    continue;
+                }
+                planned_ranges.push_back(range);
+            }
+        }
+
+        page_range_set coalesced = coalesce_page_ranges(std::move(planned_ranges));
+        if (!coalesced.valid) {
+            invalid_ranges = saturating_add(
+                invalid_ranges,
+                static_cast<uint64_t>(coalesced.input_ranges));
+            coalesced.ranges.clear();
+        }
+
+        uint64_t covered{0};
+        for (const page_range & range : coalesced.ranges) {
+            covered = saturating_add(covered, static_cast<uint64_t>(range.length));
+        }
+
+        std::vector<page_range> selected;
+        selected.reserve(coalesced.ranges.size());
         uint64_t skipped{0};
-        const uint64_t budget = memory_budget_.load();
-        const auto selected = select_prefetch_items(item_sizes, budget, &requested, &skipped);
+        uint64_t remaining = memory_budget_.load();
+        const size_t page_size = raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 0;
+        for (const page_range & range : coalesced.ranges) {
+            const uint64_t available = std::min<uint64_t>(remaining, range.length);
+            const uint64_t admitted = page_size == 0 ? 0 : available - available % page_size;
+            if (admitted > 0) {
+                selected.push_back({range.address, static_cast<size_t>(admitted), 0, true, 0});
+                remaining -= admitted;
+            }
+            skipped = saturating_add(skipped, static_cast<uint64_t>(range.length) - admitted);
+        }
+
         uint64_t issued{0};
-        uint64_t failures{0};
-        for (const size_t index : selected) {
-            const tensor_prefetch_info & tensor = items[index];
-            if (advice_(tensor.addr, tensor.size, POSIX_MADV_WILLNEED) == 0) {
-                issued = saturating_add(issued, static_cast<uint64_t>(tensor.size));
+        uint64_t failures = invalid_ranges;
+        for (const page_range & range : selected) {
+            if (advice_(reinterpret_cast<void *>(range.address), range.length, POSIX_MADV_WILLNEED) == 0) {
+                issued = saturating_add(issued, static_cast<uint64_t>(range.length));
             } else {
-                ++failures;
+                failures = saturating_add(failures, uint64_t{1});
             }
         }
 
@@ -301,6 +351,12 @@ void prefetch_scheduler::worker_loop() {
         atomic_saturating_add(budget_issued_bytes_, issued);
         atomic_saturating_add(budget_skipped_bytes_, skipped);
         atomic_saturating_add(budget_madvise_failures_, failures);
+        atomic_saturating_add(budget_advice_requests_, advice_requests);
+        atomic_saturating_add(
+            budget_coalesced_ranges_,
+            static_cast<uint64_t>(coalesced.ranges.size()));
+        atomic_saturating_add(budget_covered_bytes_, covered);
+        atomic_saturating_add(budget_invalid_ranges_, invalid_ranges);
         if (skipped > 0) {
             atomic_saturating_add(budget_rounds_throttled_, uint64_t{1});
         }
