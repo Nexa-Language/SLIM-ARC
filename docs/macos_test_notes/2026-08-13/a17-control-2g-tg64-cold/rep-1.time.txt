@@ -1,0 +1,23 @@
+	Command being timed: "/opt/llama-patched/build/bin/llama-bench --model /models/model.gguf --threads 8 --poll 50 --n-prompt 64 --n-gen 64 --n-depth 0 --repetitions 1 --output jsonl --no-warmup --n-gpu-layers 0 --load-mode mmap --offline"
+	User time (seconds): 26.44
+	System time (seconds): 229.47
+	Percent of CPU this job got: 277%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:32.37
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 2083544
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 1028236
+	Minor (reclaiming a frame) page faults: 4471617
+	Voluntary context switches: 1955385
+	Involuntary context switches: 36080
+	Swaps: 0
+	File system inputs: 453055720
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0
