@@ -23,10 +23,14 @@ repetition.
 | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | --- |
 | A0 aligned | cold | aligned/coalesced advice | 70.46 s | 3.519132 t/s | 0.587988 t/s | 115.563 GB | 397,366 | success |
 | A1 latest | cold | slow-storage latest-wins | 61.33 s | 3.912382 t/s | 0.687312 t/s | 114.948 GB | 406,709 | success |
-| A1 pressure | cold | latest-wins + pressure admission, 512 MiB reserve | **57.16 s** | **3.951332 t/s** | **0.799665 t/s** | **102.247 GB** | 409,985 | success |
-| A1 pressure | warm | same as above | 49.49 s | 4.267432 t/s | 1.212909 t/s | 78.100 GB | 261,503 | success |
+| A1 pressure, 2 GiB | cold | latest-wins + pressure admission, 512 MiB reserve | **57.16 s** | **3.951332 t/s** | **0.799665 t/s** | **102.247 GB** | 409,985 | success |
+| A1 pressure, 2 GiB | warm | same as above | 49.49 s | 4.267432 t/s | 1.212909 t/s | 78.100 GB | 261,503 | success |
 | A1 pressure, 1 GiB | cold | same policy, 1 GiB memory cap | 59.46 s | 3.544539 t/s | 0.802944 t/s | 102.439 GB | 418,176 | success |
 | A1 pressure, 1 GiB | warm | same policy, 1 GiB memory cap | 57.27 s | 3.593174 t/s | 0.802087 t/s | 98.100 GB | 389,402 | success |
+| A1 pressure, 4 GiB | cold | same policy, 4 GiB memory cap | 57.92 s | 3.387624 t/s | 1.023154 t/s | 87.055 GB | 298,402 | success |
+| A1 latest, 4 GiB | cold | latest-wins weight and expert prefetch | 64.46 s | 3.977736 t/s | 0.649079 t/s | 113.120 GB | 393,082 | success, negative |
+| A1 confidence, 4 GiB | cold | latest-wins + expert confidence and budget | 68.26 s | 3.589438 t/s | 0.609960 t/s | 104.001 GB | 392,853 | success, negative |
+| A1 decode NORMAL, 2 GiB | cold | pressure policy, decode-only `MADV_NORMAL` | 74.94 s | 3.311175 t/s | 0.546979 t/s | 112.060 GB | 297,675 | success, negative |
 | A1 normal | cold | same as A1 pressure, dynamic advice disabled | 64.62 s | 3.499077 t/s | 0.682863 t/s | 117.127 GB | 251,503 | success, negative |
 | A1 random | cold | latest-wins + decode `MADV_RANDOM` | >120 s | NA | NA | NA | NA | stopped, negative |
 
@@ -43,9 +47,16 @@ device reads by 11.36%. Relative to the 2 GiB cold candidate, it traded 10.30%
 of prefill throughput for half the physical-memory limit while decode was
 0.41% higher in the observed run.
 
+At 4 GiB, pressure admission reduced device reads by 23.04% and improved
+decode throughput by 57.63% relative to latest-wins weight/expert prefetch.
+Confidence plus budget reduced expert advice from 13.80 GB to 3.97 GB and
+raised its byte hit rate from 30.72% to 47.67%, but it still lost to issuing no
+speculative expert advice. Decode-only `MADV_NORMAL` was also clearly
+negative; the initial and decode `SEQUENTIAL` hints remain the candidate.
+
 ## Interpretation
 
-At a 1--2 GiB physical-memory cap, the active layer/expert `WILLNEED` streams
+At a 1--4 GiB physical-memory cap, the active layer/expert `WILLNEED` streams
 compete with near-term demand-faulted pages. Pressure admission set both
 weight and expert issued bytes to zero and produced the best cold result,
 while retaining the initial whole-mapping sequential access hint. Disabling
