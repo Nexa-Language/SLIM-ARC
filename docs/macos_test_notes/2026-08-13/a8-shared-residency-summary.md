@@ -19,5 +19,14 @@ reduced wall time by **5.40%**, major faults by **2.97%**, and input blocks by
 zero failures, completed at the 2 GiB peak, used zero swap, and did not OOM.
 
 `SLIM_ARC_SHARED_MLOCK=1` is promoted as the 2 GiB finalist candidate. It remains
-opt-in until the 1 GiB boundary and the remote board are profiled, because pinned
-pages reduce the remaining general page-cache capacity.
+opt-in until the remote board is profiled, because pinned pages reduce the
+remaining general page-cache capacity.
+
+## 1 GiB boundary
+
+At 1 GiB, the same paired experiment continued to reduce major faults by 5.45%
+and input blocks by 1.76%, but median prefill fell 3.27%, decode fell 4.03%, and
+wall time increased 0.92%. The second candidate run was especially slow,
+showing that reserving 92.4 MB makes the remaining page cache too fragile at
+this tier. The finalist policy therefore enables shared residency at 2 GiB and
+disables it at 1 GiB.

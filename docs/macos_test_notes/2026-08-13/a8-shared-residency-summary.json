@@ -38,5 +38,17 @@
     "shared_resident":{"sample_count":2,"prefill_tps":4.6398825,"decode_tps":0.886365,"wall_seconds":51.51,"major_faults":474053.5,"filesystem_input_blocks":196913124},
     "candidate_relative_percent":{"prefill_tps":3.930347,"decode_tps":3.072589,"wall_seconds":-5.399449,"major_faults":-2.970924,"filesystem_input_blocks":-1.323985}
   },
-  "decision": "promote_shared_residency_for_2g"
+  "one_gib_boundary": {
+    "control_runs": [
+      {"run":"a8-shared-control-1g-cold","prefill_tps":3.966620,"decode_tps":0.781289,"wall_seconds":56.29,"major_faults":503265,"filesystem_input_blocks":202224608},
+      {"run":"a8-shared-control-r2-1g-cold","prefill_tps":3.843843,"decode_tps":0.712585,"wall_seconds":61.00,"major_faults":487351,"filesystem_input_blocks":201714544}
+    ],
+    "candidate_runs": [
+      {"run":"a8-shared-mlock-1g-cold","prefill_tps":4.023884,"decode_tps":0.825492,"wall_seconds":54.09,"major_faults":481865,"filesystem_input_blocks":198497824,"locked_bytes":92405760,"lock_failures":0},
+      {"run":"a8-shared-mlock-r2-1g-cold","prefill_tps":3.531121,"decode_tps":0.608215,"wall_seconds":64.28,"major_faults":454810,"filesystem_input_blocks":198339560,"locked_bytes":92405760,"lock_failures":0}
+    ],
+    "median_relative_percent":{"prefill_tps":-3.270715,"decode_tps":-4.027582,"wall_seconds":0.920795,"major_faults":-5.445198,"filesystem_input_blocks":-1.758128},
+    "decision": "disable_at_1g"
+  },
+  "decision": "promote_at_2g_disable_at_1g"
 }
