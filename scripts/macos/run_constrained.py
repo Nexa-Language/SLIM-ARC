@@ -65,8 +65,8 @@ class RunConfig:
         object.__setattr__(self, "env", MappingProxyType(dict(self.env)))
 
     def validate(self) -> None:
-        if not 2 <= self.memory_gib <= 16:
-            raise ValueError("memory_gib must be between 2 and 16")
+        if not 1 <= self.memory_gib <= 16:
+            raise ValueError("memory_gib must be between 1 and 16")
         if not 1 <= self.cpus <= 8:
             raise ValueError("cpus must be between 1 and 8")
         if not 1 <= self.pp <= 512 or not 1 <= self.tg <= 128:

@@ -55,6 +55,18 @@ def test_no_swap_docker_limits_are_exact(tmp_path: Path) -> None:
     )
 
 
+def test_allows_one_gib_extreme_memory_diagnostic(tmp_path: Path) -> None:
+    command = run_constrained.build_docker_command(
+        config(memory_gib=1),
+        tmp_path,
+        container_name="slim-arc-run-test",
+        image_id=image_id(),
+    )
+
+    assert command[command.index("--memory") + 1] == "1g"
+    assert command[command.index("--memory-swap") + 1] == "1g"
+
+
 def image_id() -> str:
     return "sha256:" + "a" * 64
 
@@ -85,7 +97,7 @@ def test_rejects_malformed_inspected_image_identity(monkeypatch: pytest.MonkeyPa
     "cfg",
     [
         config(memory_gib=17),
-        config(memory_gib=1),
+        config(memory_gib=0),
         config(cpus=9),
         config(timeout_seconds=1),
         config(variant="unknown"),
