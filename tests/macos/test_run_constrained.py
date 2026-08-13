@@ -226,6 +226,21 @@ def test_pressure_environment_is_allowlisted() -> None:
     cfg.validate()
 
 
+@pytest.mark.parametrize("value", ["1", "32", "64"])
+def test_allows_bounded_layer_local_expert_pipeline(value: str) -> None:
+    cfg = config(env={"SLIM_ARC_EXPERT_PIPELINE_MB": value})
+
+    cfg.validate()
+
+
+@pytest.mark.parametrize("value", ["", "0", "65", "-1", "1.5", "true"])
+def test_rejects_unbounded_layer_local_expert_pipeline(value: str) -> None:
+    cfg = config(env={"SLIM_ARC_EXPERT_PIPELINE_MB": value})
+
+    with pytest.raises(ValueError, match="SLIM_ARC_EXPERT_PIPELINE_MB"):
+        cfg.validate()
+
+
 @pytest.mark.parametrize(
     ("name", "value"),
     [

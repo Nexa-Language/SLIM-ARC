@@ -200,10 +200,22 @@ def patch_context(filepath: str) -> None:
 
     compute = "    auto status = ggml_backend_sched_graph_compute_async(sched.get(), gf);"
     precompute = r'''    auto slim_arc_runtime = slim_arc::acquire_runtime();
+    const char * slim_arc_inline_router_raw = std::getenv("SLIM_ARC_INLINE_ROUTER");
+    const bool slim_arc_inline_router = slim_arc_runtime && !batched && cparams.cb_eval == nullptr &&
+        slim_arc_inline_router_raw != nullptr && std::strcmp(slim_arc_inline_router_raw, "1") == 0;
+    const char * slim_arc_expert_pipeline_raw = std::getenv("SLIM_ARC_EXPERT_PIPELINE_MB");
+    char * slim_arc_expert_pipeline_end = nullptr;
+    const long slim_arc_expert_pipeline_mb = slim_arc_expert_pipeline_raw == nullptr ? 0 :
+        std::strtol(slim_arc_expert_pipeline_raw, &slim_arc_expert_pipeline_end, 10);
+    const size_t pipeline_budget_bytes = slim_arc_inline_router && slim_arc_expert_pipeline_raw != nullptr &&
+        slim_arc_expert_pipeline_end != slim_arc_expert_pipeline_raw && *slim_arc_expert_pipeline_end == '\0' &&
+        slim_arc_expert_pipeline_mb >= 1 && slim_arc_expert_pipeline_mb <= 64 ?
+        static_cast<size_t>(slim_arc_expert_pipeline_mb) << 20 : 0;
+    const bool slim_arc_expert_pipeline = pipeline_budget_bytes > 0;
     std::vector<uint64_t> expert_generation_tokens;
+    int slim_arc_min_layer = INT_MAX;
+    int slim_arc_max_layer = -1;
     if (slim_arc_runtime) {
-        int min_layer = INT_MAX;
-        int max_layer = -1;
         const int n_nodes = ggml_graph_n_nodes(gf);
         for (int i = 0; i < n_nodes; ++i) {
             struct ggml_tensor * tensor = ggml_graph_node(gf, i);
@@ -214,37 +226,48 @@ def patch_context(filepath: str) -> None:
                 if (dash != nullptr && dash[1] >= '0' && dash[1] <= '9') layer = atoi(dash + 1);
             }
             if (layer >= 0) {
-                min_layer = std::min(min_layer, layer);
-                max_layer = std::max(max_layer, layer);
+                slim_arc_min_layer = std::min(slim_arc_min_layer, layer);
+                slim_arc_max_layer = std::max(slim_arc_max_layer, layer);
             }
         }
-        if (min_layer != INT_MAX && max_layer >= 0) {
-            expert_generation_tokens.resize(static_cast<size_t>(max_layer) + 1, 0);
+        if (slim_arc_min_layer != INT_MAX && slim_arc_max_layer >= 0) {
+            expert_generation_tokens.resize(static_cast<size_t>(slim_arc_max_layer) + 1, 0);
             auto & scheduler = slim_arc_runtime.prefetch();
             auto & unified = slim_arc_runtime.unified();
             const char * slow_storage_raw = std::getenv("SLIM_ARC_SLOW_STORAGE");
             const bool slow_storage = slow_storage_raw != nullptr && std::strcmp(slow_storage_raw, "1") == 0;
             scheduler.set_phase(batched ? slim_arc::compute_phase::PREFILL : slim_arc::compute_phase::DECODE);
             unified.set_phase(batched ? slim_arc::runtime_phase::PREFILL_SHORT : slim_arc::runtime_phase::MOE_DECODE);
-            unified.tick(min_layer, 3);
-            if (!slow_storage && !batched && max_layer > min_layer) {
-                for (int layer = min_layer + scheduler.effective_window() + 1; layer <= max_layer; ++layer) scheduler.notify_layer_compute(layer);
-            }
-            for (int layer = min_layer; layer <= max_layer; ++layer) {
-                const std::vector<int> experts = scheduler.cached_experts_snapshot(layer);
-                if (!experts.empty()) expert_generation_tokens[static_cast<size_t>(layer)] =
-                    scheduler.prefetch_experts(layer, experts.data(), static_cast<int>(experts.size()));
+            unified.tick(slim_arc_min_layer, 3);
+            if (!slow_storage && !batched && slim_arc_max_layer > slim_arc_min_layer) {
+                for (int layer = slim_arc_min_layer + scheduler.effective_window() + 1;
+                     layer <= slim_arc_max_layer; ++layer) scheduler.notify_layer_compute(layer);
             }
         }
     }
-    const char * slim_arc_inline_router_raw = std::getenv("SLIM_ARC_INLINE_ROUTER");
-    const bool slim_arc_inline_router = slim_arc_runtime && !batched && cparams.cb_eval == nullptr &&
-        slim_arc_inline_router_raw != nullptr && std::strcmp(slim_arc_inline_router_raw, "1") == 0;
     struct slim_arc_inline_router_state {
         slim_arc::runtime_lease * runtime;
         std::vector<uint64_t> * generations;
+        int min_layer;
+        int max_layer;
+        size_t pipeline_budget_bytes;
         int pending_layer{-1};
         std::vector<int> pending_experts;
+
+        void prefetch_layer(int layer, bool bounded = true) {
+            if (runtime == nullptr || !*runtime || layer < min_layer || layer > max_layer ||
+                static_cast<size_t>(layer) >= generations->size() ||
+                (*generations)[static_cast<size_t>(layer)] != 0) return;
+            auto & scheduler = runtime->prefetch();
+            if (bounded) {
+                if (pipeline_budget_bytes == 0) return;
+                scheduler.set_expert_budget(pipeline_budget_bytes);
+                scheduler.reset_expert_budget_usage();
+            }
+            const std::vector<int> experts = scheduler.cached_experts_snapshot(layer);
+            if (!experts.empty()) (*generations)[static_cast<size_t>(layer)] =
+                scheduler.prefetch_experts(layer, experts.data(), static_cast<int>(experts.size()));
+        }
 
         void settle_pending() {
             if (runtime == nullptr || !*runtime || pending_layer < 0 || pending_experts.empty()) return;
@@ -256,7 +279,18 @@ def patch_context(filepath: str) -> None:
             pending_layer = -1;
             pending_experts.clear();
         }
-    } slim_arc_inline_state{&slim_arc_runtime, &expert_generation_tokens, -1, {}};
+    } slim_arc_inline_state{
+        &slim_arc_runtime, &expert_generation_tokens, slim_arc_min_layer, slim_arc_max_layer,
+        pipeline_budget_bytes, -1, {}};
+    if (slim_arc_runtime && slim_arc_min_layer != INT_MAX && slim_arc_max_layer >= 0) {
+        if (!slim_arc_expert_pipeline) {
+            for (int layer = slim_arc_min_layer; layer <= slim_arc_max_layer; ++layer) {
+                slim_arc_inline_state.prefetch_layer(layer, false);
+            }
+        } else {
+            slim_arc_inline_state.prefetch_layer(slim_arc_min_layer);
+        }
+    }
     if (slim_arc_inline_router) {
         ggml_backend_sched_set_eval_callback(
             sched.get(),
@@ -284,6 +318,7 @@ def patch_context(filepath: str) -> None:
                     state->pending_layer = layer;
                     state->pending_experts = std::move(unique);
                 }
+                state->prefetch_layer(layer + 1);
                 return true;
             },
             &slim_arc_inline_state);

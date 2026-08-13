@@ -115,7 +115,7 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert "auto slim_arc_runtime = slim_arc::acquire_runtime();" in context
     assert context.count('std::getenv("SLIM_ARC_SLOW_STORAGE")') == 1
     assert context.count('std::strcmp(slow_storage_raw, "1") == 0') == 1
-    assert "if (!slow_storage && !batched && max_layer > min_layer)" in context
+    assert "if (!slow_storage && !batched && slim_arc_max_layer > slim_arc_min_layer)" in context
     assert context.index("if (slim_arc_runtime) {") < context.index("ggml_graph_n_nodes(gf)")
     assert "get_global_prefetch_scheduler" not in context
     assert "get_global_unified_scheduler" not in context
@@ -123,6 +123,12 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert "cparams.cb_eval == nullptr" in context
     assert "slim_arc_inline_router_state" in context
     assert "settle_pending()" in context
+    assert 'std::getenv("SLIM_ARC_EXPERT_PIPELINE_MB")' in context
+    assert "pipeline_budget_bytes" in context
+    assert "prefetch_layer(slim_arc_min_layer)" in context
+    assert "prefetch_layer(layer + 1)" in context
+    assert context.count("reset_expert_budget_usage()") >= 1
+    assert "if (!slim_arc_expert_pipeline)" in context
     assert "ggml_backend_sched_set_eval_callback(sched.get(), cparams.cb_eval, cparams.cb_eval_user_data);" in context
     assert "status == GGML_STATUS_SUCCESS && !slim_arc_inline_router" in context
 
