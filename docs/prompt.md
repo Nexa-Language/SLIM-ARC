@@ -48,7 +48,7 @@ RK3588 端侧测试任务 Prompt（工程级）
 - 已测：Qwen3-4B 全部可行测试通过（无崩溃/无 OOM/无 SLIM-ARC 异常输出）。
 - 关键限制：4GB 无法加载 >6GB 模型 → 核心创新不触发；microSD 是最大瓶颈
   （~8-10MB/s）；Pi5 内核无 CONFIG_MEMCG，无法用 cgroup 限内存。
-- 完整流程与脚本参照：docs/pi5_4GB_test_notes/（任务Prompt、root-cause、
+- 完整流程与脚本参照：docs/pi5_4GB_test_notes/2026-08-05-修复与测试归档/（任务Prompt、root-cause、
   Qwen3-4B-SLIMARC修复与测试报告-2026-08-05.md）。
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

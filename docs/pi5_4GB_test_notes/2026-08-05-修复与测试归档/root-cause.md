@@ -76,4 +76,4 @@
 ## 五、既有基线参考
 
 - vanilla upstream llama.cpp 已编译成功（`llama-cli`/`llama-bench` 产物存在）。
-- Qwen3-4B 既有基线约 0.3/0.4 t/s（见 `docs/pi5_4GB_test_notes/pi5_qwen3_4b_results.md`）。
+- Qwen3-4B 既有基线约 0.3/0.4 t/s（见 `docs/pi5_4GB_test_notes/2026-08-05-修复与测试归档/pi5_qwen3_4b_results.md`）。

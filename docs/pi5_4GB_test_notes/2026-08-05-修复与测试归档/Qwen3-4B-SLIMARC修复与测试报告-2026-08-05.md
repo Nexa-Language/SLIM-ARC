@@ -2,7 +2,8 @@
 
 > 日期：2026-08-05（UTC+8）
 > 执行环境：树莓派 5（4GB RAM / 4 核 Cortex-A76 / microSD / Debian 13 trixie / aarch64）
-> 依据任务文档：`docs/pi5_4GB_test_notes/任务Prompt-修复SLIMARC补丁.md`（T0~T6）
+> 依据任务文档：`docs/pi5_4GB_test_notes/2026-08-05-修复与测试归档/任务Prompt-修复SLIMARC补丁.md`（T0~T6）
+> 归档说明：2026-08-13 目录整理，本报告及配套文件已从 `docs/pi5_4GB_test_notes/` 根目录移入本归档目录。
 
 ---
 
@@ -15,7 +16,7 @@
 - **仓库**：主仓库 `git log -1` = `12aaa969`；upstream `src/llama-upstream` HEAD = **`1c3c9674de4d455f1e571bed808252af54932767`**
 - **模型**：`data/models/Qwen3-4B-Q4_K_M.gguf`（2,497,280,256 字节 ≈ 2.33 GB）
 - **CPU 特性**（`/proc/cpuinfo` + 编译 flags）：`crc32`、`crypto`（aes/pmull/sha1/sha2）、`dotprod`（asimddp）——对应 `-mcpu=cortex-a76+crc+crypto+dotprod`
-- **证据**：T0 中间产物（`t0-environment-snapshot.txt`、`pre-fix.diff`、`backups/`）已按清理要求移除，关键信息保留于本报告与 [`root-cause.md`](docs/pi5_4GB_test_notes/root-cause.md)
+- **证据**：T0 中间产物（`t0-environment-snapshot.txt`、`pre-fix.diff`、`backups/`）已按清理要求移除，关键信息保留于本报告与 [`root-cause.md`](root-cause.md)
 
 ---
 
@@ -44,7 +45,7 @@
 ### C 类：脚本生成的代码缺陷
 - `prefetch_block` 以函数结尾 `}` 收尾，但 `replace` 只插入不删除原有 `}`，导致 `init_mappings` 出现**重复 `}`**（`expected declaration before '}'`，attempt-2）。
 
-详细分析见 [`root-cause.md`](docs/pi5_4GB_test_notes/root-cause.md)。
+详细分析见 [`root-cause.md`](root-cause.md)。
 
 ---
 
@@ -73,7 +74,7 @@
 | 4 | 失败：UI embed 校验占位资产不完整 |
 | 5 | **成功**（`BUILD_EXIT_CODE=0`） |
 
-> 注：5 份完整编译日志 `build-slimarc-attempt-{1..5}.log` 当时已保存，现按清理要求移除（属中间过程）；各尝试结果摘要见上表与 [`root-cause.md`](docs/pi5_4GB_test_notes/root-cause.md)。
+> 注：5 份完整编译日志 `build-slimarc-attempt-{1..5}.log` 当时已保存，现按清理要求移除（属中间过程）；各尝试结果摘要见上表与 [`root-cause.md`](root-cause.md)。
 
 **构建命令**（规避 UI 下载，仅需 CLI/Bench 无需 Web UI）：
 ```bash
@@ -93,7 +94,7 @@ cmake --build build --target llama-cli llama-bench -j2
 
 ## 5. 完整测试矩阵（T3 + T4，Qwen3-4B / 4GB）
 
-> 所有原始输出保存在 `docs/pi5_4GB_test_notes/raw-*.txt` 与 `smoke-*.txt`。`EXIT=0` 均指 `COMMAND_EXIT_CODE="0"`。
+> 所有原始输出保存在 `docs/pi5_4GB_test_notes/2026-08-05-修复与测试归档/原始数据/`（`raw-*.txt` 与 `smoke-*.txt`）。`EXIT=0` 均指 `COMMAND_EXIT_CODE="0"`。
 
 | 项 | 用例 | 参数 | Prompt t/s | Generation t/s | 关键结论 |
 |---|---|---|---|---|---|
@@ -113,7 +114,7 @@ cmake --build build --target llama-cli llama-bench -j2
 | 4.7b NO_MADV | `raw-47-no-madv.txt` | `SLIM_ARC_NO_MADV_RANDOM=1` | 6.7 | 3.2 | 无 MADV 触发（<6GB），不崩溃 |
 
 ### 与既有基线对比
-- 任务文档提及既有 Qwen3-4B 基线约 **0.3 / 0.4 t/s**（见 `docs/pi5_4GB_test_notes/pi5_qwen3_4b_results.md`）。
+- 任务文档提及既有 Qwen3-4B 基线约 **0.3 / 0.4 t/s**（见同目录 [`pi5_qwen3_4b_results.md`](pi5_qwen3_4b_results.md)）。
 - 本次短上下文 + 页面缓存热 + `--single-turn` 下，llama-cli 报告的 Generation 为 **2.6~4.9 t/s**；`llama-bench` 的稳态指标 tg32/tg64 为 **3.48 / 2.93 t/s**。
 - 说明：0.3/0.4 t/s 基线对应冷缓存/更长上下文/更完整生成路径，本次数值偏高主要因短上下文与热缓存，**不代表 SLIM-ARC 带来数量级加速**（Qwen3-4B 在 4GB 下 `model_fits` 判定为真，SLIM-ARC 未激活，本就运行 baseline 路径）。修复验证的核心目标是"编译通过 + 不崩溃 + 无异常"，均已达成。
 
@@ -150,10 +151,10 @@ cmake --build build --target llama-cli llama-bench -j2
 
 ---
 
-## 9. 产物清单（docs/pi5_4GB_test_notes/，清理后）
+## 9. 产物清单（docs/pi5_4GB_test_notes/2026-08-05-修复与测试归档/，清理后）
 
-- 测试说明：`任务Prompt-修复SLIMARC补丁.md`、`init_pi5.md`、`pi5.md`、`root-cause.md`
+- 测试说明：`任务Prompt-修复SLIMARC补丁.md`、`root-cause.md`、`环境准备与文档/init_pi5.md`、`环境准备与文档/pi5.md`
 - 汇总报告：`Qwen3-4B-SLIMARC修复与测试报告-2026-08-05.md`
 - 结果汇总：`pi5_qwen3_4b_results.md`
-- 原始输出：`smoke-slimarc.txt`、`smoke-slimarc-disabled.txt`、`raw-41~47-*.txt`
+- 原始输出：`原始数据/smoke-slimarc.txt`、`原始数据/smoke-slimarc-disabled.txt`、`原始数据/raw-41~47-*.txt`
 - 已清理（中间过程/debug）：`build-slimarc-attempt-{1..5}.log`、`t0-environment-snapshot.txt`、`t1-apply-slim-arc.txt`、`pre-fix.diff`、`backups/`

@@ -64,7 +64,7 @@ slim_arc::prefetch_scheduler has no member named 'cache_router_experts'
 
 **影响**: SLIM-ARC 核心优化（MADV_RANDOM、MoE 预取、KV eviction、统一调度器）无法在当前 upstream 上编译。
 
-**注意**: 根据 [`docs/pi5_4GB_test_notes/init_pi5.md`](init_pi5.md) 的分析，Qwen3-4B（2.4GB）在 4GB Pi5 上 SLIM-ARC 核心创新（MADV_RANDOM，仅对 >6GB 模型生效）**根本不会触发**，因此使用 vanilla llama.cpp 进行测试是合理的。
+**注意**: 根据 [`init_pi5.md`](环境准备与文档/init_pi5.md) 的分析，Qwen3-4B（2.4GB）在 4GB Pi5 上 SLIM-ARC 核心创新（MADV_RANDOM，仅对 >6GB 模型生效）**根本不会触发**，因此使用 vanilla llama.cpp 进行测试是合理的。
 
 ### 2.2 Vanilla upstream llama.cpp 编译 ✅ 成功
 

@@ -171,10 +171,10 @@
 4. **llama-cli 版本差异**：无 `--no-cnv`、UI 走 `/dev/tty`，用 `--single-turn` + `script` 捕获
 5. **UI 资产**：外网 SSL 下载失败，编译以 `-DLLAMA_BUILD_UI=OFF` 规避（不影响 CLI/Bench）
 
-## 数据文件索引（docs/pi5_4GB_test_notes/）
+## 数据文件索引（docs/pi5_4GB_test_notes/2026-08-05-修复与测试归档/，2026-08-13 整理后路径）
 
-- 汇总报告: [`Qwen3-4B-SLIMARC修复与测试报告-2026-08-05.md`](../docs/pi5_4GB_test_notes/Qwen3-4B-SLIMARC修复与测试报告-2026-08-05.md)
-- 结果汇总: [`pi5_qwen3_4b_results.md`](../docs/pi5_4GB_test_notes/pi5_qwen3_4b_results.md)
-- 根因分析: [`root-cause.md`](../docs/pi5_4GB_test_notes/root-cause.md)
-- 原始输出: `smoke-slimarc*.txt`、`raw-41~47-*.txt`（共 16 个）
-- 安装/说明: `init_pi5.md`、`pi5.md`、`任务Prompt-修复SLIMARC补丁.md`
+- 汇总报告: [`Qwen3-4B-SLIMARC修复与测试报告-2026-08-05.md`](../docs/pi5_4GB_test_notes/2026-08-05-修复与测试归档/Qwen3-4B-SLIMARC修复与测试报告-2026-08-05.md)
+- 结果汇总: [`pi5_qwen3_4b_results.md`](../docs/pi5_4GB_test_notes/2026-08-05-修复与测试归档/pi5_qwen3_4b_results.md)
+- 根因分析: [`root-cause.md`](../docs/pi5_4GB_test_notes/2026-08-05-修复与测试归档/root-cause.md)
+- 原始输出: `原始数据/smoke-slimarc*.txt`、`原始数据/raw-41~47-*.txt`（共 16 个）
+- 安装/说明: `环境准备与文档/init_pi5.md`、`环境准备与文档/pi5.md`、`任务Prompt-修复SLIMARC补丁.md`
