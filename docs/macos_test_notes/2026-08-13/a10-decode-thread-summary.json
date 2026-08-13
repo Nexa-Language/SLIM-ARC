@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "image_id": "sha256:061f538668209893c72b4de714c6eac9a4727e53d8621eac104f7ae76313643a",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "contract": {
+    "memory_gib": 2,
+    "cpu_limit": 8,
+    "prefill_threads": 8,
+    "poll": 50,
+    "shared_mlock": true,
+    "read_ahead_kb": 128,
+    "swap_bytes": 0,
+    "n_prompt": 64,
+    "n_gen": 16,
+    "cache_state": "cold"
+  },
+  "decode_6_reference_median": {
+    "sample_count": 2,
+    "prefill_tps": 4.298078,
+    "decode_tps": 0.834153,
+    "wall_seconds": 55.31
+  },
+  "screening_runs": [
+    {"run":"a10-decode5-2g-cold","decode_threads":5,"prefill_tps":4.296201,"decode_tps":0.816189,"wall_seconds":55.40,"major_faults":454694,"filesystem_input_blocks":194711664},
+    {"run":"a10-decode7-2g-cold","decode_threads":7,"prefill_tps":4.167850,"decode_tps":0.847838,"wall_seconds":55.89,"major_faults":485487,"filesystem_input_blocks":196218344}
+  ],
+  "decision": "keep_decode_threads_6"
+}
