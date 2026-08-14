@@ -120,6 +120,28 @@ bool env_exact_one(const char * name) noexcept {
     return value != nullptr && std::strcmp(value, "1") == 0;
 }
 
+int parse_cross_layer_transition_topk() noexcept {
+    if (!env_exact_one("SLIM_ARC_CROSS_LAYER_TRANSITION")) return 0;
+    const char * const raw = std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK");
+    if (raw == nullptr) {
+        std::fprintf(
+            stderr,
+            "SLIM-ARC: SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK is required when transition is enabled\n");
+        return 0;
+    }
+    const std::string_view value{raw};
+    int parsed{0};
+    const auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
+    if (value.empty() || result.ec != std::errc{} || result.ptr != value.data() + value.size() ||
+        parsed < 1 || parsed > 64) {
+        std::fprintf(
+            stderr,
+            "SLIM-ARC: invalid SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK; expected an integer in [1,64]\n");
+        return 0;
+    }
+    return parsed;
+}
+
 void update_atomic_peak(std::atomic<uint64_t> & peak, uint64_t candidate) noexcept {
     uint64_t current = peak.load();
     while (current < candidate && !peak.compare_exchange_weak(current, candidate)) {
@@ -317,6 +339,8 @@ prefetch_scheduler::prefetch_scheduler(
     , expert_prefetch_disabled_(env_exact_one("SLIM_ARC_NO_EXPERT_PREFETCH"))
     , expert_random_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_RANDOM"))
     , expert_normal_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_NORMAL"))
+    , cross_layer_transition_topk_(parse_cross_layer_transition_topk())
+    , cross_layer_transition_enabled_(cross_layer_transition_topk_ > 0)
     , n_threads_(slow_storage_enabled_ ? 1 : std::max(1, n_threads))
     , window_(slow_storage_enabled_ ? 1 : std::max(1, window))
     , request_claim_hook_(std::move(request_claim_hook))
@@ -646,12 +670,58 @@ void prefetch_scheduler::register_expert_tensor(const char *, void * addr, size_
             size,
             raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 0);
     }
+    if (cross_layer_transition_enabled_) {
+        std::lock_guard<std::mutex> transition_lock(expert_transition_mtx_);
+        (void) expert_transition_table_.register_layer(layer, n_experts);
+    }
     std::lock_guard<std::mutex> lock(expert_state_mtx_);
     if ((size_t)layer >= experts_by_layer_.size()) {
         experts_by_layer_.resize(layer + 1);
     }
     experts_by_layer_[layer].push_back({addr, size, n_experts});
     if (random_range.valid) expert_madv_ranges_.push_back(random_range);
+}
+
+void prefetch_scheduler::observe_expert_transition(
+    int layer,
+    const std::vector<int> & source,
+    const std::vector<int> & target) {
+    if (!cross_layer_transition_enabled_ || source.empty() || target.empty()) return;
+    std::lock_guard<std::mutex> lock(expert_transition_mtx_);
+    expert_transition_table_.observe(
+        layer,
+        source.data(),
+        static_cast<int>(source.size()),
+        target.data(),
+        static_cast<int>(target.size()));
+}
+
+std::vector<int> prefetch_scheduler::predict_expert_transition(
+    int layer, const std::vector<int> & source) {
+    if (!cross_layer_transition_enabled_ || source.empty()) return {};
+    std::lock_guard<std::mutex> lock(expert_transition_mtx_);
+    return expert_transition_table_.predict(
+        layer,
+        source.data(),
+        static_cast<int>(source.size()),
+        cross_layer_transition_topk_);
+}
+
+void prefetch_scheduler::record_expert_transition_result(
+    const std::vector<int> & predicted,
+    const std::vector<int> & actual) {
+    if (!cross_layer_transition_enabled_ || predicted.empty() || actual.empty()) return;
+    std::lock_guard<std::mutex> lock(expert_transition_mtx_);
+    expert_transition_table_.record_result(
+        predicted.data(),
+        static_cast<int>(predicted.size()),
+        actual.data(),
+        static_cast<int>(actual.size()));
+}
+
+expert_transition_stats prefetch_scheduler::expert_transition_statistics() const noexcept {
+    std::lock_guard<std::mutex> lock(expert_transition_mtx_);
+    return expert_transition_table_.statistics();
 }
 
 void prefetch_scheduler::cache_router_experts(int layer, const int * expert_ids, int n) {
@@ -1381,6 +1451,19 @@ void prefetch_scheduler::dump_metrics() const {
             static_cast<unsigned long long>(router_samples_.load()),
             issued / 1048576.0, hit / 1048576.0, waste / 1048576.0, hr,
             total / 1048576.0);
+    if (cross_layer_transition_enabled_) {
+        const expert_transition_stats transition = expert_transition_statistics();
+        std::fprintf(
+            stderr,
+            "[SLIM-ARC-TRANSITION] schema=1 updates=%llu prediction_rounds=%llu "
+            "empty_rounds=%llu predicted_experts=%llu matched_experts=%llu decays=%llu\n",
+            static_cast<unsigned long long>(transition.updates),
+            static_cast<unsigned long long>(transition.prediction_rounds),
+            static_cast<unsigned long long>(transition.empty_rounds),
+            static_cast<unsigned long long>(transition.predicted_experts),
+            static_cast<unsigned long long>(transition.matched_experts),
+            static_cast<unsigned long long>(transition.decays));
+    }
     if (router_mlock_enabled_) {
         std::fprintf(
             stderr,

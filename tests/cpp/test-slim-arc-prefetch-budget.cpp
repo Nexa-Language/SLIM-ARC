@@ -1419,6 +1419,77 @@ void test_expert_hot_cache_requires_stability_and_respects_budget() {
     assert(munmap(second, tensor_bytes) == 0);
 }
 
+void test_cross_layer_transition_flag_requires_exact_pair() {
+    for (const char * value : {"0", "01", "true", ""}) {
+        scoped_env enabled{"SLIM_ARC_CROSS_LAYER_TRANSITION", value};
+        scoped_env topk{"SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK", "2"};
+        slim_arc::prefetch_scheduler scheduler{0, 1};
+        assert(!scheduler.cross_layer_transition_enabled());
+    }
+    for (const char * value : {"0", "65", "2x"}) {
+        scoped_env enabled{"SLIM_ARC_CROSS_LAYER_TRANSITION", "1"};
+        scoped_env topk{"SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK", value};
+        slim_arc::prefetch_scheduler scheduler{0, 1};
+        assert(!scheduler.cross_layer_transition_enabled());
+    }
+    {
+        scoped_env enabled{"SLIM_ARC_CROSS_LAYER_TRANSITION", "1"};
+        scoped_env topk{"SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK", nullptr};
+        slim_arc::prefetch_scheduler scheduler{0, 1};
+        assert(!scheduler.cross_layer_transition_enabled());
+    }
+    {
+        scoped_env enabled{"SLIM_ARC_CROSS_LAYER_TRANSITION", nullptr};
+        scoped_env topk{"SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK", "2"};
+        slim_arc::prefetch_scheduler scheduler{0, 1};
+        assert(!scheduler.cross_layer_transition_enabled());
+    }
+}
+
+void test_scheduler_learns_and_accounts_cross_layer_transition() {
+    scoped_env enabled{"SLIM_ARC_CROSS_LAYER_TRANSITION", "1"};
+    scoped_env topk{"SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK", "2"};
+    slim_arc::prefetch_scheduler scheduler{0, 1};
+    std::vector<unsigned char> tensor(64 * 4096);
+    scheduler.register_expert_tensor("blk.2.ffn_down_exps", tensor.data(), tensor.size(), 2, 64);
+    scheduler.register_expert_tensor("blk.3.ffn_down_exps", tensor.data(), tensor.size(), 3, 64);
+    assert(scheduler.cross_layer_transition_enabled());
+    assert(scheduler.cross_layer_transition_topk() == 2);
+    assert(scheduler.predict_expert_transition(2, {1, 2}).empty());
+
+    scheduler.observe_expert_transition(2, {1, 2}, {9, 4});
+    const std::vector<int> predicted = scheduler.predict_expert_transition(2, {1, 2});
+    assert((predicted == std::vector<int>{4, 9}));
+    scheduler.record_expert_transition_result(predicted, {4, 7, 7});
+
+    const auto stats = scheduler.expert_transition_statistics();
+    assert(stats.updates == 1);
+    assert(stats.prediction_rounds == 2);
+    assert(stats.empty_rounds == 1);
+    assert(stats.predicted_experts == 2);
+    assert(stats.matched_experts == 1);
+}
+
+void test_cross_layer_transition_calls_are_thread_safe() {
+    scoped_env enabled{"SLIM_ARC_CROSS_LAYER_TRANSITION", "1"};
+    scoped_env topk{"SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK", "2"};
+    slim_arc::prefetch_scheduler scheduler{0, 1};
+    std::vector<unsigned char> tensor(8 * 4096);
+    scheduler.register_expert_tensor("blk.4.ffn_down_exps", tensor.data(), tensor.size(), 4, 8);
+
+    auto observe = std::async(std::launch::async, [&] {
+        scheduler.observe_expert_transition(4, {1, 2}, {3, 4});
+    });
+    auto predict = std::async(std::launch::async, [&] {
+        return scheduler.predict_expert_transition(4, {1, 2});
+    });
+    assert(observe.wait_for(std::chrono::seconds{2}) == std::future_status::ready);
+    assert(predict.wait_for(std::chrono::seconds{2}) == std::future_status::ready);
+    observe.get();
+    (void) predict.get();
+    assert(scheduler.expert_transition_statistics().updates == 1);
+}
+
 } // namespace
 
 int main() {
@@ -1468,5 +1539,8 @@ int main() {
     test_flag_off_target_and_advice_order_equal_legacy_path();
     test_residency_advice_callback_can_read_expert_state_without_deadlock();
     test_expert_hot_cache_requires_stability_and_respects_budget();
+    test_cross_layer_transition_flag_requires_exact_pair();
+    test_scheduler_learns_and_accounts_cross_layer_transition();
+    test_cross_layer_transition_calls_are_thread_safe();
     return 0;
 }

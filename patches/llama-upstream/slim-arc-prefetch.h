@@ -1,6 +1,7 @@
 #pragma once
 
 #include "slim-arc-expert-residency.h"
+#include "slim-arc-expert-transition.h"
 #include "slim-arc-page-range.h"
 
 // SLIM-ARC: Tensor-level asynchronous prefetch scheduler
@@ -191,6 +192,17 @@ class prefetch_scheduler {
     uint64_t dropped_request_count() const { return dropped_requests_.load(); }
     bool confidence_gating_enabled() const { return conf_gating_; }
     int popularity_k() const { return pop_k_; }
+    bool cross_layer_transition_enabled() const noexcept { return cross_layer_transition_enabled_; }
+    int cross_layer_transition_topk() const noexcept { return cross_layer_transition_topk_; }
+    void observe_expert_transition(
+        int layer,
+        const std::vector<int> & source,
+        const std::vector<int> & target);
+    std::vector<int> predict_expert_transition(int layer, const std::vector<int> & source);
+    void record_expert_transition_result(
+        const std::vector<int> & predicted,
+        const std::vector<int> & actual);
+    expert_transition_stats expert_transition_statistics() const noexcept;
     // 统一 I/O 预算下发与每步重置（改进 3，供 unified_io_scheduler::tick 调用）
     void set_expert_budget(size_t bytes) {
         expert_budget_.store(bytes);
@@ -219,6 +231,8 @@ class prefetch_scheduler {
     const bool expert_prefetch_disabled_;
     const bool expert_random_madv_enabled_;
     const bool expert_normal_madv_enabled_;
+    const int cross_layer_transition_topk_;
+    const bool cross_layer_transition_enabled_;
     int n_threads_;
     int window_;
     std::atomic<compute_phase> phase_{compute_phase::DECODE};
@@ -315,6 +329,8 @@ class prefetch_scheduler {
     std::vector<std::vector<expert_tensor_info>>   experts_by_layer_;
     // Guards the expert registry and router predictor/accounting state.
     mutable std::mutex                              expert_state_mtx_;
+    mutable std::mutex                              expert_transition_mtx_;
+    expert_transition_table                        expert_transition_table_;
     // Router-selected expert IDs per layer (for next-layer prediction)
     std::vector<std::vector<int>>                  cached_router_experts_;
     struct expert_prefetch_record {
