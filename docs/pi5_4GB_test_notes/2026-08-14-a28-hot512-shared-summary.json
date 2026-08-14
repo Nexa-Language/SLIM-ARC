@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "optimization": "A28 demand paging plus resident-only hot experts and always-on shared experts",
+  "source_commit": "b693106b66054327cbfa610e30ac4bba88ed410e",
+  "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+  "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "contract": {
+    "device": "Raspberry Pi 5 Model B",
+    "memory_gib": 4,
+    "threads": 4,
+    "swap": "disabled during each run and restored afterwards",
+    "cache": "cold",
+    "model_storage": "USB NTFS/FUSE disk",
+    "n_prompt": 16,
+    "n_gen": 16,
+    "environment_delta": {
+      "SLIM_ARC_NO_EXPERT_PREFETCH": "1",
+      "SLIM_ARC_EXPERT_HOT_MB": "512",
+      "SLIM_ARC_SHARED_MLOCK": "1"
+    }
+  },
+  "references": {
+    "a24": {"sample_count": 1, "prefill_tps": 0.201104, "decode_tps": 0.0556140, "wall_seconds": 547},
+    "a26": {"sample_count": 2, "prefill_tps": 0.200578, "decode_tps": 0.0607264, "wall_seconds": 522.5}
+  },
+  "runs": [
+    {
+      "name": "tg16-r1",
+      "prefill_tps": 0.203135,
+      "decode_tps": 0.0630510,
+      "wall_seconds": 513,
+      "expert_issued_bytes": 0,
+      "shared_locked_bytes": 94765056,
+      "shared_lock_failures": 0,
+      "hot_locked_bytes": 254066688,
+      "hot_admissions": 990,
+      "hot_hits": 1691,
+      "hot_evictions": 811,
+      "hot_budget_rejections": 0,
+      "hot_nonresident_bytes": 380321792,
+      "hot_lock_failures": 0
+    },
+    {
+      "name": "tg16-r2",
+      "prefill_tps": 0.204910,
+      "decode_tps": 0.0639218,
+      "wall_seconds": 509,
+      "expert_issued_bytes": 0,
+      "shared_locked_bytes": 94765056,
+      "shared_lock_failures": 0,
+      "hot_locked_bytes": 234815488,
+      "hot_admissions": 990,
+      "hot_hits": 1691,
+      "hot_evictions": 811,
+      "hot_budget_rejections": 0,
+      "hot_nonresident_bytes": 574799872,
+      "hot_lock_failures": 0
+    }
+  ],
+  "median": {
+    "sample_count": 2,
+    "prefill_tps": 0.2040225,
+    "decode_tps": 0.0634864,
+    "wall_seconds": 511.0,
+    "shared_locked_bytes": 94765056,
+    "hot_locked_bytes": 244441088,
+    "hot_nonresident_bytes": 477560832,
+    "relative_to_a24_percent": {"prefill_tps": 1.451239, "decode_tps": 14.155428, "wall_seconds": -6.581353},
+    "relative_to_a26_percent": {"prefill_tps": 1.717287, "decode_tps": 4.544975, "wall_seconds": -2.200957}
+  },
+  "decision": "promote_as_current_pi_slow_storage_best",
+  "reason": "Two cold/no-swap runs reproduced 509-513 second wall time, issued no speculative expert I/O, locked the 94.8 MB always-on shared path with zero failures, and improved decode by 14.16% versus A24."
+}

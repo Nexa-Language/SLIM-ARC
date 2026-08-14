@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "screen": "A30-A31 Linux block tuning on top of A29",
+  "source_commit": "b514badf85d4dfbc00e4935ed819e79710884e1b",
+  "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+  "reference_a29_median": {
+    "sample_count": 2,
+    "prefill_tps": 0.2042825,
+    "decode_tps": 0.0635846,
+    "wall_seconds": 510.5,
+    "read_ahead_kb": 2048,
+    "nr_requests": 2
+  },
+  "runs": [
+    {
+      "name": "A30 nr_requests=32",
+      "prefill_tps": 0.202409,
+      "decode_tps": 0.0638302,
+      "wall_seconds": 511,
+      "read_ahead_kb": 2048,
+      "nr_requests_during": 32,
+      "nr_requests_after": 4,
+      "relative_to_a29_percent": {
+        "prefill_tps": -0.917112,
+        "decode_tps": 0.386257,
+        "wall_seconds": 0.097943
+      },
+      "decision": "reject_no_measurable_gain"
+    },
+    {
+      "name": "A31 read_ahead_kb=256",
+      "prefill_tps": 0.204092,
+      "decode_tps": 0.0639209,
+      "wall_seconds": 510,
+      "read_ahead_kb_during": 256,
+      "read_ahead_kb_after": 2048,
+      "nr_requests": 4,
+      "relative_to_a29_percent": {
+        "prefill_tps": -0.093253,
+        "decode_tps": 0.528902,
+        "wall_seconds": -0.097943
+      },
+      "decision": "reject_no_measurable_gain"
+    }
+  ],
+  "final_storage_state": {
+    "read_ahead_kb": 2048,
+    "nr_requests": 4,
+    "note": "The kernel clamps a post-run write of 2 to 4; no model process remains and zram is restored."
+  },
+  "decision": "keep_default_readahead_and_do_not_raise_queue_depth",
+  "reason": "Neither screen improved wall time by the 2-3 percent promotion threshold; both remained within A29 run-to-run noise."
+}

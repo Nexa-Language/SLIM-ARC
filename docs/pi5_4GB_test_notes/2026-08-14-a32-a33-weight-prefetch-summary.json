@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "optimization": "A32 isolate and disable weight prefetch while retaining the runtime",
+  "source_commit": "2b3322624075d7b49f00b0c51e482d7f3708655c",
+  "generated_source_sha256": "de5b578c488f297c1d2592310c448845f8d763084808225341bbf6584e943cac",
+  "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+  "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "contract": {
+    "device": "Raspberry Pi 5 Model B",
+    "memory_gib": 4,
+    "threads": 4,
+    "swap": "disabled during each run and restored afterwards",
+    "cache": "cold",
+    "model_storage": "USB NTFS/FUSE rotational disk",
+    "read_ahead_kb": 2048,
+    "nr_requests": 4,
+    "n_prompt": 16,
+    "n_gen": 16,
+    "common_environment": {
+      "SLIM_ARC_NO_EXPERT_PREFETCH": "1",
+      "SLIM_ARC_EXPERT_HOT_MB": "512",
+      "SLIM_ARC_SHARED_MLOCK": "1",
+      "SLIM_ARC_TOTAL_BUDGET_MB": "16"
+    }
+  },
+  "a32_runs": [
+    {
+      "name": "no-weight-prefetch-r1",
+      "prefill_tps": 0.203182,
+      "decode_tps": 0.0652680,
+      "wall_seconds": 505,
+      "weight_requested_bytes": 0,
+      "weight_issued_bytes": 0,
+      "weight_advice_requests": 0,
+      "weight_inflight_peak_bytes": 0,
+      "shared_locked_bytes": 94765056,
+      "hot_locked_bytes": 324042752,
+      "hot_nonresident_bytes": 24264704,
+      "lock_failures": 0
+    },
+    {
+      "name": "no-weight-prefetch-r2",
+      "prefill_tps": 0.204102,
+      "decode_tps": 0.0652248,
+      "wall_seconds": 505,
+      "weight_requested_bytes": 0,
+      "weight_issued_bytes": 0,
+      "weight_advice_requests": 0,
+      "weight_inflight_peak_bytes": 0,
+      "shared_locked_bytes": 94765056,
+      "hot_locked_bytes": 309706752,
+      "hot_nonresident_bytes": 104628224,
+      "lock_failures": 0
+    }
+  ],
+  "a32_median": {
+    "sample_count": 2,
+    "prefill_tps": 0.203642,
+    "decode_tps": 0.0652464,
+    "wall_seconds": 505.0,
+    "hot_locked_bytes": 316874752,
+    "hot_nonresident_bytes": 64446464
+  },
+  "a33_same_environment_control": {
+    "sample_count": 1,
+    "prefill_tps": 0.203043,
+    "decode_tps": 0.0650063,
+    "wall_seconds": 505,
+    "weight_requested_bytes": 18185175808,
+    "weight_issued_bytes": 63537152,
+    "weight_advice_requests": 289,
+    "weight_inflight_peak_bytes": 10059776,
+    "shared_locked_bytes": 94765056,
+    "hot_locked_bytes": 314802176,
+    "hot_nonresident_bytes": 123830272,
+    "lock_failures": 0
+  },
+  "a32_relative_to_a33_percent": {
+    "prefill_tps": 0.295011,
+    "decode_tps": 0.369349,
+    "wall_seconds": 0.0,
+    "weight_issued_bytes": -100.0,
+    "weight_inflight_peak_bytes": -100.0,
+    "hot_locked_bytes": 0.658374,
+    "hot_nonresident_bytes": -47.955808
+  },
+  "decision": "promote_as_pi_slow_storage_zero_speculation_policy",
+  "reason": "A32 reproduced a 505 second wall time twice and matched the same-environment A33 control while eliminating all weight and expert speculative advice."
+}

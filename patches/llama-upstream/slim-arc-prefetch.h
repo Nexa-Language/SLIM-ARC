@@ -105,6 +105,7 @@ struct expert_hot_cache_stats {
     uint64_t budget_rejections{0};
     uint64_t nonresident_bytes{0};
     uint64_t lock_failures{0};
+    uint64_t entries{0};
 };
 
 std::vector<size_t> select_prefetch_items(
@@ -228,6 +229,7 @@ class prefetch_scheduler {
     const bool shared_mlock_enabled_;
     const bool small_mlock_enabled_;
     const size_t expert_hot_budget_bytes_;
+    const bool expert_hot_lru_enabled_;
     const bool expert_prefetch_disabled_;
     const bool expert_random_madv_enabled_;
     const bool expert_normal_madv_enabled_;
@@ -310,6 +312,7 @@ class prefetch_scheduler {
         int expert_id{-1};
         std::vector<page_range> ranges;
         uint64_t locked_bytes{0};
+        uint64_t last_touch{0};
     };
     mutable std::mutex                              expert_hot_mtx_;
     std::vector<expert_hot_entry>                  expert_hot_entries_;
@@ -320,6 +323,7 @@ class prefetch_scheduler {
     uint64_t                                        expert_hot_budget_rejections_{0};
     uint64_t                                        expert_hot_nonresident_bytes_{0};
     uint64_t                                        expert_hot_lock_failures_{0};
+    uint64_t                                        expert_hot_touch_clock_{0};
     std::vector<std::pair<void *, size_t>>         mmap_regions_;
     std::vector<page_range>                        expert_madv_ranges_;
     std::atomic<uint64_t>                          expert_madv_advice_calls_{0};

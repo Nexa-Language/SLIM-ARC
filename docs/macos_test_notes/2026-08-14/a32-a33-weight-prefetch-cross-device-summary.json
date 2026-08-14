@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "experiment": "A32/A33 Mac cross-device weight-prefetch screen",
+  "source_commit": "23c6fbb00a5eb0554cda980aa2d435c8a8118c3b",
+  "build_context_sha256": "af4e04fdb74008fa577a5235e745db5c1cb044573a313318d3999c7c7bbbfb20",
+  "patched_source_sha256": "57e6adb1a78766ee3878246275315b46a794ab65b84c334863498a83290b8bb2",
+  "image_id": "sha256:84afefeba3dfddb9cf9eaf7fc66b256138bf15d72e50af14513a124a09b16fbd",
+  "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+  "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "contract": {
+    "device": "Apple Silicon Mac through Colima aarch64 Linux VM",
+    "memory_gib": 2,
+    "cpus": 8,
+    "swap_bytes": 0,
+    "cache": "cold guest page cache",
+    "n_prompt": 64,
+    "n_gen": 64,
+    "repetitions_per_run": 1,
+    "run_order": [
+      "weight-prefetch-on-r1",
+      "weight-prefetch-off-r1",
+      "weight-prefetch-off-r2",
+      "weight-prefetch-on-r2"
+    ],
+    "common_environment": {
+      "SLIM_ARC_DECODE_THREADS": "6",
+      "SLIM_ARC_EXPERT_CONF": "0",
+      "SLIM_ARC_EXPERT_HOT_MB": "512",
+      "SLIM_ARC_EXPERT_PIPELINE_MB": "32",
+      "SLIM_ARC_INLINE_ROUTER": "1",
+      "SLIM_ARC_NO_EXPERT_PREFETCH": "1",
+      "SLIM_ARC_POLL": "50",
+      "SLIM_ARC_PREFILL_THREADS": "8",
+      "SLIM_ARC_PRESSURE_ADMISSION": "1",
+      "SLIM_ARC_PRESSURE_RESERVE_MB": "512",
+      "SLIM_ARC_SHARED_MLOCK": "1",
+      "SLIM_ARC_SLOW_STORAGE": "1"
+    },
+    "treatment_delta": {
+      "SLIM_ARC_NO_WEIGHT_PREFETCH": "1"
+    }
+  },
+  "weight_prefetch_on_runs": [
+    {
+      "name": "weight-prefetch-on-r1",
+      "prefill_tps": 4.500820,
+      "decode_tps": 1.078833,
+      "wall_seconds": 93.13,
+      "major_faults": 1285446,
+      "file_system_inputs": 396295832,
+      "weight_advice_requests": 1105,
+      "weight_issued_bytes": 0,
+      "weight_skipped_bytes": 69531770880
+    },
+    {
+      "name": "weight-prefetch-on-r2",
+      "prefill_tps": 4.595924,
+      "decode_tps": 1.087476,
+      "wall_seconds": 91.25,
+      "major_faults": 1295337,
+      "file_system_inputs": 400100824,
+      "weight_advice_requests": 1105,
+      "weight_issued_bytes": 0,
+      "weight_skipped_bytes": 69531770880
+    }
+  ],
+  "weight_prefetch_off_runs": [
+    {
+      "name": "weight-prefetch-off-r1",
+      "prefill_tps": 4.510820,
+      "decode_tps": 1.042492,
+      "wall_seconds": 94.64,
+      "major_faults": 1324330,
+      "file_system_inputs": 407232824,
+      "weight_advice_requests": 0,
+      "weight_issued_bytes": 0,
+      "weight_skipped_bytes": 0
+    },
+    {
+      "name": "weight-prefetch-off-r2",
+      "prefill_tps": 4.475100,
+      "decode_tps": 1.002231,
+      "wall_seconds": 97.63,
+      "major_faults": 1298511,
+      "file_system_inputs": 401101952,
+      "weight_advice_requests": 0,
+      "weight_issued_bytes": 0,
+      "weight_skipped_bytes": 0
+    }
+  ],
+  "medians": {
+    "weight_prefetch_on": {
+      "sample_count": 2,
+      "prefill_tps": 4.548372,
+      "decode_tps": 1.0831545,
+      "wall_seconds": 92.19,
+      "major_faults": 1290391.5,
+      "file_system_inputs": 398198328,
+      "weight_advice_requests": 1105,
+      "weight_issued_bytes": 0,
+      "weight_skipped_bytes": 69531770880
+    },
+    "weight_prefetch_off": {
+      "sample_count": 2,
+      "prefill_tps": 4.492960,
+      "decode_tps": 1.0223615,
+      "wall_seconds": 96.135,
+      "major_faults": 1311420.5,
+      "file_system_inputs": 404167388,
+      "weight_advice_requests": 0,
+      "weight_issued_bytes": 0,
+      "weight_skipped_bytes": 0
+    }
+  },
+  "weight_prefetch_off_relative_to_on_percent": {
+    "prefill_tps": -1.218282,
+    "decode_tps": -5.612588,
+    "wall_seconds": 4.279206,
+    "major_faults": 1.629660,
+    "file_system_inputs": 1.499017,
+    "weight_advice_requests": -100.0
+  },
+  "decision": "keep_weight_prefetch_enabled_on_mac_and_disable_it_only_on_pi_slow_storage",
+  "reason": "Both Mac configurations issued zero weight prefetch bytes under the 2 GiB pressure budget, so the observed throughput difference cannot be attributed to extra disk prefetch. The off path removed 1105 rejected scheduling requests per run but had lower median decode throughput. Preserve the faster default on Mac while retaining the zero-speculation policy independently validated on the Raspberry Pi slow disk."
+}

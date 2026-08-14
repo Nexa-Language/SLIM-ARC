@@ -453,6 +453,7 @@ def test_manifest_records_pressure_admission_environment(tmp_path: Path) -> None
             "SLIM_ARC_EXPERT_RECLAIM_WASTE",
             "SLIM_ARC_EXPERT_RESIDENCY",
             "SLIM_ARC_NO_EXPERT_PREFETCH",
+            "SLIM_ARC_NO_WEIGHT_PREFETCH",
             "SLIM_ARC_ROUTER_MLOCK",
             "SLIM_ARC_ROUTER_PREFETCH",
             "SLIM_ARC_SLOW_STORAGE",
@@ -468,6 +469,12 @@ def test_manifest_environment_rejects_non_enabled_finalist_policies(name: str, v
 def test_manifest_environment_rejects_unknown_slim_arc_variable() -> None:
     with pytest.raises(ValueError, match="unsupported"):
         run_manifest.collect_slim_arc_environment({"SLIM_ARC_UNKNOWN": "1"})
+
+
+def test_manifest_records_no_weight_prefetch() -> None:
+    assert run_manifest.collect_slim_arc_environment(
+        {"SLIM_ARC_NO_WEIGHT_PREFETCH": "1"}
+    ) == {"SLIM_ARC_NO_WEIGHT_PREFETCH": "1"}
 
 
 @pytest.mark.parametrize("value", ["1", "32", "64"])

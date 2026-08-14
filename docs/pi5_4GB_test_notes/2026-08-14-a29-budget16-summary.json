@@ -1,0 +1,98 @@
+{
+  "schema_version": 1,
+  "optimization": "A29 bound unified speculative I/O while retaining resident expert paths",
+  "source_commit": "b514badf85d4dfbc00e4935ed819e79710884e1b",
+  "generated_source_sha256": "05af794afe6df8fe84be5238131499bebb0f7ce0af5191ff822b9ba232437855",
+  "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+  "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "contract": {
+    "device": "Raspberry Pi 5 Model B",
+    "memory_gib": 4,
+    "threads": 4,
+    "swap": "disabled during each run and restored afterwards",
+    "cache": "cold",
+    "model_storage": "USB NTFS/FUSE rotational disk",
+    "n_prompt": 16,
+    "n_gen": 16,
+    "environment_delta": {
+      "SLIM_ARC_NO_EXPERT_PREFETCH": "1",
+      "SLIM_ARC_EXPERT_HOT_MB": "512",
+      "SLIM_ARC_SHARED_MLOCK": "1",
+      "SLIM_ARC_TOTAL_BUDGET_MB": "16"
+    }
+  },
+  "reference_a28_median": {
+    "sample_count": 2,
+    "prefill_tps": 0.2040225,
+    "decode_tps": 0.0634864,
+    "wall_seconds": 511.0,
+    "weight_issued_bytes": 4080156672,
+    "weight_inflight_peak_bytes": 644235264
+  },
+  "runs": [
+    {
+      "name": "tg16-r1",
+      "prefill_tps": 0.203950,
+      "decode_tps": 0.0642558,
+      "wall_seconds": 508,
+      "expert_issued_bytes": 0,
+      "weight_requested_bytes": 18185175808,
+      "weight_issued_bytes": 63537152,
+      "weight_skipped_bytes": 18121834496,
+      "weight_inflight_peak_bytes": 10059776,
+      "shared_locked_bytes": 94765056,
+      "shared_lock_failures": 0,
+      "hot_locked_bytes": 271237120,
+      "hot_admissions": 990,
+      "hot_hits": 1691,
+      "hot_evictions": 811,
+      "hot_budget_rejections": 0,
+      "hot_nonresident_bytes": 376012800,
+      "hot_lock_failures": 0
+    },
+    {
+      "name": "tg16-r2",
+      "prefill_tps": 0.204615,
+      "decode_tps": 0.0629134,
+      "wall_seconds": 513,
+      "expert_issued_bytes": 0,
+      "weight_requested_bytes": 18185175808,
+      "weight_issued_bytes": 63537152,
+      "weight_skipped_bytes": 18121834496,
+      "weight_inflight_peak_bytes": 10059776,
+      "shared_locked_bytes": 94765056,
+      "shared_lock_failures": 0,
+      "hot_locked_bytes": 239370240,
+      "hot_admissions": 990,
+      "hot_hits": 1691,
+      "hot_evictions": 811,
+      "hot_budget_rejections": 0,
+      "hot_nonresident_bytes": 514211840,
+      "hot_lock_failures": 0
+    }
+  ],
+  "median": {
+    "sample_count": 2,
+    "prefill_tps": 0.2042825,
+    "decode_tps": 0.0635846,
+    "wall_seconds": 510.5,
+    "weight_issued_bytes": 63537152,
+    "weight_inflight_peak_bytes": 10059776,
+    "shared_locked_bytes": 94765056,
+    "hot_locked_bytes": 255303680,
+    "relative_to_a28_percent": {
+      "prefill_tps": 0.127437,
+      "decode_tps": 0.154679,
+      "wall_seconds": -0.097847,
+      "weight_issued_bytes": -98.442777,
+      "weight_inflight_peak_bytes": -98.438493
+    },
+    "relative_to_a24_percent": {
+      "prefill_tps": 1.580525,
+      "decode_tps": 14.331823,
+      "wall_seconds": -6.672761
+    }
+  },
+  "decision": "promote_as_pi_slow_storage_io_policy",
+  "reason": "Two cold no-swap runs preserved A28 throughput and wall time while reducing speculative weight issuance and peak in-flight bytes by 98.44 percent."
+}

@@ -1,0 +1,72 @@
+{
+  "cold_cache": true,
+  "config": {
+    "cpus": 8,
+    "env": {
+      "SLIM_ARC_DECODE_THREADS": "6",
+      "SLIM_ARC_EXPERT_CONF": "0",
+      "SLIM_ARC_EXPERT_HOT_MB": "512",
+      "SLIM_ARC_EXPERT_PIPELINE_MB": "32",
+      "SLIM_ARC_INLINE_ROUTER": "1",
+      "SLIM_ARC_NO_EXPERT_PREFETCH": "1",
+      "SLIM_ARC_POLL": "50",
+      "SLIM_ARC_PREFILL_THREADS": "8",
+      "SLIM_ARC_PRESSURE_ADMISSION": "1",
+      "SLIM_ARC_PRESSURE_RESERVE_MB": "512",
+      "SLIM_ARC_SHARED_MLOCK": "1",
+      "SLIM_ARC_SLOW_STORAGE": "1"
+    },
+    "memory_gib": 2,
+    "pp": 64,
+    "repetitions": 1,
+    "tg": 64,
+    "timeout_seconds": 1800,
+    "variant": "patched"
+  },
+  "container_name": "slim-arc-run-20260814t131444z-a7c07aa9",
+  "container_state": {
+    "Dead": false,
+    "Error": "",
+    "ExitCode": 0,
+    "FinishedAt": "2026-08-14T13:16:17.808798915Z",
+    "OOMKilled": false,
+    "Paused": false,
+    "Pid": 0,
+    "Restarting": false,
+    "Running": false,
+    "StartedAt": "2026-08-14T13:14:44.425907482Z",
+    "Status": "exited"
+  },
+  "created_at": "2026-08-14T13:16:17.853752+00:00",
+  "image_id": "sha256:84afefeba3dfddb9cf9eaf7fc66b256138bf15d72e50af14513a124a09b16fbd",
+  "llama_commit": "360e134",
+  "memory_limit_bytes": 2147483648,
+  "memory_swap_limit_bytes": 0,
+  "model": {
+    "actual_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+    "expected_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+    "filename": "Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf",
+    "repo_id": "Qwen/Qwen3-Next-80B-A3B-Instruct-GGUF",
+    "revision": "4c8630cf7af926a9c5095cb4bbbbc65d36e20f77",
+    "size": 48410988384,
+    "verified_at": "2026-08-11T14:17:16.915666+00:00"
+  },
+  "outcome": "success",
+  "return_code": 0,
+  "run_id": "a33-mac-weight-prefetch-on-r1-2g-tg64-cold",
+  "schema_version": 1,
+  "stderr_summary": "",
+  "timed_out": false,
+  "workload_contract": {
+    "context_tokens": 128,
+    "load_mode": "mmap",
+    "n_depth": 0,
+    "n_gen": 64,
+    "n_prompt": 64,
+    "no_warmup": true,
+    "offline": true,
+    "seed": 1,
+    "seed_source": "implicit_c_rand_default",
+    "threads": 8
+  }
+}

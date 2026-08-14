@@ -1,0 +1,66 @@
+{
+  "schema_version": 1,
+  "optimization": "A24 disable speculative expert WILLNEED",
+  "source_commit": "b693106b66054327cbfa610e30ac4bba88ed410e",
+  "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+  "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "device": {
+    "hostname": "yituodabian",
+    "architecture": "aarch64",
+    "memory_gib": 4,
+    "threads": 4,
+    "model_storage": "USB NTFS/FUSE disk",
+    "swap": "disabled during each run and restored afterwards",
+    "cache": "cold"
+  },
+  "pairs": [
+    {
+      "name": "tg4-r1",
+      "n_prompt": 16,
+      "n_gen": 4,
+      "a23_control": {
+        "prefill_tps": 0.202419,
+        "decode_tps": 0.0550797,
+        "wall_seconds": 331,
+        "expert_issued_bytes": 2812297216
+      },
+      "a24_no_expert_prefetch": {
+        "prefill_tps": 0.197338,
+        "decode_tps": 0.056208,
+        "wall_seconds": 332,
+        "expert_issued_bytes": 0
+      },
+      "a24_vs_control_percent": {
+        "prefill_tps": -2.510140,
+        "decode_tps": 2.048486,
+        "wall_seconds": 0.302115,
+        "expert_issued_bytes": -100.0
+      }
+    },
+    {
+      "name": "tg16-r1",
+      "n_prompt": 16,
+      "n_gen": 16,
+      "a23_control": {
+        "prefill_tps": 0.201807,
+        "decode_tps": 0.0551405,
+        "wall_seconds": 549,
+        "expert_issued_bytes": 14063108096
+      },
+      "a24_no_expert_prefetch": {
+        "prefill_tps": 0.201104,
+        "decode_tps": 0.055614,
+        "wall_seconds": 547,
+        "expert_issued_bytes": 0
+      },
+      "a24_vs_control_percent": {
+        "prefill_tps": -0.348353,
+        "decode_tps": 0.858715,
+        "wall_seconds": -0.364299,
+        "expert_issued_bytes": -100.0
+      }
+    }
+  ],
+  "decision": "promising_platform_policy_needs_repeats",
+  "reason": "Demand paging removes all speculative expert I/O without a measurable Pi wall-time regression; the one-run throughput deltas remain within noise and require interleaved repeats before promotion."
+}
