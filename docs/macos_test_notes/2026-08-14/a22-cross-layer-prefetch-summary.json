@@ -209,6 +209,30 @@
       "relative_decode_tps_percent": 1.481266
     },
     {
+      "run": "top10-r2",
+      "cross_layer_topk": 10,
+      "prefill_tps": 0.199990,
+      "decode_tps": 0.0550086,
+      "wall_seconds": 332,
+      "expert_issued_bytes": 3729031168,
+      "expert_hit_bytes": 3085484032,
+      "expert_waste_bytes": 643547136,
+      "expert_hit_rate_percent": 82.742243,
+      "relative_decode_tps_percent": -0.570635
+    },
+    {
+      "run": "top10-r3",
+      "cross_layer_topk": 10,
+      "prefill_tps": 0.199676,
+      "decode_tps": 0.0538338,
+      "wall_seconds": 334,
+      "expert_issued_bytes": 3729031168,
+      "expert_hit_bytes": 3085484032,
+      "expert_waste_bytes": 643547136,
+      "expert_hit_rate_percent": 82.742243,
+      "relative_decode_tps_percent": -2.694115
+    },
+    {
       "run": "top16",
       "cross_layer_topk": 16,
       "prefill_tps": 0.200572,
@@ -221,9 +245,22 @@
       "relative_decode_tps_percent": -1.365584
     }
   ],
+  "pi_top10_median": {
+    "sample_count": 3,
+    "prefill_tps": 0.199676,
+    "decode_tps": 0.0550086,
+    "wall_seconds": 332,
+    "expert_hit_rate_percent": 82.742243,
+    "decode_tps_range_percent_of_median": 4.199370,
+    "relative_to_control_percent": {
+      "prefill_tps": -0.838775,
+      "decode_tps": -0.570635,
+      "wall_seconds": 0.302115
+    }
+  },
   "decision": {
     "mac": "Top2 is the A22 operating point, but A22 does not replace the faster historical A20 configuration.",
-    "pi": "Top10 is the single-run screening winner; repeat it before making a stable performance claim.",
+    "pi": "Three Top10 cold/no-swap runs do not reproduce the screening gain; keep A22 disabled by default on Raspberry Pi 5.",
     "global": "Retain A22 as an opt-in research path and use its Router precision evidence to design a no-extra-matmul successor."
   }
 }
