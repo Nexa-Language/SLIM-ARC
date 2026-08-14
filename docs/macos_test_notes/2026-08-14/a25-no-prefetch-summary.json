@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "optimization": "A25 disable the complete SLIM-ARC prefetch runtime",
+  "source_commit": "b693106b66054327cbfa610e30ac4bba88ed410e",
+  "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+  "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "mac": {
+    "contract": {"memory_gib": 2, "cpus": 8, "swap": "disabled", "cache": "cold", "n_prompt": 64, "n_gen": 64},
+    "a24_median": {"prefill_tps": 3.931758, "decode_tps": 0.903851, "wall_seconds": 108.18, "major_faults": 1276187, "file_system_inputs": 401655792},
+    "a25_run": {"prefill_tps": 3.521749, "decode_tps": 0.750988, "wall_seconds": 127.75, "major_faults": 1053093, "file_system_inputs": 510967872},
+    "a25_vs_a24_percent": {"prefill_tps": -10.428134, "decode_tps": -16.912411, "wall_seconds": 18.090220, "major_faults": -17.481294, "file_system_inputs": 27.215363}
+  },
+  "pi5": {
+    "contract": {"memory_gib": 4, "cpus": 4, "swap": "disabled", "cache": "cold", "n_prompt": 16, "n_gen": 16},
+    "a24_run": {"prefill_tps": 0.201104, "decode_tps": 0.0556140, "wall_seconds": 547},
+    "a25_run": {"prefill_tps": 0.151455, "decode_tps": 0.0423577, "wall_seconds": 662},
+    "a25_vs_a24_percent": {"prefill_tps": -24.688221, "decode_tps": -23.836264, "wall_seconds": 21.023766}
+  },
+  "decision": "reject",
+  "reason": "Disabling the full runtime removes beneficial residency and phase behavior in addition to speculative I/O, causing large regressions on both devices."
+}

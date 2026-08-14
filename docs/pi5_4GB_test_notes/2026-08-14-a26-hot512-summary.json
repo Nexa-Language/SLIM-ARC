@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "optimization": "A26 demand paging plus resident-only 512 MiB expert hot cache",
+  "source_commit": "b693106b66054327cbfa610e30ac4bba88ed410e",
+  "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+  "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "contract": {
+    "device": "Raspberry Pi 5 Model B",
+    "memory_gib": 4,
+    "threads": 4,
+    "swap": "disabled during each run and restored afterwards",
+    "cache": "cold",
+    "model_storage": "USB NTFS/FUSE disk",
+    "n_prompt": 16,
+    "n_gen": 16,
+    "environment_delta": {
+      "SLIM_ARC_NO_EXPERT_PREFETCH": "1",
+      "SLIM_ARC_EXPERT_HOT_MB": "512"
+    }
+  },
+  "a24_reference": {
+    "sample_count": 1,
+    "prefill_tps": 0.201104,
+    "decode_tps": 0.0556140,
+    "wall_seconds": 547,
+    "expert_issued_bytes": 0,
+    "hot_locked_bytes": 0
+  },
+  "a26_runs": [
+    {
+      "name": "tg16-r1",
+      "prefill_tps": 0.200541,
+      "decode_tps": 0.0607827,
+      "wall_seconds": 522,
+      "expert_issued_bytes": 0,
+      "hot_locked_bytes": 304414720,
+      "hot_admissions": 990,
+      "hot_hits": 1691,
+      "hot_evictions": 811,
+      "hot_budget_rejections": 0,
+      "hot_nonresident_bytes": 185581568,
+      "hot_lock_failures": 0
+    },
+    {
+      "name": "tg16-r2",
+      "prefill_tps": 0.200615,
+      "decode_tps": 0.0606701,
+      "wall_seconds": 523,
+      "expert_issued_bytes": 0,
+      "hot_locked_bytes": 307183616,
+      "hot_admissions": 990,
+      "hot_hits": 1691,
+      "hot_evictions": 811,
+      "hot_budget_rejections": 0,
+      "hot_nonresident_bytes": 220545024,
+      "hot_lock_failures": 0
+    }
+  ],
+  "a26_median": {
+    "sample_count": 2,
+    "prefill_tps": 0.200578,
+    "decode_tps": 0.0607264,
+    "wall_seconds": 522.5,
+    "hot_locked_bytes": 305799168,
+    "hot_nonresident_bytes": 203063296,
+    "relative_to_a24_percent": {
+      "prefill_tps": -0.261556,
+      "decode_tps": 9.192649,
+      "wall_seconds": -4.478976
+    }
+  },
+  "invalid_budget_screen": {
+    "name": "A27 TOTAL_BUDGET_MB=16 on the A23 Pi binary",
+    "prefill_tps": 0.200657,
+    "decode_tps": 0.0601573,
+    "wall_seconds": 525,
+    "observed_weight_issued_bytes": 4080156672,
+    "a26_weight_issued_bytes": 4080156672,
+    "reason": "The A23 Pi binary predates the teammate branch that added TOTAL_BUDGET_MB. Identical weight-issued bytes prove the requested budget was a no-op, so this run is excluded from the budget decision."
+  },
+  "decision": "promote_as_pi_slow_storage_candidate",
+  "reason": "Two cold/no-swap runs were one second apart, improved decode by 9.19% and wall by 4.48%, issued no speculative expert I/O, and reported 1691 hot hits with zero lock failures."
+}
