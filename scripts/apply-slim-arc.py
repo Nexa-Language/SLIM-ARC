@@ -12,6 +12,7 @@ SLIM_ARC_FILES = (
     "slim-arc-page-range.h", "slim-arc-page-range.cpp",
     "slim-arc-expert-reclaim.h", "slim-arc-expert-reclaim.cpp",
     "slim-arc-expert-residency.h", "slim-arc-expert-residency.cpp",
+    "slim-arc-expert-transition.h", "slim-arc-expert-transition.cpp",
     "slim-arc-runtime.h", "slim-arc-runtime.cpp",
     "slim-arc-unified-scheduler.h", "slim-arc-unified-scheduler.cpp",
     "slim-arc-kv-eviction.h", "slim-arc-kv-eviction.cpp",
@@ -174,6 +175,9 @@ def transform_qwen3next(content: str) -> str:
         required = (
             'std::getenv("SLIM_ARC_CROSS_LAYER_GATE")',
             'std::getenv("SLIM_ARC_CROSS_LAYER_TOPK")',
+            'std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION")',
+            'std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK")',
+            "slim_arc_cross_layer_transition_topk_count == 0",
             'cb(slim_arc_cross_layer_topk, "slim_arc_cross_layer_topk", il + 1)',
             "ggml_build_forward_expand(gf, slim_arc_cross_layer_topk);",
         )
@@ -193,12 +197,34 @@ def transform_qwen3next(content: str) -> str:
             include_anchor = f"#include {header}"
 
     loop_anchor = "    for (int il = 0; il < n_layer; ++il) {"
-    setup = r'''    const char * slim_arc_cross_layer_gate_raw = std::getenv("SLIM_ARC_CROSS_LAYER_GATE");
+    setup = r'''    const char * slim_arc_cross_layer_transition_raw =
+        std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION");
+    const char * slim_arc_cross_layer_transition_topk_raw =
+        std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK");
+    char * slim_arc_cross_layer_transition_topk_end = nullptr;
+    const long slim_arc_cross_layer_transition_topk_value =
+        slim_arc_cross_layer_transition_topk_raw == nullptr ? 0 :
+        std::strtol(
+            slim_arc_cross_layer_transition_topk_raw,
+            &slim_arc_cross_layer_transition_topk_end,
+            10);
+    const int slim_arc_cross_layer_transition_topk_count = n_tokens == 1 &&
+        slim_arc_cross_layer_transition_raw != nullptr &&
+        std::strcmp(slim_arc_cross_layer_transition_raw, "1") == 0 &&
+        slim_arc_cross_layer_transition_topk_raw != nullptr &&
+        slim_arc_cross_layer_transition_topk_end != slim_arc_cross_layer_transition_topk_raw &&
+        *slim_arc_cross_layer_transition_topk_end == '\0' &&
+        slim_arc_cross_layer_transition_topk_value >= 1 &&
+        slim_arc_cross_layer_transition_topk_value <= 64 &&
+        slim_arc_cross_layer_transition_topk_value <= n_expert ?
+        static_cast<int>(slim_arc_cross_layer_transition_topk_value) : 0;
+    const char * slim_arc_cross_layer_gate_raw = std::getenv("SLIM_ARC_CROSS_LAYER_GATE");
     const char * slim_arc_cross_layer_topk_raw = std::getenv("SLIM_ARC_CROSS_LAYER_TOPK");
     char * slim_arc_cross_layer_topk_end = nullptr;
     const long slim_arc_cross_layer_topk_value = slim_arc_cross_layer_topk_raw == nullptr ? 0 :
         std::strtol(slim_arc_cross_layer_topk_raw, &slim_arc_cross_layer_topk_end, 10);
     const int slim_arc_cross_layer_topk_count = n_tokens == 1 &&
+        slim_arc_cross_layer_transition_topk_count == 0 &&
         slim_arc_cross_layer_gate_raw != nullptr && std::strcmp(slim_arc_cross_layer_gate_raw, "1") == 0 &&
         slim_arc_cross_layer_topk_raw != nullptr &&
         slim_arc_cross_layer_topk_end != slim_arc_cross_layer_topk_raw &&
@@ -282,8 +308,28 @@ def patch_context(filepath: str) -> None:
         slim_arc_expert_pipeline_mb >= 1 && slim_arc_expert_pipeline_mb <= 64 ?
         static_cast<size_t>(slim_arc_expert_pipeline_mb) << 20 : 0;
     const bool slim_arc_expert_pipeline = pipeline_budget_bytes > 0;
+    const char * slim_arc_cross_layer_transition_raw =
+        std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION");
+    const char * slim_arc_cross_layer_transition_topk_raw =
+        std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK");
+    char * slim_arc_cross_layer_transition_topk_end = nullptr;
+    const long slim_arc_cross_layer_transition_topk_value =
+        slim_arc_cross_layer_transition_topk_raw == nullptr ? 0 :
+        std::strtol(
+            slim_arc_cross_layer_transition_topk_raw,
+            &slim_arc_cross_layer_transition_topk_end,
+            10);
+    const bool cross_layer_transition = slim_arc_expert_pipeline &&
+        slim_arc_cross_layer_transition_raw != nullptr &&
+        std::strcmp(slim_arc_cross_layer_transition_raw, "1") == 0 &&
+        slim_arc_cross_layer_transition_topk_raw != nullptr &&
+        slim_arc_cross_layer_transition_topk_end != slim_arc_cross_layer_transition_topk_raw &&
+        *slim_arc_cross_layer_transition_topk_end == '\0' &&
+        slim_arc_cross_layer_transition_topk_value >= 1 &&
+        slim_arc_cross_layer_transition_topk_value <= 64;
     const char * slim_arc_cross_layer_gate_raw = std::getenv("SLIM_ARC_CROSS_LAYER_GATE");
-    const bool cross_layer_gate = slim_arc_expert_pipeline && slim_arc_cross_layer_gate_raw != nullptr &&
+    const bool cross_layer_gate = slim_arc_expert_pipeline && !cross_layer_transition &&
+        slim_arc_cross_layer_gate_raw != nullptr &&
         std::strcmp(slim_arc_cross_layer_gate_raw, "1") == 0;
     std::vector<uint64_t> expert_generation_tokens;
     int slim_arc_min_layer = INT_MAX;
@@ -325,6 +371,9 @@ def patch_context(filepath: str) -> None:
         int max_layer;
         size_t pipeline_budget_bytes;
         bool cross_layer_gate;
+        bool cross_layer_transition;
+        std::vector<std::vector<int>> native_experts_by_layer;
+        std::vector<std::vector<int>> predicted_experts_by_layer;
         int pending_layer{-1};
         std::vector<int> pending_experts;
 
@@ -355,7 +404,8 @@ def patch_context(filepath: str) -> None:
         }
 
         void prefetch_prediction(int layer, const std::vector<int> & experts) {
-            if (runtime == nullptr || !*runtime || !cross_layer_gate || experts.empty() ||
+            if (runtime == nullptr || !*runtime || (!cross_layer_gate && !cross_layer_transition) ||
+                experts.empty() ||
                 layer < min_layer || layer > max_layer || static_cast<size_t>(layer) >= generations->size() ||
                 (*generations)[static_cast<size_t>(layer)] != 0) return;
             auto & scheduler = runtime->prefetch();
@@ -366,7 +416,12 @@ def patch_context(filepath: str) -> None:
         }
     } slim_arc_inline_state{
         &slim_arc_runtime, &expert_generation_tokens, slim_arc_min_layer, slim_arc_max_layer,
-        pipeline_budget_bytes, cross_layer_gate, -1, {}};
+        pipeline_budget_bytes, cross_layer_gate, cross_layer_transition, {}, {}, -1, {}};
+    if (slim_arc_max_layer >= 0) {
+        const size_t router_layer_count = static_cast<size_t>(slim_arc_max_layer) + 1;
+        slim_arc_inline_state.native_experts_by_layer.resize(router_layer_count);
+        slim_arc_inline_state.predicted_experts_by_layer.resize(router_layer_count);
+    }
     if (slim_arc_runtime && slim_arc_min_layer != INT_MAX && slim_arc_max_layer >= 0) {
         if (!slim_arc_expert_pipeline) {
             for (int layer = slim_arc_min_layer; layer <= slim_arc_max_layer; ++layer) {
@@ -405,10 +460,39 @@ def patch_context(filepath: str) -> None:
                 if (predicted) {
                     state->prefetch_prediction(layer, unique);
                 } else if (!unique.empty()) {
+                    if (state->cross_layer_transition &&
+                        static_cast<size_t>(layer) < state->native_experts_by_layer.size()) {
+                        auto & scheduler = state->runtime->prefetch();
+                        if (layer > state->min_layer &&
+                            static_cast<size_t>(layer - 1) < state->native_experts_by_layer.size() &&
+                            !state->native_experts_by_layer[static_cast<size_t>(layer - 1)].empty()) {
+                            scheduler.observe_expert_transition(
+                                layer - 1,
+                                state->native_experts_by_layer[static_cast<size_t>(layer - 1)],
+                                unique);
+                        }
+                        if (static_cast<size_t>(layer) < state->predicted_experts_by_layer.size() &&
+                            !state->predicted_experts_by_layer[static_cast<size_t>(layer)].empty()) {
+                            scheduler.record_expert_transition_result(
+                                state->predicted_experts_by_layer[static_cast<size_t>(layer)],
+                                unique);
+                        }
+                        state->native_experts_by_layer[static_cast<size_t>(layer)] = unique;
+                        if (layer < state->max_layer &&
+                            static_cast<size_t>(layer + 1) < state->predicted_experts_by_layer.size()) {
+                            std::vector<int> transition_prediction =
+                                scheduler.predict_expert_transition(layer, unique);
+                            state->predicted_experts_by_layer[static_cast<size_t>(layer + 1)] =
+                                transition_prediction;
+                            state->prefetch_prediction(layer + 1, transition_prediction);
+                        }
+                    }
                     state->pending_layer = layer;
                     state->pending_experts = std::move(unique);
                 }
-                if (native && !state->cross_layer_gate) state->prefetch_layer(layer + 1);
+                if (native && !state->cross_layer_gate && !state->cross_layer_transition) {
+                    state->prefetch_layer(layer + 1);
+                }
                 return true;
             },
             &slim_arc_inline_state);
@@ -496,7 +580,7 @@ def patch_cmakelists(filepath: str) -> None:
         "slim-arc-prefetch.cpp", "slim-arc-runtime.cpp", "slim-arc-kv-eviction.cpp",
         "slim-arc-unified-scheduler.cpp", "slim-arc-cgroup-memory.cpp", "slim-arc-pressure-budget.cpp",
         "slim-arc-page-range.cpp", "slim-arc-expert-reclaim.cpp",
-        "slim-arc-expert-residency.cpp",
+        "slim-arc-expert-residency.cpp", "slim-arc-expert-transition.cpp",
     )
     if all(name in content for name in required):
         return
@@ -509,7 +593,8 @@ def patch_cmakelists(filepath: str) -> None:
             slim-arc-pressure-budget.cpp
             slim-arc-page-range.cpp
             slim-arc-expert-reclaim.cpp
-            slim-arc-expert-residency.cpp"""
+            slim-arc-expert-residency.cpp
+            slim-arc-expert-transition.cpp"""
     if "slim-arc-prefetch.cpp" not in content:
         content = replace_required(content, "llama-vocab.cpp", files, "CMake llama-vocab.cpp")
     else:
@@ -517,7 +602,7 @@ def patch_cmakelists(filepath: str) -> None:
         for name in (
             "slim-arc-runtime.cpp", "slim-arc-cgroup-memory.cpp", "slim-arc-pressure-budget.cpp",
             "slim-arc-page-range.cpp", "slim-arc-expert-reclaim.cpp",
-            "slim-arc-expert-residency.cpp",
+            "slim-arc-expert-residency.cpp", "slim-arc-expert-transition.cpp",
         ):
             if name not in content:
                 content = replace_required(content, anchor, f"{anchor}\n            {name}", "CMake source")

@@ -147,17 +147,27 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert "ggml_backend_sched_set_eval_callback(sched.get(), cparams.cb_eval, cparams.cb_eval_user_data);" in context
     assert "status == GGML_STATUS_SUCCESS && !slim_arc_inline_router" in context
     assert 'std::getenv("SLIM_ARC_CROSS_LAYER_GATE")' in context
+    assert context.count('std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION")') == 1
+    assert context.count('std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK")') == 1
     assert 'std::strstr(tensor->name, "slim_arc_cross_layer_topk")' in context
     assert "prefetch_prediction(layer, unique)" in context
-    assert "if (native && !state->cross_layer_gate) state->prefetch_layer(layer + 1);" in context
+    assert "observe_expert_transition(" in context
+    assert "predict_expert_transition(layer, unique)" in context
+    assert "record_expert_transition_result(" in context
+    assert "native_experts_by_layer" in context
+    assert "predicted_experts_by_layer" in context
+    assert "if (native && !state->cross_layer_gate && !state->cross_layer_transition)" in context
 
     qwen3next = second["models/qwen3next.cpp"].decode(encoding="utf-8")
     assert qwen3next.count('std::getenv("SLIM_ARC_CROSS_LAYER_GATE")') == 1
     assert qwen3next.count('std::getenv("SLIM_ARC_CROSS_LAYER_TOPK")') == 1
+    assert qwen3next.count('std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION")') == 1
+    assert qwen3next.count('std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK")') == 1
     assert qwen3next.count('cb(slim_arc_cross_layer_topk, "slim_arc_cross_layer_topk", il + 1)') == 1
     assert qwen3next.count("ggml_build_forward_expand(gf, slim_arc_cross_layer_topk);") == 1
     assert "il + 1 < n_layer" in qwen3next
     assert "n_tokens == 1" in qwen3next
+    assert "slim_arc_cross_layer_transition_topk_count == 0" in qwen3next
 
     model = second["llama-model.cpp"].decode(encoding="utf-8")
     impl = model[model.index("struct llama_model::impl"):model.index("};", model.index("struct llama_model::impl"))]
@@ -179,6 +189,7 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert cmake.count("slim-arc-page-range.cpp") == 1
     assert cmake.count("slim-arc-expert-reclaim.cpp") == 1
     assert cmake.count("slim-arc-expert-residency.cpp") == 1
+    assert cmake.count("slim-arc-expert-transition.cpp") == 1
     assert "slim-arc-runtime.h" in second
     assert "slim-arc-runtime.cpp" in second
     assert "slim-arc-page-range.h" in second
@@ -187,6 +198,8 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert "slim-arc-expert-reclaim.cpp" in second
     assert "slim-arc-expert-residency.h" in second
     assert "slim-arc-expert-residency.cpp" in second
+    assert "slim-arc-expert-transition.h" in second
+    assert "slim-arc-expert-transition.cpp" in second
     assert "slim-arc-on-demand.h" not in second
     assert "slim-arc-on-demand.cpp" not in second
 
