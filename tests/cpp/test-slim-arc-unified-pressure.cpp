@@ -28,6 +28,39 @@ void clear_pressure_environment() {
     unsetenv("SLIM_ARC_PRESSURE_ADMISSION");
     unsetenv("SLIM_ARC_PRESSURE_RESERVE_MB");
     unsetenv("SLIM_ARC_EXPERT_RESIDENCY");
+    unsetenv("SLIM_ARC_NO_WEIGHT_PREFETCH");
+}
+
+bool observes_weight_advice(const char * no_weight_prefetch) {
+    clear_pressure_environment();
+    if (no_weight_prefetch != nullptr) {
+        assert(setenv("SLIM_ARC_NO_WEIGHT_PREFETCH", no_weight_prefetch, 1) == 0);
+    }
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(nullptr, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    std::promise<void> advised;
+    const std::future<void> advice = advised.get_future();
+    {
+        slim_arc::prefetch_scheduler prefetcher{1, 1, {}, [&](void *, size_t, int type) {
+            assert(type == POSIX_MADV_WILLNEED);
+            advised.set_value();
+            return 0;
+        }};
+        prefetcher.register_tensor("blk.1.weight", mapping, page_size, 1);
+        slim_arc::unified_io_scheduler scheduler{static_budget, &prefetcher, nullptr};
+        scheduler.tick(0, 1);
+        const bool observed = advice.wait_for(std::chrono::milliseconds{250}) == std::future_status::ready;
+        prefetcher.shutdown();
+        assert(munmap(mapping, page_size) == 0);
+        clear_pressure_environment();
+        return observed;
+    }
+}
+
+void test_weight_prefetch_can_be_disabled_without_disabling_runtime() {
+    assert(!observes_weight_advice("1"));
+    assert(observes_weight_advice(nullptr));
 }
 
 void test_each_model_owned_runtime_emits_its_exact_machine_line_once() {
@@ -290,6 +323,7 @@ void test_valid_configuration_samples_pressure_once_per_tick() {
 
 int main() {
     test_each_model_owned_runtime_emits_its_exact_machine_line_once();
+    test_weight_prefetch_can_be_disabled_without_disabling_runtime();
     test_pressure_admission_is_opt_in();
     test_invalid_configuration_disables_pressure_admission();
     test_valid_configuration_samples_pressure_once_per_tick();

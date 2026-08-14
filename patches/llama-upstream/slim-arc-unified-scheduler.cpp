@@ -65,6 +65,8 @@ unified_io_scheduler::unified_io_scheduler(size_t total_budget_bytes,
     }}) {
     current_budget_.total_bytes = total_budget_bytes;
     pressure_effective_bytes_.store(total_budget_bytes);
+    const char * const no_weight_prefetch = std::getenv("SLIM_ARC_NO_WEIGHT_PREFETCH");
+    weight_prefetch_disabled_ = no_weight_prefetch != nullptr && std::strcmp(no_weight_prefetch, "1") == 0;
     const char * const residency = std::getenv("SLIM_ARC_EXPERT_RESIDENCY");
     expert_residency_enabled_ = residency != nullptr && std::strcmp(residency, "1") == 0;
     const char * const enabled = std::getenv("SLIM_ARC_PRESSURE_ADMISSION");
@@ -239,7 +241,9 @@ void unified_io_scheduler::tick(int current_layer, int lookahead) {
             weight_prefetcher_->set_expert_budget(budget.expert_bytes);
             weight_prefetcher_->reset_expert_budget_usage();  // 每 step 重置累计用量
         }
-        weight_prefetcher_->notify_layer_compute(current_layer);
+        if (!weight_prefetch_disabled_) {
+            weight_prefetcher_->notify_layer_compute(current_layer);
+        }
     }
 
     if (kv_manager_) {

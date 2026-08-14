@@ -103,6 +103,7 @@ class unified_io_scheduler {
     mutable std::mutex history_mtx_;
     std::vector<adaptation_record> history_;
     int tick_count_ = 0;
+    bool weight_prefetch_disabled_{false};
     bool pressure_admission_enabled_{false};
     bool expert_residency_enabled_{false};
     pressure_snapshot_provider pressure_provider_;
