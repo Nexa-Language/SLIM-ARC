@@ -1,0 +1,122 @@
+WRAPPER_BEFORE
+Name:	sed
+Umask:	0022
+State:	R (running)
+Tgid:	26
+Ngid:	0
+Pid:	26
+PPid:	1
+TracerPid:	0
+Uid:	0	0	0	0
+Gid:	0	0	0	0
+FDSize:	256
+Groups:	0
+NStgid:	26
+NSpid:	26
+NSpgid:	1
+NSsid:	1
+Kthread:	0
+VmPeak:	    3396 kB
+VmSize:	    3396 kB
+VmLck:	       0 kB
+VmPin:	       0 kB
+VmHWM:	    1716 kB
+VmRSS:	    1716 kB
+RssAnon:	     128 kB
+RssFile:	    1588 kB
+RssShmem:	       0 kB
+VmData:	     236 kB
+VmStk:	     132 kB
+VmExe:	      96 kB
+VmLib:	    2548 kB
+VmPTE:	      48 kB
+VmSwap:	       0 kB
+HugetlbPages:	       0 kB
+CoreDumping:	0
+THP_enabled:	1
+untag_mask:	0xffffffffffffff
+Threads:	1
+SigQ:	2/63653
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+SigBlk:	0000000000000000
+SigIgn:	0000000000000000
+SigCgt:	0000000000000000
+CapInh:	0000000000000000
+CapPrm:	00000000a80425fb
+CapEff:	00000000a80425fb
+CapBnd:	00000000a80425fb
+CapAmb:	0000000000000000
+NoNewPrivs:	0
+Seccomp:	2
+Seccomp_filters:	1
+Speculation_Store_Bypass:	vulnerable
+SpeculationIndirectBranch:	unknown
+Cpus_allowed:	ff
+Cpus_allowed_list:	0-7
+Mems_allowed:	00000000,00000001
+Mems_allowed_list:	0
+voluntary_ctxt_switches:	4
+nonvoluntary_ctxt_switches:	0
+SELF_CGROUP
+0::/
+WRAPPER_AFTER
+Name:	sed
+Umask:	0022
+State:	R (running)
+Tgid:	51
+Ngid:	0
+Pid:	51
+PPid:	1
+TracerPid:	0
+Uid:	0	0	0	0
+Gid:	0	0	0	0
+FDSize:	256
+Groups:	0
+NStgid:	51
+NSpid:	51
+NSpgid:	1
+NSsid:	1
+Kthread:	0
+VmPeak:	    3396 kB
+VmSize:	    3396 kB
+VmLck:	       0 kB
+VmPin:	       0 kB
+VmHWM:	    1668 kB
+VmRSS:	    1668 kB
+RssAnon:	     132 kB
+RssFile:	    1536 kB
+RssShmem:	       0 kB
+VmData:	     236 kB
+VmStk:	     132 kB
+VmExe:	      96 kB
+VmLib:	    2548 kB
+VmPTE:	      44 kB
+VmSwap:	       0 kB
+HugetlbPages:	       0 kB
+CoreDumping:	0
+THP_enabled:	1
+untag_mask:	0xffffffffffffff
+Threads:	1
+SigQ:	1/63653
+SigPnd:	0000000000000000
+ShdPnd:	0000000000000000
+SigBlk:	0000000000000000
+SigIgn:	0000000000000000
+SigCgt:	0000000000000000
+CapInh:	0000000000000000
+CapPrm:	00000000a80425fb
+CapEff:	00000000a80425fb
+CapBnd:	00000000a80425fb
+CapAmb:	0000000000000000
+NoNewPrivs:	0
+Seccomp:	2
+Seccomp_filters:	1
+Speculation_Store_Bypass:	vulnerable
+SpeculationIndirectBranch:	unknown
+Cpus_allowed:	ff
+Cpus_allowed_list:	0-7
+Mems_allowed:	00000000,00000001
+Mems_allowed_list:	0
+voluntary_ctxt_switches:	9
+nonvoluntary_ctxt_switches:	0
