@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "optimization": "A34 budgeted cross-token LRU for resident hot expert pages",
+  "source_commit": "b8d84f7a2d5d323087edfda00efe5a64defdec22",
+  "generated_source_sha256": "d9b5f6794f08738fa55e8a23218d7eb37d3ec2c158d389d1d115134943c126a7",
+  "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+  "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "contract": {
+    "device": "Raspberry Pi 5 Model B",
+    "memory_gib": 4,
+    "threads": 4,
+    "swap": "disabled during each run and restored afterwards",
+    "cache": "cold",
+    "model_storage": "USB NTFS/FUSE rotational disk",
+    "read_ahead_kb": 2048,
+    "nr_requests": 4,
+    "n_prompt": 16,
+    "n_gen": 16,
+    "common_environment": {
+      "SLIM_ARC_NO_EXPERT_PREFETCH": "1",
+      "SLIM_ARC_NO_WEIGHT_PREFETCH": "1",
+      "SLIM_ARC_EXPERT_HOT_LRU": "1",
+      "SLIM_ARC_SHARED_MLOCK": "1",
+      "SLIM_ARC_TOTAL_BUDGET_MB": "16"
+    }
+  },
+  "a34_lru512_runs": [
+    {
+      "name": "hot-lru512-r1",
+      "prefill_tps": 0.203835,
+      "decode_tps": 0.0669076,
+      "wall_seconds": 499,
+      "hot_budget_bytes": 536870912,
+      "hot_locked_bytes": 536313856,
+      "hot_entries": 309,
+      "hot_admissions": 969,
+      "hot_hits": 1712,
+      "hot_evictions": 660,
+      "hot_nonresident_bytes": 106070016,
+      "hot_lock_failures": 0,
+      "shared_locked_bytes": 94765056,
+      "shared_lock_failures": 0
+    },
+    {
+      "name": "hot-lru512-r2",
+      "prefill_tps": 0.203334,
+      "decode_tps": 0.0648051,
+      "wall_seconds": 507,
+      "hot_budget_bytes": 536870912,
+      "hot_locked_bytes": 536870912,
+      "hot_entries": 417,
+      "hot_admissions": 790,
+      "hot_hits": 1891,
+      "hot_evictions": 373,
+      "hot_nonresident_bytes": 470548480,
+      "hot_lock_failures": 0,
+      "shared_locked_bytes": 94765056,
+      "shared_lock_failures": 0
+    }
+  ],
+  "a34_lru512_median": {
+    "sample_count": 2,
+    "prefill_tps": 0.2035845,
+    "decode_tps": 0.06585635,
+    "wall_seconds": 503.0,
+    "hot_locked_bytes": 536592384,
+    "hot_entries": 363.0,
+    "hot_admissions": 879.5,
+    "hot_hits": 1801.5,
+    "hot_evictions": 516.5,
+    "hot_nonresident_bytes": 288309248
+  },
+  "a32_legacy_hot_median": {
+    "sample_count": 2,
+    "prefill_tps": 0.203642,
+    "decode_tps": 0.0652464,
+    "wall_seconds": 505.0,
+    "hot_locked_bytes": 316874752,
+    "hot_admissions": 990,
+    "hot_hits": 1691,
+    "hot_evictions": 811
+  },
+  "a34_relative_to_a32_percent": {
+    "prefill_tps": -0.028236,
+    "decode_tps": 0.934841,
+    "wall_seconds": -0.396040,
+    "hot_locked_bytes": 69.338952,
+    "hot_admissions": -11.161616,
+    "hot_hits": 6.534595,
+    "hot_evictions": -36.313194
+  },
+  "a35_lru384_screen": {
+    "sample_count": 1,
+    "prefill_tps": 0.202685,
+    "decode_tps": 0.0641983,
+    "wall_seconds": 510,
+    "hot_budget_bytes": 402653184,
+    "hot_locked_bytes": 400801792,
+    "hot_entries": 228,
+    "hot_admissions": 1370,
+    "hot_hits": 1311,
+    "hot_evictions": 1142,
+    "hot_nonresident_bytes": 261193728,
+    "hot_lock_failures": 0
+  },
+  "a35_relative_to_a34_percent": {
+    "prefill_tps": -0.441831,
+    "decode_tps": -2.517677,
+    "wall_seconds": 1.391650,
+    "hot_admissions": 55.770324,
+    "hot_hits": -27.227311,
+    "hot_evictions": 121.103582
+  },
+  "decision": "promote_a34_lru512_as_the_pi_slow_storage_candidate",
+  "reason": "The opt-in LRU preserved resident expert pages across token gaps, reduced median evictions by 36.31 percent, increased hits by 6.53 percent, improved median decode throughput by 0.93 percent, and reduced median wall time by two seconds without issuing speculative expert or weight I/O. The 384 MiB screen increased churn and was rejected."
+}
