@@ -67,13 +67,13 @@ if [[ ! "${RUN_IMAGE_ID:-}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
     exit 2
 fi
 
-readonly allowed_slim_arc_env='^(SLIM_ARC_DECODE_MADV|SLIM_ARC_DECODE_THREADS|SLIM_ARC_DISABLE|SLIM_ARC_DYNAMIC_MADV|SLIM_ARC_EXPERT_BUDGET|SLIM_ARC_EXPERT_CONF|SLIM_ARC_EXPERT_HOT_MB|SLIM_ARC_EXPERT_MADV_NORMAL|SLIM_ARC_EXPERT_MADV_RANDOM|SLIM_ARC_EXPERT_PIPELINE_MB|SLIM_ARC_EXPERT_POP|SLIM_ARC_EXPERT_RECLAIM_WASTE|SLIM_ARC_EXPERT_RESIDENCY|SLIM_ARC_INLINE_ROUTER|SLIM_ARC_KV_EVICT|SLIM_ARC_KV_SINK|SLIM_ARC_KV_WINDOW|SLIM_ARC_NO_EXPERT_PREFETCH|SLIM_ARC_NO_MADV_RANDOM|SLIM_ARC_NO_PREFETCH|SLIM_ARC_POLL|SLIM_ARC_PREFILL_THREADS|SLIM_ARC_PRESSURE_ADMISSION|SLIM_ARC_PRESSURE_RESERVE_MB|SLIM_ARC_ROUTER_MLOCK|SLIM_ARC_ROUTER_PREFETCH|SLIM_ARC_SHARED_MLOCK|SLIM_ARC_SMALL_MLOCK|SLIM_ARC_SLOW_STORAGE)$'
+readonly allowed_slim_arc_env='^(SLIM_ARC_CROSS_LAYER_GATE|SLIM_ARC_CROSS_LAYER_TOPK|SLIM_ARC_DECODE_MADV|SLIM_ARC_DECODE_THREADS|SLIM_ARC_DISABLE|SLIM_ARC_DYNAMIC_MADV|SLIM_ARC_EXPERT_BUDGET|SLIM_ARC_EXPERT_CONF|SLIM_ARC_EXPERT_HOT_MB|SLIM_ARC_EXPERT_MADV_NORMAL|SLIM_ARC_EXPERT_MADV_RANDOM|SLIM_ARC_EXPERT_PIPELINE_MB|SLIM_ARC_EXPERT_POP|SLIM_ARC_EXPERT_RECLAIM_WASTE|SLIM_ARC_EXPERT_RESIDENCY|SLIM_ARC_INLINE_ROUTER|SLIM_ARC_KV_EVICT|SLIM_ARC_KV_SINK|SLIM_ARC_KV_WINDOW|SLIM_ARC_NO_EXPERT_PREFETCH|SLIM_ARC_NO_MADV_RANDOM|SLIM_ARC_NO_PREFETCH|SLIM_ARC_POLL|SLIM_ARC_PREFILL_THREADS|SLIM_ARC_PRESSURE_ADMISSION|SLIM_ARC_PRESSURE_RESERVE_MB|SLIM_ARC_ROUTER_MLOCK|SLIM_ARC_ROUTER_PREFETCH|SLIM_ARC_SHARED_MLOCK|SLIM_ARC_SMALL_MLOCK|SLIM_ARC_SLOW_STORAGE)$'
 while IFS= read -r variable_name; do
     if [[ "${variable_name}" == SLIM_ARC_* && ! "${variable_name}" =~ ${allowed_slim_arc_env} ]]; then
         printf 'Unsupported SLIM-ARC environment variable: %s\n' "${variable_name}" >&2
         exit 2
     fi
-    if [[ ( "${variable_name}" == "SLIM_ARC_EXPERT_MADV_NORMAL" || "${variable_name}" == "SLIM_ARC_EXPERT_MADV_RANDOM" || "${variable_name}" == "SLIM_ARC_EXPERT_RECLAIM_WASTE" || "${variable_name}" == "SLIM_ARC_EXPERT_RESIDENCY" || "${variable_name}" == "SLIM_ARC_INLINE_ROUTER" || "${variable_name}" == "SLIM_ARC_NO_EXPERT_PREFETCH" || "${variable_name}" == "SLIM_ARC_ROUTER_MLOCK" || "${variable_name}" == "SLIM_ARC_ROUTER_PREFETCH" || "${variable_name}" == "SLIM_ARC_SHARED_MLOCK" || "${variable_name}" == "SLIM_ARC_SMALL_MLOCK" || "${variable_name}" == "SLIM_ARC_SLOW_STORAGE" ) && "${!variable_name}" != "1" ]]; then
+    if [[ ( "${variable_name}" == "SLIM_ARC_CROSS_LAYER_GATE" || "${variable_name}" == "SLIM_ARC_EXPERT_MADV_NORMAL" || "${variable_name}" == "SLIM_ARC_EXPERT_MADV_RANDOM" || "${variable_name}" == "SLIM_ARC_EXPERT_RECLAIM_WASTE" || "${variable_name}" == "SLIM_ARC_EXPERT_RESIDENCY" || "${variable_name}" == "SLIM_ARC_INLINE_ROUTER" || "${variable_name}" == "SLIM_ARC_NO_EXPERT_PREFETCH" || "${variable_name}" == "SLIM_ARC_ROUTER_MLOCK" || "${variable_name}" == "SLIM_ARC_ROUTER_PREFETCH" || "${variable_name}" == "SLIM_ARC_SHARED_MLOCK" || "${variable_name}" == "SLIM_ARC_SMALL_MLOCK" || "${variable_name}" == "SLIM_ARC_SLOW_STORAGE" ) && "${!variable_name}" != "1" ]]; then
         printf '%s must be exactly 1\n' "${variable_name}" >&2
         exit 2
     fi
@@ -101,7 +101,19 @@ while IFS= read -r variable_name; do
             exit 2
         fi
     fi
+    if [[ "${variable_name}" == "SLIM_ARC_CROSS_LAYER_TOPK" ]]; then
+        if [[ ! "${!variable_name}" =~ ^[1-9][0-9]?$ ]] || (( 10#${!variable_name} > 64 )); then
+            printf 'SLIM_ARC_CROSS_LAYER_TOPK must be an integer between 1 and 64\n' >&2
+            exit 2
+        fi
+    fi
 done < <(compgen -e)
+
+if [[ -n "${SLIM_ARC_CROSS_LAYER_GATE:-}" && -z "${SLIM_ARC_CROSS_LAYER_TOPK:-}" ]] ||
+   [[ -z "${SLIM_ARC_CROSS_LAYER_GATE:-}" && -n "${SLIM_ARC_CROSS_LAYER_TOPK:-}" ]]; then
+    printf 'SLIM_ARC_CROSS_LAYER_GATE and SLIM_ARC_CROSS_LAYER_TOPK must be configured together\n' >&2
+    exit 2
+fi
 
 cgroup_relative="$(awk -F: '$1 == "0" {print $3}' /proc/self/cgroup)"
 if [[ -n "${cgroup_relative}" && -f "/sys/fs/cgroup${cgroup_relative}/memory.max" ]]; then

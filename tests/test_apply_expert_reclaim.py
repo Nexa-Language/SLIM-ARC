@@ -12,6 +12,8 @@ APPLY_SCRIPT = REPO_ROOT / "scripts" / "apply-slim-arc.py"
 def write_fixture(root: Path) -> Path:
     src = root / "src"
     src.mkdir(parents=True)
+    models = src / "models"
+    models.mkdir()
     (src / "llama-model-loader.cpp").write_text(
         '#include "llama-model-loader.h"\n#include <regex>\n'
         "void init_mappings() {\n"
@@ -60,6 +62,19 @@ def write_fixture(root: Path) -> Path:
         encoding="utf-8",
     )
     (src / "CMakeLists.txt").write_text("set(LLAMA_SOURCES llama-vocab.cpp)\n", encoding="utf-8")
+    (models / "qwen3next.cpp").write_text(
+        '#include "models.h"\n#include "llama-memory-recurrent.h"\n'
+        "void build_qwen3next_graph() {\n"
+        "    for (int il = 0; il < n_layer; ++il) {\n"
+        "        ggml_tensor * attn_post_norm = build_norm(cur, model.layers[il].attn_post_norm, nullptr, LLM_NORM_RMS, il);\n"
+        '        cb(attn_post_norm, "attn_post_norm", il);\n\n'
+        "        // FFN layer (MoE or dense) - without residual connection\n"
+        "        cur = build_layer_ffn(attn_post_norm, il);\n"
+        '        cb(cur, "ffn_out", il);\n'
+        "    }\n"
+        "}\n",
+        encoding="utf-8",
+    )
     return src
 
 
@@ -95,9 +110,9 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     src = write_fixture(tmp_path / "llama")
 
     first_run = run_apply(src.parent)
-    first = {path.name: path.read_bytes() for path in src.iterdir() if path.is_file()}
+    first = snapshot_tree(src)
     second_run = run_apply(src.parent)
-    second = {path.name: path.read_bytes() for path in src.iterdir() if path.is_file()}
+    second = snapshot_tree(src)
 
     assert first == second
     assert first_run.stdout == "SLIM-ARC integration complete\n"
@@ -131,6 +146,18 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert "if (!slim_arc_expert_pipeline)" in context
     assert "ggml_backend_sched_set_eval_callback(sched.get(), cparams.cb_eval, cparams.cb_eval_user_data);" in context
     assert "status == GGML_STATUS_SUCCESS && !slim_arc_inline_router" in context
+    assert 'std::getenv("SLIM_ARC_CROSS_LAYER_GATE")' in context
+    assert 'std::strstr(tensor->name, "slim_arc_cross_layer_topk")' in context
+    assert "prefetch_prediction(layer, unique)" in context
+    assert "if (native && !state->cross_layer_gate) state->prefetch_layer(layer + 1);" in context
+
+    qwen3next = second["models/qwen3next.cpp"].decode(encoding="utf-8")
+    assert qwen3next.count('std::getenv("SLIM_ARC_CROSS_LAYER_GATE")') == 1
+    assert qwen3next.count('std::getenv("SLIM_ARC_CROSS_LAYER_TOPK")') == 1
+    assert qwen3next.count('cb(slim_arc_cross_layer_topk, "slim_arc_cross_layer_topk", il + 1)') == 1
+    assert qwen3next.count("ggml_build_forward_expand(gf, slim_arc_cross_layer_topk);") == 1
+    assert "il + 1 < n_layer" in qwen3next
+    assert "n_tokens == 1" in qwen3next
 
     model = second["llama-model.cpp"].decode(encoding="utf-8")
     impl = model[model.index("struct llama_model::impl"):model.index("};", model.index("struct llama_model::impl"))]

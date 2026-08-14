@@ -167,6 +167,76 @@ def patch_model(filepath: str) -> None:
         destination.write(content)
 
 
+def transform_qwen3next(content: str) -> str:
+    """Install one decode-only next-layer Router root in Qwen3-Next graphs."""
+    marker = "// SLIM-ARC: compute the next Router before the current expert FFN."
+    if marker in content:
+        required = (
+            'std::getenv("SLIM_ARC_CROSS_LAYER_GATE")',
+            'std::getenv("SLIM_ARC_CROSS_LAYER_TOPK")',
+            'cb(slim_arc_cross_layer_topk, "slim_arc_cross_layer_topk", il + 1)',
+            "ggml_build_forward_expand(gf, slim_arc_cross_layer_topk);",
+        )
+        if content.count(marker) != 1 or any(content.count(item) != 1 for item in required):
+            raise RuntimeError("cross-layer Router patch is incomplete")
+        return content
+
+    include_anchor = '#include "llama-memory-recurrent.h"'
+    for header in ("<cstdlib>", "<cstring>"):
+        if f"#include {header}" not in content:
+            content = replace_required(
+                content,
+                include_anchor,
+                f"{include_anchor}\n#include {header}",
+                f"Qwen3-Next {header} include",
+            )
+            include_anchor = f"#include {header}"
+
+    loop_anchor = "    for (int il = 0; il < n_layer; ++il) {"
+    setup = r'''    const char * slim_arc_cross_layer_gate_raw = std::getenv("SLIM_ARC_CROSS_LAYER_GATE");
+    const char * slim_arc_cross_layer_topk_raw = std::getenv("SLIM_ARC_CROSS_LAYER_TOPK");
+    char * slim_arc_cross_layer_topk_end = nullptr;
+    const long slim_arc_cross_layer_topk_value = slim_arc_cross_layer_topk_raw == nullptr ? 0 :
+        std::strtol(slim_arc_cross_layer_topk_raw, &slim_arc_cross_layer_topk_end, 10);
+    const int slim_arc_cross_layer_topk_count = n_tokens == 1 &&
+        slim_arc_cross_layer_gate_raw != nullptr && std::strcmp(slim_arc_cross_layer_gate_raw, "1") == 0 &&
+        slim_arc_cross_layer_topk_raw != nullptr &&
+        slim_arc_cross_layer_topk_end != slim_arc_cross_layer_topk_raw &&
+        *slim_arc_cross_layer_topk_end == '\0' && slim_arc_cross_layer_topk_value >= 1 &&
+        slim_arc_cross_layer_topk_value <= 64 && slim_arc_cross_layer_topk_value <= n_expert ?
+        static_cast<int>(slim_arc_cross_layer_topk_value) : 0;
+
+'''
+    content = replace_required(content, loop_anchor, setup + loop_anchor, "Qwen3-Next layer loop")
+
+    prediction_anchor = '''        cb(attn_post_norm, "attn_post_norm", il);
+
+        // FFN layer (MoE or dense) - without residual connection'''
+    prediction = '''        cb(attn_post_norm, "attn_post_norm", il);
+
+        // SLIM-ARC: compute the next Router before the current expert FFN.
+        if (slim_arc_cross_layer_topk_count > 0 && il + 1 < n_layer &&
+            model.layers[il + 1].ffn_gate_inp != nullptr) {
+            ggml_tensor * slim_arc_cross_layer_logits =
+                build_lora_mm(model.layers[il + 1].ffn_gate_inp, attn_post_norm);
+            cb(slim_arc_cross_layer_logits, "slim_arc_cross_layer_logits", il + 1);
+            ggml_tensor * slim_arc_cross_layer_topk = ggml_argsort_top_k(
+                ctx0, slim_arc_cross_layer_logits, slim_arc_cross_layer_topk_count);
+            cb(slim_arc_cross_layer_topk, "slim_arc_cross_layer_topk", il + 1);
+            ggml_build_forward_expand(gf, slim_arc_cross_layer_topk);
+        }
+
+        // FFN layer (MoE or dense) - without residual connection'''
+    return replace_required(content, prediction_anchor, prediction, "Qwen3-Next post-attention norm")
+
+
+def patch_qwen3next(filepath: str) -> None:
+    with open(filepath, encoding="utf-8") as source:
+        content = transform_qwen3next(source.read())
+    with open(filepath, "w", encoding="utf-8") as destination:
+        destination.write(content)
+
+
 def patch_context(filepath: str) -> None:
     """Acquire one lease spanning graph preparation, compute, and settlement."""
     with open(filepath, encoding="utf-8") as source:
@@ -212,6 +282,9 @@ def patch_context(filepath: str) -> None:
         slim_arc_expert_pipeline_mb >= 1 && slim_arc_expert_pipeline_mb <= 64 ?
         static_cast<size_t>(slim_arc_expert_pipeline_mb) << 20 : 0;
     const bool slim_arc_expert_pipeline = pipeline_budget_bytes > 0;
+    const char * slim_arc_cross_layer_gate_raw = std::getenv("SLIM_ARC_CROSS_LAYER_GATE");
+    const bool cross_layer_gate = slim_arc_expert_pipeline && slim_arc_cross_layer_gate_raw != nullptr &&
+        std::strcmp(slim_arc_cross_layer_gate_raw, "1") == 0;
     std::vector<uint64_t> expert_generation_tokens;
     int slim_arc_min_layer = INT_MAX;
     int slim_arc_max_layer = -1;
@@ -251,6 +324,7 @@ def patch_context(filepath: str) -> None:
         int min_layer;
         int max_layer;
         size_t pipeline_budget_bytes;
+        bool cross_layer_gate;
         int pending_layer{-1};
         std::vector<int> pending_experts;
 
@@ -279,9 +353,20 @@ def patch_context(filepath: str) -> None:
             pending_layer = -1;
             pending_experts.clear();
         }
+
+        void prefetch_prediction(int layer, const std::vector<int> & experts) {
+            if (runtime == nullptr || !*runtime || !cross_layer_gate || experts.empty() ||
+                layer < min_layer || layer > max_layer || static_cast<size_t>(layer) >= generations->size() ||
+                (*generations)[static_cast<size_t>(layer)] != 0) return;
+            auto & scheduler = runtime->prefetch();
+            scheduler.set_expert_budget(pipeline_budget_bytes);
+            scheduler.reset_expert_budget_usage();
+            (*generations)[static_cast<size_t>(layer)] = scheduler.prefetch_experts(
+                layer, experts.data(), static_cast<int>(experts.size()));
+        }
     } slim_arc_inline_state{
         &slim_arc_runtime, &expert_generation_tokens, slim_arc_min_layer, slim_arc_max_layer,
-        pipeline_budget_bytes, -1, {}};
+        pipeline_budget_bytes, cross_layer_gate, -1, {}};
     if (slim_arc_runtime && slim_arc_min_layer != INT_MAX && slim_arc_max_layer >= 0) {
         if (!slim_arc_expert_pipeline) {
             for (int layer = slim_arc_min_layer; layer <= slim_arc_max_layer; ++layer) {
@@ -295,10 +380,13 @@ def patch_context(filepath: str) -> None:
         ggml_backend_sched_set_eval_callback(
             sched.get(),
             [](struct ggml_tensor * tensor, bool ask, void * user_data) -> bool {
-                if (tensor == nullptr || std::strstr(tensor->name, "ffn_moe_topk") == nullptr) return false;
+                if (tensor == nullptr) return false;
+                const bool predicted = std::strstr(tensor->name, "slim_arc_cross_layer_topk") != nullptr;
+                const bool native = std::strstr(tensor->name, "ffn_moe_topk") != nullptr;
+                if (!predicted && !native) return false;
                 if (ask) return true;
                 auto * state = static_cast<slim_arc_inline_router_state *>(user_data);
-                state->settle_pending();
+                if (native) state->settle_pending();
                 if (tensor->data == nullptr || tensor->ne[0] <= 0) return true;
                 int layer = slim_arc::tensor_layer_from_name(tensor->name);
                 if (layer < 0) {
@@ -314,11 +402,13 @@ def patch_context(filepath: str) -> None:
                         unique.push_back(selected[expert]);
                     }
                 }
-                if (!unique.empty()) {
+                if (predicted) {
+                    state->prefetch_prediction(layer, unique);
+                } else if (!unique.empty()) {
                     state->pending_layer = layer;
                     state->pending_experts = std::move(unique);
                 }
-                state->prefetch_layer(layer + 1);
+                if (native && !state->cross_layer_gate) state->prefetch_layer(layer + 1);
                 return true;
             },
             &slim_arc_inline_state);
@@ -452,6 +542,7 @@ def main() -> None:
         shutil.copy2(source, os.path.join(src_dir, filename))
     patch_model_loader(os.path.join(src_dir, "llama-model-loader.cpp"))
     patch_model(model_path)
+    patch_qwen3next(os.path.join(src_dir, "models", "qwen3next.cpp"))
     patch_context(os.path.join(src_dir, "llama-context.cpp"))
     patch_kv_cache(os.path.join(src_dir, "llama-kv-cache.cpp"))
     patch_cmakelists(os.path.join(src_dir, "CMakeLists.txt"))

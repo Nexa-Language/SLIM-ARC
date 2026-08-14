@@ -241,6 +241,34 @@ def test_rejects_unbounded_layer_local_expert_pipeline(value: str) -> None:
         cfg.validate()
 
 
+@pytest.mark.parametrize("value", ["1", "8", "10", "16", "64"])
+def test_allows_cross_layer_router_topk(value: str) -> None:
+    config(
+        env={
+            "SLIM_ARC_CROSS_LAYER_GATE": "1",
+            "SLIM_ARC_CROSS_LAYER_TOPK": value,
+        }
+    ).validate()
+
+
+@pytest.mark.parametrize("value", ["", "0", "65", "-1", "1.5", "true"])
+def test_rejects_invalid_cross_layer_router_topk(value: str) -> None:
+    with pytest.raises(ValueError, match="SLIM_ARC_CROSS_LAYER_TOPK"):
+        config(
+            env={
+                "SLIM_ARC_CROSS_LAYER_GATE": "1",
+                "SLIM_ARC_CROSS_LAYER_TOPK": value,
+            }
+        ).validate()
+
+
+def test_cross_layer_router_requires_gate_and_topk_together() -> None:
+    with pytest.raises(ValueError, match="must be configured together"):
+        config(env={"SLIM_ARC_CROSS_LAYER_GATE": "1"}).validate()
+    with pytest.raises(ValueError, match="must be configured together"):
+        config(env={"SLIM_ARC_CROSS_LAYER_TOPK": "10"}).validate()
+
+
 @pytest.mark.parametrize(
     ("name", "value"),
     [

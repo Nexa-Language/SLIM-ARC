@@ -30,6 +30,8 @@ CONTAINER_NAME_PATTERN = re.compile(r"^slim-arc-run-[0-9]{8}t[0-9]{6}z-[0-9a-f]{
 ENV_VALUE_PATTERN = re.compile(r"^[A-Za-z0-9_.+-]{1,64}$")
 SLIM_ARC_ENV_ALLOWLIST = frozenset(
     {
+        "SLIM_ARC_CROSS_LAYER_GATE",
+        "SLIM_ARC_CROSS_LAYER_TOPK",
         "SLIM_ARC_DECODE_MADV",
         "SLIM_ARC_DISABLE",
         "SLIM_ARC_DYNAMIC_MADV",
@@ -109,6 +111,7 @@ class RunConfig:
                 "SLIM_ARC_SHARED_MLOCK",
                 "SLIM_ARC_SMALL_MLOCK",
                 "SLIM_ARC_SLOW_STORAGE",
+                "SLIM_ARC_CROSS_LAYER_GATE",
             } and value != "1":
                 raise ValueError(f"{name} must be exactly 1")
             if name in {"SLIM_ARC_PREFILL_THREADS", "SLIM_ARC_DECODE_THREADS"} and (
@@ -127,8 +130,18 @@ class RunConfig:
                 not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 64
             ):
                 raise ValueError("SLIM_ARC_EXPERT_PIPELINE_MB must be an integer between 1 and 64")
+            if name == "SLIM_ARC_CROSS_LAYER_TOPK" and (
+                not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 64
+            ):
+                raise ValueError("SLIM_ARC_CROSS_LAYER_TOPK must be an integer between 1 and 64")
             if ENV_VALUE_PATTERN.fullmatch(value) is None:
                 raise ValueError(f"unsafe value for {name}")
+        cross_layer_fields = {
+            "SLIM_ARC_CROSS_LAYER_GATE",
+            "SLIM_ARC_CROSS_LAYER_TOPK",
+        }
+        if bool(cross_layer_fields & self.env.keys()) and not cross_layer_fields <= self.env.keys():
+            raise ValueError("SLIM_ARC_CROSS_LAYER_GATE and SLIM_ARC_CROSS_LAYER_TOPK must be configured together")
 
 
 @dataclass(frozen=True)

@@ -14,6 +14,8 @@ VARIANTS = frozenset({"baseline", "patched"})
 OUTCOMES = frozenset({"success", "oom", "timeout", "error"})
 SLIM_ARC_ENV_ALLOWLIST = frozenset(
     {
+        "SLIM_ARC_CROSS_LAYER_GATE",
+        "SLIM_ARC_CROSS_LAYER_TOPK",
         "SLIM_ARC_DECODE_MADV",
         "SLIM_ARC_DISABLE",
         "SLIM_ARC_DYNAMIC_MADV",
@@ -171,6 +173,7 @@ def collect_slim_arc_environment(environment: Mapping[str, str]) -> dict[str, st
             "SLIM_ARC_SHARED_MLOCK",
             "SLIM_ARC_SMALL_MLOCK",
             "SLIM_ARC_SLOW_STORAGE",
+            "SLIM_ARC_CROSS_LAYER_GATE",
         } and value != "1":
             raise ValueError(f"{name} must be exactly 1")
         if name in {"SLIM_ARC_PREFILL_THREADS", "SLIM_ARC_DECODE_THREADS"} and (
@@ -189,6 +192,10 @@ def collect_slim_arc_environment(environment: Mapping[str, str]) -> dict[str, st
             not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 64
         ):
             raise ValueError("SLIM_ARC_EXPERT_PIPELINE_MB must be an integer between 1 and 64")
+        if name == "SLIM_ARC_CROSS_LAYER_TOPK" and (
+            not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 64
+        ):
+            raise ValueError("SLIM_ARC_CROSS_LAYER_TOPK must be an integer between 1 and 64")
         selected[name] = value
     return dict(sorted(selected.items()))
 

@@ -2,6 +2,31 @@
 
 ---
 
+## 2026-08-14 A22 跨层 Router 预测预取启动
+
+### 变更描述
+- 用户确认 A22：在 Qwen3-Next 当前层 MoE 前计算下一层 Router Top-K，以当前层
+  expert FFN 与下一层 attention 作为异步 page-in 窗口；原生下一层 Router 继续作为
+  权威计算路径。
+- 真实 80A3B tensor 日志确认 48 层、512 experts，单 expert 三张量为
+  1.69--1.95 MiB；Top-8/10/16 最大覆盖约 15.56/19.45/31.13 MiB，均符合
+  32 MiB 逐层预算。
+- 验证收缩为 patcher/runner 两个 seam、一次增量构建和 Top-K 性能消融；复用唯一
+  GGUF 与现有 pinned tree，控制新增磁盘占用。
+
+### 涉及文件
+- `plan/33-v1-cross-layer-router-prefetch.md`
+- `ROADMAP.md`
+
+### 决策原因
+- A20 已降低 major fault 与 filesystem input，但 wall time 无显著改善，说明上一 token
+  同层历史发起得仍然过晚；跨层 Router 能提供当前 MoE 加下一 attention 的更长 I/O
+  overlap window。
+- 直接复用模型现有下一层 gate 权重，无需训练、checkpoint 或模型副本，符合比赛期
+  性能优先与磁盘约束。
+
+---
+
 ## 2026-08-13 A0 实机闭环与 A1 最新代调度
 
 ### 变更描述
