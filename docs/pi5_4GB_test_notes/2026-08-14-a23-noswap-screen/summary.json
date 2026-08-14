@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "optimization": "A23 online cross-layer expert transition Top4",
+  "source_commit": "b693106b66054327cbfa610e30ac4bba88ed410e",
+  "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+  "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "device": {
+    "hostname": "yituodabian",
+    "architecture": "aarch64",
+    "memory_gib": 4,
+    "threads": 4,
+    "model_storage": "USB disk",
+    "swap": "disabled during each pair and restored afterwards",
+    "cache": "cold"
+  },
+  "pairs": [
+    {
+      "name": "tg4-r1",
+      "n_prompt": 16,
+      "n_gen": 4,
+      "control": {"prefill_tps": 0.202419, "decode_tps": 0.0550797, "wall_seconds": 331, "expert_issued_bytes": 2812297216},
+      "top4": {"prefill_tps": 0.200163, "decode_tps": 0.0551424, "wall_seconds": 332, "expert_issued_bytes": 843726848, "predicted_experts": 404, "matched_experts": 62},
+      "top4_vs_control_percent": {"prefill_tps": -1.114520, "decode_tps": 0.113835, "wall_seconds": 0.302115, "expert_issued_bytes": -69.998660}
+    },
+    {
+      "name": "tg16-r1",
+      "n_prompt": 16,
+      "n_gen": 16,
+      "control": {"prefill_tps": 0.201807, "decode_tps": 0.0551405, "wall_seconds": 549, "expert_issued_bytes": 14063108096},
+      "top4": {"prefill_tps": 0.200179, "decode_tps": 0.0550520, "wall_seconds": 550, "expert_issued_bytes": 5462360064, "predicted_experts": 2644, "matched_experts": 1071},
+      "top4_vs_control_percent": {"prefill_tps": -0.806711, "decode_tps": -0.160499, "wall_seconds": 0.182149, "expert_issued_bytes": -61.158230}
+    }
+  ],
+  "decision": "keep_opt_in_do_not_promote",
+  "reason": "A23 substantially reduces speculative advice bytes but does not improve Pi decode throughput or wall time at tg4 or tg16."
+}

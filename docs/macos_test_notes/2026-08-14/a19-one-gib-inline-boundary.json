@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "slim_arc_git_commit": "6dea8336c8365a9dd06dbbf81ba984defe902a67",
+    "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+    "patched_source_sha256": "8e275b2ae3988d823eb6238c15bc6a3f61178ea9bb2ca088d35843b035389c9c",
+    "build_context_sha256": "87d965dd4620e746de07021cbca0679c0450eee356a07f70075f9751e0c7dd79",
+    "image_id": "sha256:8fa06c5dcee6e18eebbfc05cfd40a108a160e5c392412bc61d0a7a202ce55f5f",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "contract": {
+    "memory_gib": 1,
+    "swap_bytes": 0,
+    "cpu_limit": 8,
+    "prefill_threads": 8,
+    "decode_threads": 6,
+    "poll": 50,
+    "read_ahead_kb": 256,
+    "io_scheduler": "mq-deadline",
+    "n_prompt": 64,
+    "n_gen": 64,
+    "cache_state": "cold",
+    "pressure_reserve_mb": 512,
+    "shared_mlock": false,
+    "slow_storage": true
+  },
+  "runs": {
+    "control": {
+      "run": "a19-inline-control-1g-tg64-cold",
+      "prefill_tps": 5.301490,
+      "decode_tps": 1.042672,
+      "wall_seconds": 90.66,
+      "major_faults": 1110831,
+      "filesystem_input_blocks": 475077984,
+      "memory_peak_bytes": 1073741824
+    },
+    "hot_64_mib": {
+      "run": "a19-inline-hot64-1g-tg64-cold",
+      "prefill_tps": 5.278169,
+      "decode_tps": 1.040939,
+      "wall_seconds": 90.78,
+      "major_faults": 1100717,
+      "filesystem_input_blocks": 473061216,
+      "memory_peak_bytes": 1073741824,
+      "locked_bytes": 66772992,
+      "admissions": 442,
+      "hits": 1770,
+      "evictions": 406,
+      "budget_rejections": 10369,
+      "nonresident_bytes": 0,
+      "lock_failures": 0,
+      "relative_to_control_percent": {
+        "prefill_tps": -0.439895,
+        "decode_tps": -0.166208,
+        "wall_seconds": 0.132363,
+        "major_faults": -0.910490,
+        "filesystem_input_blocks": -0.424513
+      }
+    },
+    "hot_128_mib": {
+      "run": "a19-inline-hot128-1g-tg64-cold",
+      "prefill_tps": 5.375829,
+      "decode_tps": 1.030581,
+      "wall_seconds": 91.24,
+      "major_faults": 1083509,
+      "filesystem_input_blocks": 467095400,
+      "memory_peak_bytes": 1073741824,
+      "locked_bytes": 133738496,
+      "admissions": 849,
+      "hits": 3616,
+      "evictions": 776,
+      "budget_rejections": 8039,
+      "nonresident_bytes": 265842688,
+      "lock_failures": 77,
+      "relative_to_control_percent": {
+        "prefill_tps": 1.402228,
+        "decode_tps": -1.159617,
+        "wall_seconds": 0.639753,
+        "major_faults": -2.459600,
+        "filesystem_input_blocks": -1.680268
+      }
+    }
+  },
+  "decision": "disable_expert_hot_cache_at_1g"
+}

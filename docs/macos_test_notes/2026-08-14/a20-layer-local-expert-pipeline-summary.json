@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "slim_arc_git_commit": "566c6c2052cb417d26e3ee72adf75de2264494c9",
+    "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+    "patched_source_sha256": "f644206fbfb0fd3062f115acbd0655b081e3a7e7c9e9b18f99edc69a2cd452b4",
+    "build_context_sha256": "29e7cf87e6f472a9449a2a04dbf13edf803da7e346ccea84ee972d97d8d28728",
+    "image_id": "sha256:3cb632ed92e3a5b1bc31cca09779ddb07536d974c68511dccbe38dc2f5176c45",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "contract": {
+    "memory_gib": 2,
+    "swap_bytes": 0,
+    "cpu_limit": 8,
+    "prefill_threads": 8,
+    "decode_threads": 6,
+    "poll": 50,
+    "read_ahead_kb": 256,
+    "io_scheduler": "mq-deadline",
+    "n_prompt": 64,
+    "n_gen": 64,
+    "cache_state": "cold",
+    "expert_hot_mb": 512,
+    "expert_pipeline_mb_per_layer": 32,
+    "expert_confidence_gating": true,
+    "pressure_reserve_mb": 512,
+    "shared_mlock": true,
+    "slow_storage": true
+  },
+  "reference": {
+    "source": "a18-inline-hot-cache-summary.json promoted_median",
+    "sample_count": 2,
+    "prefill_tps": 5.445879,
+    "decode_tps": 1.124524,
+    "wall_seconds": 85.19,
+    "major_faults": 952603.5,
+    "filesystem_input_blocks": 433311724
+  },
+  "valid_runs": [
+    {
+      "run": "a20-pipeline32-hot512-valid-2g-tg64-cold",
+      "prefill_tps": 5.368264,
+      "decode_tps": 1.154015,
+      "wall_seconds": 84.22,
+      "major_faults": 913957,
+      "filesystem_input_blocks": 411146968,
+      "expert_issued_bytes": 23379554304,
+      "expert_hit_bytes": 15970897920,
+      "expert_waste_bytes": 7408656384,
+      "expert_hit_rate_percent": 68.31,
+      "expert_advice_failures": 0,
+      "expert_invalid_ranges": 0,
+      "hot_locked_bytes": 443559936,
+      "oom_kills": 0
+    },
+    {
+      "run": "a20-pipeline32-hot512-valid-r2-2g-tg64-cold",
+      "prefill_tps": 5.294670,
+      "decode_tps": 1.118134,
+      "wall_seconds": 86.02,
+      "major_faults": 913232,
+      "filesystem_input_blocks": 411279840,
+      "expert_issued_bytes": 23379554304,
+      "expert_hit_bytes": 15970897920,
+      "expert_waste_bytes": 7408656384,
+      "expert_hit_rate_percent": 68.31,
+      "expert_advice_failures": 0,
+      "expert_invalid_ranges": 0,
+      "hot_locked_bytes": 444162048,
+      "oom_kills": 0
+    }
+  ],
+  "candidate_median": {
+    "sample_count": 2,
+    "prefill_tps": 5.331467,
+    "decode_tps": 1.1360745,
+    "wall_seconds": 85.12,
+    "major_faults": 913594.5,
+    "filesystem_input_blocks": 411213404,
+    "relative_to_reference_percent": {
+      "prefill_tps": -2.100891,
+      "decode_tps": 1.027146,
+      "wall_seconds": -0.082169,
+      "major_faults": -4.094988,
+      "filesystem_input_blocks": -5.099867
+    }
+  },
+  "invalid_diagnostic": {
+    "run": "a20-pipeline32-hot512-2g-tg64-cold",
+    "reason": "The benchmark succeeded, but the wrapper returned error because run_manifest.py did not yet allow SLIM_ARC_EXPERT_PIPELINE_MB.",
+    "used_for_performance_decision": false
+  },
+  "decision": "retain_as_slow_storage_opt_in_candidate_pending_remote_or_bandwidth_limited_confirmation"
+}

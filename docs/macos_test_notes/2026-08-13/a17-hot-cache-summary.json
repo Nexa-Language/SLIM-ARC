@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "slim_arc_git_commit": "060e52eb493ce33bc20f4a5b3888416cbe828f67",
+    "build_context_sha256": "073692113a812306b5845fe6bb7a586e5a95e4cc399c3a49ff737eba52ad8b5a",
+    "patched_source_sha256": "24ae4dad0f7f1728c4022dd6e0477a8bc656d21252be9487fe1f583ccbee17ac",
+    "image_id": "sha256:dc6c261c95f9268b8da505ba1b612b67b3c7c701e1cef90afc9d8074cd306ff9",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "contract": {
+    "memory_gib": 2,
+    "cpu_limit": 8,
+    "swap_bytes": 0,
+    "n_prompt": 64,
+    "n_gen": 64,
+    "cache_state": "cold",
+    "read_ahead_kb": 256,
+    "scheduler": "mq-deadline",
+    "shared_mlock": true,
+    "prefill_threads": 8,
+    "decode_threads": 6,
+    "poll": 50
+  },
+  "control": {
+    "run": "a17-control-2g-tg64-cold",
+    "prefill_tps": 5.261280,
+    "decode_tps": 1.019083,
+    "wall_seconds": 92.37,
+    "major_faults": 1028236,
+    "filesystem_input_blocks": 453055720,
+    "max_rss_kib": 2083544
+  },
+  "hot_128_mib": {
+    "run": "a17-hot128-2g-tg64-cold",
+    "prefill_tps": 5.300603,
+    "decode_tps": 0.997965,
+    "wall_seconds": 92.87,
+    "major_faults": 1045031,
+    "filesystem_input_blocks": 458595280,
+    "max_rss_kib": 2083972,
+    "hot_metrics": {
+      "budget_bytes": 134217728,
+      "locked_bytes": 38973440,
+      "admissions": 265,
+      "hits": 367,
+      "evictions": 244,
+      "budget_rejections": 0,
+      "nonresident_bytes": 21339844608,
+      "lock_failures": 11302
+    },
+    "relative_percent": {
+      "prefill_tps": 0.747404,
+      "decode_tps": -2.072255,
+      "wall_seconds": 0.541301,
+      "major_faults": 1.633380,
+      "filesystem_input_blocks": 1.222711
+    }
+  },
+  "decision": "reject_hot_cache_keep_default_off",
+  "reason": "The router result hook runs after whole-graph compute, when most early-layer expert pages are already nonresident under 2 GiB."
+}

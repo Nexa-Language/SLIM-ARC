@@ -1,0 +1,266 @@
+{
+  "schema_version": 1,
+  "optimization": "A22 cross-layer Router-guided expert prefetch",
+  "identity": {
+    "slim_arc_git_commit": "d972c75a9f09558940e15233f1446292cc19793f",
+    "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+    "mac_build_context_sha256": "82605003e81181fea318cdf5541c06b9f6167e54ff121d9a74759713aa3d4f54",
+    "mac_patched_source_sha256": "04ae2ec67ebfac1ca564032ca86345e638769074ec5c5581a94dacfdf68ad1fd",
+    "mac_image_id": "sha256:96e5c8d77b26af9aa4a7ed2c92ecc131ac2258198be1fce273a038e56af8fe3b",
+    "pi_patched_source_sha256": "06785a08fabf77f01e1ddd6b3cef185c445089d831319d0bc3f443f145e9fec1"
+  },
+  "model": {
+    "name": "Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf",
+    "file_size_bytes": 48410988384,
+    "benchmark_reported_size_bytes": 48405005312,
+    "sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "mac_contract": {
+    "memory_gib": 2,
+    "swap_bytes": 0,
+    "cpu_limit": 8,
+    "n_prompt": 64,
+    "n_gen": 64,
+    "cache_state": "cold",
+    "slow_storage": true,
+    "prefill_threads": 8,
+    "decode_threads": 6,
+    "expert_pipeline_mb_per_layer": 32,
+    "expert_hot_mb": 512,
+    "expert_confidence_gating": false
+  },
+  "mac_runs": [
+    {
+      "run": "a22-control-2g-tg64-cold",
+      "cross_layer_topk": 0,
+      "prefill_tps": 3.800736,
+      "decode_tps": 0.916271,
+      "wall_seconds": 106.97,
+      "major_faults": 1158678,
+      "filesystem_input_blocks": 447503824,
+      "expert_issued_bytes": 57961992192,
+      "expert_hit_bytes": 23898955776,
+      "expert_waste_bytes": 34063036416
+    },
+    {
+      "run": "a22-cross-top1-2g-tg64-cold",
+      "cross_layer_topk": 1,
+      "prefill_tps": 4.323694,
+      "decode_tps": 0.932913,
+      "wall_seconds": 104.02,
+      "major_faults": 1262694,
+      "filesystem_input_blocks": 405610672,
+      "expert_issued_bytes": 7050153984,
+      "expert_hit_bytes": 5774413824,
+      "expert_waste_bytes": 1275740160
+    },
+    {
+      "run": "a22-cross-top2-2g-tg64-cold",
+      "cross_layer_topk": 2,
+      "prefill_tps": 4.458174,
+      "decode_tps": 1.032245,
+      "wall_seconds": 95.90,
+      "major_faults": 1202745,
+      "filesystem_input_blocks": 393253296,
+      "expert_issued_bytes": 12807524352,
+      "expert_hit_bytes": 11342290944,
+      "expert_waste_bytes": 1465233408
+    },
+    {
+      "run": "a22-cross-top2-r2-2g-tg64-cold",
+      "cross_layer_topk": 2,
+      "prefill_tps": 4.093546,
+      "decode_tps": 0.982831,
+      "wall_seconds": 101.42,
+      "major_faults": 1249896,
+      "filesystem_input_blocks": 414403512,
+      "expert_issued_bytes": 12807524352,
+      "expert_hit_bytes": 11342290944,
+      "expert_waste_bytes": 1465233408
+    },
+    {
+      "run": "a22-cross-top4-2g-tg64-cold",
+      "cross_layer_topk": 4,
+      "prefill_tps": 3.517707,
+      "decode_tps": 0.898789,
+      "wall_seconds": 111.33,
+      "major_faults": 1315947,
+      "filesystem_input_blocks": 454244064,
+      "expert_issued_bytes": 24321810432,
+      "expert_hit_bytes": 22124875776,
+      "expert_waste_bytes": 2196934656
+    },
+    {
+      "run": "a22-cross-top8-2g-tg64-cold",
+      "cross_layer_topk": 8,
+      "prefill_tps": 4.160491,
+      "decode_tps": 0.780640,
+      "wall_seconds": 118.44,
+      "major_faults": 1311051,
+      "filesystem_input_blocks": 502025008,
+      "expert_issued_bytes": 47349215232,
+      "expert_hit_bytes": 41323597824,
+      "expert_waste_bytes": 6025617408
+    },
+    {
+      "run": "a22-cross-top2-conf-2g-tg64-cold",
+      "cross_layer_topk": 2,
+      "expert_confidence_gating": true,
+      "prefill_tps": 3.898304,
+      "decode_tps": 0.785045,
+      "wall_seconds": 118.07,
+      "major_faults": 1228624,
+      "filesystem_input_blocks": 396844856,
+      "expert_issued_bytes": 6377938944,
+      "expert_hit_bytes": 6277926912,
+      "expert_waste_bytes": 100012032
+    },
+    {
+      "run": "a22-cross-top2-decode8-2g-tg64-cold",
+      "cross_layer_topk": 2,
+      "decode_threads": 8,
+      "prefill_tps": 3.955517,
+      "decode_tps": 0.878923,
+      "wall_seconds": 109.82,
+      "major_faults": 1249790,
+      "filesystem_input_blocks": 397816360,
+      "expert_issued_bytes": 12807524352,
+      "expert_hit_bytes": 11342290944,
+      "expert_waste_bytes": 1465233408
+    }
+  ],
+  "mac_top2_median": {
+    "sample_count": 2,
+    "prefill_tps": 4.275860,
+    "decode_tps": 1.007538,
+    "wall_seconds": 98.66,
+    "expert_hit_rate_percent": 88.559589,
+    "relative_to_control_percent": {
+      "prefill_tps": 12.500842,
+      "decode_tps": 9.960699,
+      "wall_seconds": -7.768533
+    }
+  },
+  "historical_a20_median": {
+    "source": "a20-layer-local-expert-pipeline-summary.json",
+    "sample_count": 2,
+    "prefill_tps": 5.331467,
+    "decode_tps": 1.1360745,
+    "wall_seconds": 85.12
+  },
+  "pi_contract": {
+    "device": "Raspberry Pi 5 Model B 4GB",
+    "swap": "off during every measured case and restored afterward",
+    "threads": 4,
+    "n_prompt": 16,
+    "n_gen": 4,
+    "cache_state": "cold",
+    "kv_type": "q4_0",
+    "expert_pipeline_mb_per_layer": 32,
+    "expert_confidence_gating": false
+  },
+  "pi_runs": [
+    {
+      "run": "control",
+      "cross_layer_topk": 0,
+      "prefill_tps": 0.201365,
+      "decode_tps": 0.0553243,
+      "wall_seconds": 331,
+      "expert_issued_bytes": 2812297216,
+      "expert_hit_bytes": 328466432,
+      "expert_waste_bytes": 2483830784,
+      "expert_hit_rate_percent": 11.679649,
+      "relative_decode_tps_percent": 0.0
+    },
+    {
+      "run": "top2",
+      "cross_layer_topk": 2,
+      "prefill_tps": 0.200645,
+      "decode_tps": 0.0549788,
+      "wall_seconds": 332,
+      "expert_issued_bytes": 796180480,
+      "expert_hit_bytes": 728088576,
+      "expert_waste_bytes": 68091904,
+      "expert_hit_rate_percent": 91.447680,
+      "relative_decode_tps_percent": -0.624500
+    },
+    {
+      "run": "top8",
+      "cross_layer_topk": 8,
+      "prefill_tps": 0.200411,
+      "decode_tps": 0.0554293,
+      "wall_seconds": 331,
+      "expert_issued_bytes": 2996027392,
+      "expert_hit_bytes": 2638954496,
+      "expert_waste_bytes": 357072896,
+      "expert_hit_rate_percent": 88.081788,
+      "relative_decode_tps_percent": 0.189790
+    },
+    {
+      "run": "top10",
+      "cross_layer_topk": 10,
+      "prefill_tps": 0.199279,
+      "decode_tps": 0.0561438,
+      "wall_seconds": 330,
+      "expert_issued_bytes": 3729031168,
+      "expert_hit_bytes": 3085484032,
+      "expert_waste_bytes": 643547136,
+      "expert_hit_rate_percent": 82.742243,
+      "relative_decode_tps_percent": 1.481266
+    },
+    {
+      "run": "top10-r2",
+      "cross_layer_topk": 10,
+      "prefill_tps": 0.199990,
+      "decode_tps": 0.0550086,
+      "wall_seconds": 332,
+      "expert_issued_bytes": 3729031168,
+      "expert_hit_bytes": 3085484032,
+      "expert_waste_bytes": 643547136,
+      "expert_hit_rate_percent": 82.742243,
+      "relative_decode_tps_percent": -0.570635
+    },
+    {
+      "run": "top10-r3",
+      "cross_layer_topk": 10,
+      "prefill_tps": 0.199676,
+      "decode_tps": 0.0538338,
+      "wall_seconds": 334,
+      "expert_issued_bytes": 3729031168,
+      "expert_hit_bytes": 3085484032,
+      "expert_waste_bytes": 643547136,
+      "expert_hit_rate_percent": 82.742243,
+      "relative_decode_tps_percent": -2.694115
+    },
+    {
+      "run": "top16",
+      "cross_layer_topk": 16,
+      "prefill_tps": 0.200572,
+      "decode_tps": 0.0545688,
+      "wall_seconds": 332,
+      "expert_issued_bytes": 5927141376,
+      "expert_hit_bytes": 3487809536,
+      "expert_waste_bytes": 2439331840,
+      "expert_hit_rate_percent": 58.844716,
+      "relative_decode_tps_percent": -1.365584
+    }
+  ],
+  "pi_top10_median": {
+    "sample_count": 3,
+    "prefill_tps": 0.199676,
+    "decode_tps": 0.0550086,
+    "wall_seconds": 332,
+    "expert_hit_rate_percent": 82.742243,
+    "decode_tps_range_percent_of_median": 4.199370,
+    "relative_to_control_percent": {
+      "prefill_tps": -0.838775,
+      "decode_tps": -0.570635,
+      "wall_seconds": 0.302115
+    }
+  },
+  "decision": {
+    "mac": "Top2 is the A22 operating point, but A22 does not replace the faster historical A20 configuration.",
+    "pi": "Three Top10 cold/no-swap runs do not reproduce the screening gain; keep A22 disabled by default on Raspberry Pi 5.",
+    "global": "Retain A22 as an opt-in research path and use its Router precision evidence to design a no-extra-matmul successor."
+  }
+}

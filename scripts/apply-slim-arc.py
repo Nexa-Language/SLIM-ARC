@@ -12,6 +12,7 @@ SLIM_ARC_FILES = (
     "slim-arc-page-range.h", "slim-arc-page-range.cpp",
     "slim-arc-expert-reclaim.h", "slim-arc-expert-reclaim.cpp",
     "slim-arc-expert-residency.h", "slim-arc-expert-residency.cpp",
+    "slim-arc-expert-transition.h", "slim-arc-expert-transition.cpp",
     "slim-arc-runtime.h", "slim-arc-runtime.cpp",
     "slim-arc-unified-scheduler.h", "slim-arc-unified-scheduler.cpp",
     "slim-arc-kv-eviction.h", "slim-arc-kv-eviction.cpp",
@@ -173,6 +174,101 @@ def patch_model(filepath: str) -> None:
         destination.write(content)
 
 
+def transform_qwen3next(content: str) -> str:
+    """Install one decode-only next-layer Router root in Qwen3-Next graphs."""
+    marker = "// SLIM-ARC: compute the next Router before the current expert FFN."
+    if marker in content:
+        required = (
+            'std::getenv("SLIM_ARC_CROSS_LAYER_GATE")',
+            'std::getenv("SLIM_ARC_CROSS_LAYER_TOPK")',
+            'std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION")',
+            'std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK")',
+            "slim_arc_cross_layer_transition_topk_count == 0",
+            'cb(slim_arc_cross_layer_topk, "slim_arc_cross_layer_topk", il + 1)',
+            "ggml_build_forward_expand(gf, slim_arc_cross_layer_topk);",
+        )
+        if content.count(marker) != 1 or any(content.count(item) != 1 for item in required):
+            raise RuntimeError("cross-layer Router patch is incomplete")
+        return content
+
+    include_anchor = '#include "llama-memory-recurrent.h"'
+    for header in ("<cstdlib>", "<cstring>"):
+        if f"#include {header}" not in content:
+            content = replace_required(
+                content,
+                include_anchor,
+                f"{include_anchor}\n#include {header}",
+                f"Qwen3-Next {header} include",
+            )
+            include_anchor = f"#include {header}"
+
+    loop_anchor = "    for (int il = 0; il < n_layer; ++il) {"
+    setup = r'''    const char * slim_arc_cross_layer_transition_raw =
+        std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION");
+    const char * slim_arc_cross_layer_transition_topk_raw =
+        std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK");
+    char * slim_arc_cross_layer_transition_topk_end = nullptr;
+    const long slim_arc_cross_layer_transition_topk_value =
+        slim_arc_cross_layer_transition_topk_raw == nullptr ? 0 :
+        std::strtol(
+            slim_arc_cross_layer_transition_topk_raw,
+            &slim_arc_cross_layer_transition_topk_end,
+            10);
+    const int slim_arc_cross_layer_transition_topk_count = n_tokens == 1 &&
+        slim_arc_cross_layer_transition_raw != nullptr &&
+        std::strcmp(slim_arc_cross_layer_transition_raw, "1") == 0 &&
+        slim_arc_cross_layer_transition_topk_raw != nullptr &&
+        slim_arc_cross_layer_transition_topk_end != slim_arc_cross_layer_transition_topk_raw &&
+        *slim_arc_cross_layer_transition_topk_end == '\0' &&
+        slim_arc_cross_layer_transition_topk_value >= 1 &&
+        slim_arc_cross_layer_transition_topk_value <= 64 &&
+        slim_arc_cross_layer_transition_topk_value <= n_expert ?
+        static_cast<int>(slim_arc_cross_layer_transition_topk_value) : 0;
+    const char * slim_arc_cross_layer_gate_raw = std::getenv("SLIM_ARC_CROSS_LAYER_GATE");
+    const char * slim_arc_cross_layer_topk_raw = std::getenv("SLIM_ARC_CROSS_LAYER_TOPK");
+    char * slim_arc_cross_layer_topk_end = nullptr;
+    const long slim_arc_cross_layer_topk_value = slim_arc_cross_layer_topk_raw == nullptr ? 0 :
+        std::strtol(slim_arc_cross_layer_topk_raw, &slim_arc_cross_layer_topk_end, 10);
+    const int slim_arc_cross_layer_topk_count = n_tokens == 1 &&
+        slim_arc_cross_layer_transition_topk_count == 0 &&
+        slim_arc_cross_layer_gate_raw != nullptr && std::strcmp(slim_arc_cross_layer_gate_raw, "1") == 0 &&
+        slim_arc_cross_layer_topk_raw != nullptr &&
+        slim_arc_cross_layer_topk_end != slim_arc_cross_layer_topk_raw &&
+        *slim_arc_cross_layer_topk_end == '\0' && slim_arc_cross_layer_topk_value >= 1 &&
+        slim_arc_cross_layer_topk_value <= 64 && slim_arc_cross_layer_topk_value <= n_expert ?
+        static_cast<int>(slim_arc_cross_layer_topk_value) : 0;
+
+'''
+    content = replace_required(content, loop_anchor, setup + loop_anchor, "Qwen3-Next layer loop")
+
+    prediction_anchor = '''        cb(attn_post_norm, "attn_post_norm", il);
+
+        // FFN layer (MoE or dense) - without residual connection'''
+    prediction = '''        cb(attn_post_norm, "attn_post_norm", il);
+
+        // SLIM-ARC: compute the next Router before the current expert FFN.
+        if (slim_arc_cross_layer_topk_count > 0 && il + 1 < n_layer &&
+            model.layers[il + 1].ffn_gate_inp != nullptr) {
+            ggml_tensor * slim_arc_cross_layer_logits =
+                build_lora_mm(model.layers[il + 1].ffn_gate_inp, attn_post_norm);
+            cb(slim_arc_cross_layer_logits, "slim_arc_cross_layer_logits", il + 1);
+            ggml_tensor * slim_arc_cross_layer_topk = ggml_argsort_top_k(
+                ctx0, slim_arc_cross_layer_logits, slim_arc_cross_layer_topk_count);
+            cb(slim_arc_cross_layer_topk, "slim_arc_cross_layer_topk", il + 1);
+            ggml_build_forward_expand(gf, slim_arc_cross_layer_topk);
+        }
+
+        // FFN layer (MoE or dense) - without residual connection'''
+    return replace_required(content, prediction_anchor, prediction, "Qwen3-Next post-attention norm")
+
+
+def patch_qwen3next(filepath: str) -> None:
+    with open(filepath, encoding="utf-8") as source:
+        content = transform_qwen3next(source.read())
+    with open(filepath, "w", encoding="utf-8") as destination:
+        destination.write(content)
+
+
 def patch_context(filepath: str) -> None:
     """Acquire one lease spanning graph preparation, compute, and settlement."""
     with open(filepath, encoding="utf-8") as source:
@@ -180,7 +276,7 @@ def patch_context(filepath: str) -> None:
     if '#include "slim-arc-runtime.h"' not in content:
         content = replace_required(content, '#include "llama-ext.h"',
                                    '#include "llama-ext.h"\n#include "slim-arc-runtime.h"', "context include")
-    for header in ("<vector>", "<cstdint>", "<climits>", "<algorithm>", "<cstdlib>"):
+    for header in ("<vector>", "<cstdint>", "<climits>", "<algorithm>", "<cstdlib>", "<cstring>", "<utility>"):
         if f"#include {header}" not in content:
             content = replace_required(content, "#include <limits>",
                                        f"#include <limits>\n#include {header}", f"context {header} include")
@@ -206,10 +302,45 @@ def patch_context(filepath: str) -> None:
 
     compute = "    auto status = ggml_backend_sched_graph_compute_async(sched.get(), gf);"
     precompute = r'''    auto slim_arc_runtime = slim_arc::acquire_runtime();
+    const char * slim_arc_inline_router_raw = std::getenv("SLIM_ARC_INLINE_ROUTER");
+    const bool slim_arc_inline_router = slim_arc_runtime && !batched && cparams.cb_eval == nullptr &&
+        slim_arc_inline_router_raw != nullptr && std::strcmp(slim_arc_inline_router_raw, "1") == 0;
+    const char * slim_arc_expert_pipeline_raw = std::getenv("SLIM_ARC_EXPERT_PIPELINE_MB");
+    char * slim_arc_expert_pipeline_end = nullptr;
+    const long slim_arc_expert_pipeline_mb = slim_arc_expert_pipeline_raw == nullptr ? 0 :
+        std::strtol(slim_arc_expert_pipeline_raw, &slim_arc_expert_pipeline_end, 10);
+    const size_t pipeline_budget_bytes = slim_arc_inline_router && slim_arc_expert_pipeline_raw != nullptr &&
+        slim_arc_expert_pipeline_end != slim_arc_expert_pipeline_raw && *slim_arc_expert_pipeline_end == '\0' &&
+        slim_arc_expert_pipeline_mb >= 1 && slim_arc_expert_pipeline_mb <= 64 ?
+        static_cast<size_t>(slim_arc_expert_pipeline_mb) << 20 : 0;
+    const bool slim_arc_expert_pipeline = pipeline_budget_bytes > 0;
+    const char * slim_arc_cross_layer_transition_raw =
+        std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION");
+    const char * slim_arc_cross_layer_transition_topk_raw =
+        std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK");
+    char * slim_arc_cross_layer_transition_topk_end = nullptr;
+    const long slim_arc_cross_layer_transition_topk_value =
+        slim_arc_cross_layer_transition_topk_raw == nullptr ? 0 :
+        std::strtol(
+            slim_arc_cross_layer_transition_topk_raw,
+            &slim_arc_cross_layer_transition_topk_end,
+            10);
+    const bool cross_layer_transition = slim_arc_expert_pipeline &&
+        slim_arc_cross_layer_transition_raw != nullptr &&
+        std::strcmp(slim_arc_cross_layer_transition_raw, "1") == 0 &&
+        slim_arc_cross_layer_transition_topk_raw != nullptr &&
+        slim_arc_cross_layer_transition_topk_end != slim_arc_cross_layer_transition_topk_raw &&
+        *slim_arc_cross_layer_transition_topk_end == '\0' &&
+        slim_arc_cross_layer_transition_topk_value >= 1 &&
+        slim_arc_cross_layer_transition_topk_value <= 64;
+    const char * slim_arc_cross_layer_gate_raw = std::getenv("SLIM_ARC_CROSS_LAYER_GATE");
+    const bool cross_layer_gate = slim_arc_expert_pipeline && !cross_layer_transition &&
+        slim_arc_cross_layer_gate_raw != nullptr &&
+        std::strcmp(slim_arc_cross_layer_gate_raw, "1") == 0;
     std::vector<uint64_t> expert_generation_tokens;
+    int slim_arc_min_layer = INT_MAX;
+    int slim_arc_max_layer = -1;
     if (slim_arc_runtime) {
-        int min_layer = INT_MAX;
-        int max_layer = -1;
         const int n_nodes = ggml_graph_n_nodes(gf);
         for (int i = 0; i < n_nodes; ++i) {
             struct ggml_tensor * tensor = ggml_graph_node(gf, i);
@@ -220,28 +351,157 @@ def patch_context(filepath: str) -> None:
                 if (dash != nullptr && dash[1] >= '0' && dash[1] <= '9') layer = atoi(dash + 1);
             }
             if (layer >= 0) {
-                min_layer = std::min(min_layer, layer);
-                max_layer = std::max(max_layer, layer);
+                slim_arc_min_layer = std::min(slim_arc_min_layer, layer);
+                slim_arc_max_layer = std::max(slim_arc_max_layer, layer);
             }
         }
-        if (min_layer != INT_MAX && max_layer >= 0) {
-            expert_generation_tokens.resize(static_cast<size_t>(max_layer) + 1, 0);
+        if (slim_arc_min_layer != INT_MAX && slim_arc_max_layer >= 0) {
+            expert_generation_tokens.resize(static_cast<size_t>(slim_arc_max_layer) + 1, 0);
             auto & scheduler = slim_arc_runtime.prefetch();
             auto & unified = slim_arc_runtime.unified();
             const char * slow_storage_raw = std::getenv("SLIM_ARC_SLOW_STORAGE");
             const bool slow_storage = slow_storage_raw != nullptr && std::strcmp(slow_storage_raw, "1") == 0;
             scheduler.set_phase(batched ? slim_arc::compute_phase::PREFILL : slim_arc::compute_phase::DECODE);
             unified.set_phase(batched ? slim_arc::runtime_phase::PREFILL_SHORT : slim_arc::runtime_phase::MOE_DECODE);
-            unified.tick(min_layer, 3);
-            if (!slow_storage && !batched && max_layer > min_layer) {
-                for (int layer = min_layer + scheduler.effective_window() + 1; layer <= max_layer; ++layer) scheduler.notify_layer_compute(layer);
-            }
-            for (int layer = min_layer; layer <= max_layer; ++layer) {
-                const std::vector<int> experts = scheduler.cached_experts_snapshot(layer);
-                if (!experts.empty()) expert_generation_tokens[static_cast<size_t>(layer)] =
-                    scheduler.prefetch_experts(layer, experts.data(), static_cast<int>(experts.size()));
+            unified.tick(slim_arc_min_layer, 3);
+            if (!slow_storage && !batched && slim_arc_max_layer > slim_arc_min_layer) {
+                for (int layer = slim_arc_min_layer + scheduler.effective_window() + 1;
+                     layer <= slim_arc_max_layer; ++layer) scheduler.notify_layer_compute(layer);
             }
         }
+    }
+    struct slim_arc_inline_router_state {
+        slim_arc::runtime_lease * runtime;
+        std::vector<uint64_t> * generations;
+        int min_layer;
+        int max_layer;
+        size_t pipeline_budget_bytes;
+        bool cross_layer_gate;
+        bool cross_layer_transition;
+        std::vector<std::vector<int>> native_experts_by_layer;
+        std::vector<std::vector<int>> predicted_experts_by_layer;
+        int pending_layer{-1};
+        std::vector<int> pending_experts;
+
+        void prefetch_layer(int layer, bool bounded = true) {
+            if (runtime == nullptr || !*runtime || layer < min_layer || layer > max_layer ||
+                static_cast<size_t>(layer) >= generations->size() ||
+                (*generations)[static_cast<size_t>(layer)] != 0) return;
+            auto & scheduler = runtime->prefetch();
+            if (bounded) {
+                if (pipeline_budget_bytes == 0) return;
+                scheduler.set_expert_budget(pipeline_budget_bytes);
+                scheduler.reset_expert_budget_usage();
+            }
+            const std::vector<int> experts = scheduler.cached_experts_snapshot(layer);
+            if (!experts.empty()) (*generations)[static_cast<size_t>(layer)] =
+                scheduler.prefetch_experts(layer, experts.data(), static_cast<int>(experts.size()));
+        }
+
+        void settle_pending() {
+            if (runtime == nullptr || !*runtime || pending_layer < 0 || pending_experts.empty()) return;
+            uint64_t generation = static_cast<size_t>(pending_layer) < generations->size() ?
+                (*generations)[static_cast<size_t>(pending_layer)] : 0;
+            runtime->prefetch().cache_router_experts(
+                pending_layer, pending_experts.data(), static_cast<int>(pending_experts.size()), generation);
+            if (generation != 0) (*generations)[static_cast<size_t>(pending_layer)] = 0;
+            pending_layer = -1;
+            pending_experts.clear();
+        }
+
+        void prefetch_prediction(int layer, const std::vector<int> & experts) {
+            if (runtime == nullptr || !*runtime || (!cross_layer_gate && !cross_layer_transition) ||
+                experts.empty() ||
+                layer < min_layer || layer > max_layer || static_cast<size_t>(layer) >= generations->size() ||
+                (*generations)[static_cast<size_t>(layer)] != 0) return;
+            auto & scheduler = runtime->prefetch();
+            scheduler.set_expert_budget(pipeline_budget_bytes);
+            scheduler.reset_expert_budget_usage();
+            (*generations)[static_cast<size_t>(layer)] = scheduler.prefetch_experts(
+                layer, experts.data(), static_cast<int>(experts.size()));
+        }
+    } slim_arc_inline_state{
+        &slim_arc_runtime, &expert_generation_tokens, slim_arc_min_layer, slim_arc_max_layer,
+        pipeline_budget_bytes, cross_layer_gate, cross_layer_transition, {}, {}, -1, {}};
+    if (slim_arc_max_layer >= 0) {
+        const size_t router_layer_count = static_cast<size_t>(slim_arc_max_layer) + 1;
+        slim_arc_inline_state.native_experts_by_layer.resize(router_layer_count);
+        slim_arc_inline_state.predicted_experts_by_layer.resize(router_layer_count);
+    }
+    if (slim_arc_runtime && slim_arc_min_layer != INT_MAX && slim_arc_max_layer >= 0) {
+        if (!slim_arc_expert_pipeline) {
+            for (int layer = slim_arc_min_layer; layer <= slim_arc_max_layer; ++layer) {
+                slim_arc_inline_state.prefetch_layer(layer, false);
+            }
+        } else {
+            slim_arc_inline_state.prefetch_layer(slim_arc_min_layer);
+        }
+    }
+    if (slim_arc_inline_router) {
+        ggml_backend_sched_set_eval_callback(
+            sched.get(),
+            [](struct ggml_tensor * tensor, bool ask, void * user_data) -> bool {
+                if (tensor == nullptr) return false;
+                const bool predicted = std::strstr(tensor->name, "slim_arc_cross_layer_topk") != nullptr;
+                const bool native = std::strstr(tensor->name, "ffn_moe_topk") != nullptr;
+                if (!predicted && !native) return false;
+                if (ask) return true;
+                auto * state = static_cast<slim_arc_inline_router_state *>(user_data);
+                if (native) state->settle_pending();
+                if (tensor->data == nullptr || tensor->ne[0] <= 0) return true;
+                int layer = slim_arc::tensor_layer_from_name(tensor->name);
+                if (layer < 0) {
+                    const char * dash = std::strrchr(tensor->name, '-');
+                    if (dash != nullptr && dash[1] >= '0' && dash[1] <= '9') layer = std::atoi(dash + 1);
+                }
+                if (layer < 0) return true;
+                const int32_t * selected = static_cast<const int32_t *>(tensor->data);
+                std::vector<int> unique;
+                for (int expert = 0; expert < tensor->ne[0] && expert < 64; ++expert) {
+                    if (selected[expert] >= 0 &&
+                        std::find(unique.begin(), unique.end(), selected[expert]) == unique.end()) {
+                        unique.push_back(selected[expert]);
+                    }
+                }
+                if (predicted) {
+                    state->prefetch_prediction(layer, unique);
+                } else if (!unique.empty()) {
+                    if (state->cross_layer_transition &&
+                        static_cast<size_t>(layer) < state->native_experts_by_layer.size()) {
+                        auto & scheduler = state->runtime->prefetch();
+                        if (layer > state->min_layer &&
+                            static_cast<size_t>(layer - 1) < state->native_experts_by_layer.size() &&
+                            !state->native_experts_by_layer[static_cast<size_t>(layer - 1)].empty()) {
+                            scheduler.observe_expert_transition(
+                                layer - 1,
+                                state->native_experts_by_layer[static_cast<size_t>(layer - 1)],
+                                unique);
+                        }
+                        if (static_cast<size_t>(layer) < state->predicted_experts_by_layer.size() &&
+                            !state->predicted_experts_by_layer[static_cast<size_t>(layer)].empty()) {
+                            scheduler.record_expert_transition_result(
+                                state->predicted_experts_by_layer[static_cast<size_t>(layer)],
+                                unique);
+                        }
+                        state->native_experts_by_layer[static_cast<size_t>(layer)] = unique;
+                        if (layer < state->max_layer &&
+                            static_cast<size_t>(layer + 1) < state->predicted_experts_by_layer.size()) {
+                            std::vector<int> transition_prediction =
+                                scheduler.predict_expert_transition(layer, unique);
+                            state->predicted_experts_by_layer[static_cast<size_t>(layer + 1)] =
+                                transition_prediction;
+                            state->prefetch_prediction(layer + 1, transition_prediction);
+                        }
+                    }
+                    state->pending_layer = layer;
+                    state->pending_experts = std::move(unique);
+                }
+                if (native && !state->cross_layer_gate && !state->cross_layer_transition) {
+                    state->prefetch_layer(layer + 1);
+                }
+                return true;
+            },
+            &slim_arc_inline_state);
     }
 '''
     if "auto slim_arc_runtime = slim_arc::acquire_runtime();" not in content:
@@ -250,7 +510,11 @@ def patch_context(filepath: str) -> None:
     final_marker = "// SLIM-ARC: lease-guarded router finalization."
     finalization = r'''
     // SLIM-ARC: lease-guarded router finalization.
-    if (slim_arc_runtime && status == GGML_STATUS_SUCCESS) {
+    if (slim_arc_inline_router) {
+        ggml_backend_sched_set_eval_callback(sched.get(), cparams.cb_eval, cparams.cb_eval_user_data);
+        if (status == GGML_STATUS_SUCCESS) slim_arc_inline_state.settle_pending();
+    }
+    if (slim_arc_runtime && status == GGML_STATUS_SUCCESS && !slim_arc_inline_router) {
         auto & scheduler = slim_arc_runtime.prefetch();
         const int n_nodes = ggml_graph_n_nodes(gf);
         for (int i = 0; i < n_nodes; ++i) {
@@ -322,7 +586,7 @@ def patch_cmakelists(filepath: str) -> None:
         "slim-arc-prefetch.cpp", "slim-arc-runtime.cpp", "slim-arc-kv-eviction.cpp",
         "slim-arc-unified-scheduler.cpp", "slim-arc-cgroup-memory.cpp", "slim-arc-pressure-budget.cpp",
         "slim-arc-page-range.cpp", "slim-arc-expert-reclaim.cpp",
-        "slim-arc-expert-residency.cpp",
+        "slim-arc-expert-residency.cpp", "slim-arc-expert-transition.cpp",
     )
     if all(name in content for name in required):
         return
@@ -335,7 +599,8 @@ def patch_cmakelists(filepath: str) -> None:
             slim-arc-pressure-budget.cpp
             slim-arc-page-range.cpp
             slim-arc-expert-reclaim.cpp
-            slim-arc-expert-residency.cpp"""
+            slim-arc-expert-residency.cpp
+            slim-arc-expert-transition.cpp"""
     if "slim-arc-prefetch.cpp" not in content:
         content = replace_required(content, "llama-vocab.cpp", files, "CMake llama-vocab.cpp")
     else:
@@ -343,7 +608,7 @@ def patch_cmakelists(filepath: str) -> None:
         for name in (
             "slim-arc-runtime.cpp", "slim-arc-cgroup-memory.cpp", "slim-arc-pressure-budget.cpp",
             "slim-arc-page-range.cpp", "slim-arc-expert-reclaim.cpp",
-            "slim-arc-expert-residency.cpp",
+            "slim-arc-expert-residency.cpp", "slim-arc-expert-transition.cpp",
         ):
             if name not in content:
                 content = replace_required(content, anchor, f"{anchor}\n            {name}", "CMake source")
@@ -368,6 +633,7 @@ def main() -> None:
         shutil.copy2(source, os.path.join(src_dir, filename))
     patch_model_loader(os.path.join(src_dir, "llama-model-loader.cpp"))
     patch_model(model_path)
+    patch_qwen3next(os.path.join(src_dir, "models", "qwen3next.cpp"))
     patch_context(os.path.join(src_dir, "llama-context.cpp"))
     patch_kv_cache(os.path.join(src_dir, "llama-kv-cache.cpp"))
     patch_cmakelists(os.path.join(src_dir, "CMakeLists.txt"))

@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "image_id": "sha256:061f538668209893c72b4de714c6eac9a4727e53d8621eac104f7ae76313643a",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "contract": {
+    "memory_gib": 2,
+    "cpu_limit": 8,
+    "prefill_threads": 8,
+    "decode_threads": 6,
+    "shared_mlock": true,
+    "read_ahead_kb": 128,
+    "swap_bytes": 0,
+    "n_prompt": 64,
+    "n_gen": 16,
+    "cache_state": "cold"
+  },
+  "poll_50_reference_median": {
+    "sample_count": 2,
+    "prefill_tps": 4.298078,
+    "decode_tps": 0.834153,
+    "wall_seconds": 55.31
+  },
+  "screening_runs": [
+    {"run":"a12-poll25-shared-2g-cold","poll":25,"prefill_tps":4.244326,"decode_tps":0.748560,"wall_seconds":58.69,"major_faults":480260,"filesystem_input_blocks":198338624},
+    {"run":"a12-poll75-shared-2g-cold","poll":75,"prefill_tps":4.071907,"decode_tps":0.609647,"wall_seconds":64.28,"major_faults":461429,"filesystem_input_blocks":196598592}
+  ],
+  "decision": "keep_poll_50"
+}

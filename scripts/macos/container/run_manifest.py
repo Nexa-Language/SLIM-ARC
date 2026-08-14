@@ -14,19 +14,26 @@ VARIANTS = frozenset({"baseline", "patched"})
 OUTCOMES = frozenset({"success", "oom", "timeout", "error"})
 SLIM_ARC_ENV_ALLOWLIST = frozenset(
     {
+        "SLIM_ARC_CROSS_LAYER_GATE",
+        "SLIM_ARC_CROSS_LAYER_TOPK",
+        "SLIM_ARC_CROSS_LAYER_TRANSITION",
+        "SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK",
         "SLIM_ARC_DECODE_MADV",
         "SLIM_ARC_DISABLE",
         "SLIM_ARC_DYNAMIC_MADV",
         "SLIM_ARC_EXPERT_BUDGET",
         "SLIM_ARC_EXPERT_CONF",
+        "SLIM_ARC_EXPERT_HOT_MB",
         "SLIM_ARC_EXPERT_MADV_RANDOM",
         "SLIM_ARC_EXPERT_MADV_NORMAL",
+        "SLIM_ARC_EXPERT_PIPELINE_MB",
         "SLIM_ARC_EXPERT_POP",
         "SLIM_ARC_EXPERT_RECLAIM_WASTE",
         "SLIM_ARC_EXPERT_RESIDENCY",
         "SLIM_ARC_KV_EVICT",
         "SLIM_ARC_KV_SINK",
         "SLIM_ARC_KV_WINDOW",
+        "SLIM_ARC_INLINE_ROUTER",
         "SLIM_ARC_NO_MADV_RANDOM",
         "SLIM_ARC_NO_EXPERT_PREFETCH",
         "SLIM_ARC_NO_PREFETCH",
@@ -38,6 +45,7 @@ SLIM_ARC_ENV_ALLOWLIST = frozenset(
         "SLIM_ARC_ROUTER_MLOCK",
         "SLIM_ARC_ROUTER_PREFETCH",
         "SLIM_ARC_SHARED_MLOCK",
+        "SLIM_ARC_SMALL_MLOCK",
         "SLIM_ARC_SLOW_STORAGE",
     }
 )
@@ -160,11 +168,15 @@ def collect_slim_arc_environment(environment: Mapping[str, str]) -> dict[str, st
             "SLIM_ARC_EXPERT_MADV_RANDOM",
             "SLIM_ARC_EXPERT_MADV_NORMAL",
             "SLIM_ARC_EXPERT_RESIDENCY",
+            "SLIM_ARC_INLINE_ROUTER",
             "SLIM_ARC_NO_EXPERT_PREFETCH",
             "SLIM_ARC_ROUTER_MLOCK",
             "SLIM_ARC_ROUTER_PREFETCH",
             "SLIM_ARC_SHARED_MLOCK",
+            "SLIM_ARC_SMALL_MLOCK",
             "SLIM_ARC_SLOW_STORAGE",
+            "SLIM_ARC_CROSS_LAYER_GATE",
+            "SLIM_ARC_CROSS_LAYER_TRANSITION",
         } and value != "1":
             raise ValueError(f"{name} must be exactly 1")
         if name in {"SLIM_ARC_PREFILL_THREADS", "SLIM_ARC_DECODE_THREADS"} and (
@@ -175,7 +187,32 @@ def collect_slim_arc_environment(environment: Mapping[str, str]) -> dict[str, st
             not value.isascii() or not value.isdecimal() or not 0 <= int(value) <= 100
         ):
             raise ValueError("SLIM_ARC_POLL must be an integer between 0 and 100")
+        if name == "SLIM_ARC_EXPERT_HOT_MB" and (
+            not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 512
+        ):
+            raise ValueError("SLIM_ARC_EXPERT_HOT_MB must be an integer between 1 and 512")
+        if name == "SLIM_ARC_EXPERT_PIPELINE_MB" and (
+            not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 64
+        ):
+            raise ValueError("SLIM_ARC_EXPERT_PIPELINE_MB must be an integer between 1 and 64")
+        if name == "SLIM_ARC_CROSS_LAYER_TOPK" and (
+            not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 64
+        ):
+            raise ValueError("SLIM_ARC_CROSS_LAYER_TOPK must be an integer between 1 and 64")
+        if name == "SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK" and (
+            not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 64
+        ):
+            raise ValueError("SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK must be an integer between 1 and 64")
         selected[name] = value
+    transition_fields = {
+        "SLIM_ARC_CROSS_LAYER_TRANSITION",
+        "SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK",
+    }
+    if bool(transition_fields & selected.keys()) and not transition_fields <= selected.keys():
+        raise ValueError(
+            "SLIM_ARC_CROSS_LAYER_TRANSITION and SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK "
+            "must be configured together"
+        )
     return dict(sorted(selected.items()))
 
 

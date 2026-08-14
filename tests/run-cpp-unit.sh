@@ -31,6 +31,7 @@ case "$target" in
             "$source_root/slim-arc-page-range.cpp"
             "$source_root/slim-arc-expert-reclaim.cpp"
             "$source_root/slim-arc-expert-residency.cpp"
+            "$source_root/slim-arc-expert-transition.cpp"
         )
         ;;
     test-slim-arc-runtime)
@@ -41,6 +42,7 @@ case "$target" in
             "$source_root/slim-arc-page-range.cpp"
             "$source_root/slim-arc-expert-reclaim.cpp"
             "$source_root/slim-arc-expert-residency.cpp"
+            "$source_root/slim-arc-expert-transition.cpp"
             "$source_root/slim-arc-pressure-budget.cpp"
             "$source_root/slim-arc-unified-scheduler.cpp"
             "$source_root/slim-arc-runtime.cpp"
@@ -61,6 +63,10 @@ case "$target" in
         readonly test_source="$test_root/test-slim-arc-expert-residency.cpp"
         readonly module_sources=("$source_root/slim-arc-expert-residency.cpp")
         ;;
+    test-slim-arc-expert-transition)
+        readonly test_source="$test_root/test-slim-arc-expert-transition.cpp"
+        readonly module_sources=("$source_root/slim-arc-expert-transition.cpp")
+        ;;
     test-slim-arc-unified-pressure)
         readonly test_source="$test_root/test-slim-arc-unified-pressure.cpp"
         readonly module_sources=(
@@ -69,6 +75,7 @@ case "$target" in
             "$source_root/slim-arc-page-range.cpp"
             "$source_root/slim-arc-expert-reclaim.cpp"
             "$source_root/slim-arc-expert-residency.cpp"
+            "$source_root/slim-arc-expert-transition.cpp"
             "$source_root/slim-arc-pressure-budget.cpp"
             "$source_root/slim-arc-unified-scheduler.cpp"
         )

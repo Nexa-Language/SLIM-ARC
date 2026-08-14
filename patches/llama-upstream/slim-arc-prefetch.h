@@ -1,6 +1,7 @@
 #pragma once
 
 #include "slim-arc-expert-residency.h"
+#include "slim-arc-expert-transition.h"
 #include "slim-arc-page-range.h"
 
 // SLIM-ARC: Tensor-level asynchronous prefetch scheduler
@@ -95,6 +96,17 @@ struct expert_runtime_metrics {
     uint64_t invalid_ranges{0};
 };
 
+struct expert_hot_cache_stats {
+    uint64_t budget_bytes{0};
+    uint64_t locked_bytes{0};
+    uint64_t admissions{0};
+    uint64_t hits{0};
+    uint64_t evictions{0};
+    uint64_t budget_rejections{0};
+    uint64_t nonresident_bytes{0};
+    uint64_t lock_failures{0};
+};
+
 std::vector<size_t> select_prefetch_items(
     const std::vector<size_t> & item_sizes,
     uint64_t budget_bytes,
@@ -170,6 +182,7 @@ class prefetch_scheduler {
     expert_pressure_state current_expert_pressure() const;
     expert_residency_runtime_stats expert_residency_statistics() const noexcept;
     expert_runtime_metrics expert_runtime_statistics() const noexcept;
+    expert_hot_cache_stats expert_hot_cache_statistics() const noexcept;
     std::vector<uint32_t> expert_popularity_snapshot(int layer) const;
     uint64_t popularity_decay_count() const noexcept { return popularity_decay_count_.load(); }
     uint32_t expert_waste_ewma_milli() const;
@@ -179,6 +192,17 @@ class prefetch_scheduler {
     uint64_t dropped_request_count() const { return dropped_requests_.load(); }
     bool confidence_gating_enabled() const { return conf_gating_; }
     int popularity_k() const { return pop_k_; }
+    bool cross_layer_transition_enabled() const noexcept { return cross_layer_transition_enabled_; }
+    int cross_layer_transition_topk() const noexcept { return cross_layer_transition_topk_; }
+    void observe_expert_transition(
+        int layer,
+        const std::vector<int> & source,
+        const std::vector<int> & target);
+    std::vector<int> predict_expert_transition(int layer, const std::vector<int> & source);
+    void record_expert_transition_result(
+        const std::vector<int> & predicted,
+        const std::vector<int> & actual);
+    expert_transition_stats expert_transition_statistics() const noexcept;
     // 统一 I/O 预算下发与每步重置（改进 3，供 unified_io_scheduler::tick 调用）
     void set_expert_budget(size_t bytes) {
         expert_budget_.store(bytes);
@@ -193,14 +217,22 @@ class prefetch_scheduler {
         const std::vector<int> & prefetched,
         const std::vector<int> & selected,
         const std::vector<expert_tensor_info> & tensors);
+    void update_expert_hot_cache(
+        int layer,
+        const std::vector<int> & stable_experts,
+        const std::vector<expert_tensor_info> & tensors);
 
     const bool slow_storage_enabled_;
     const bool router_prefetch_enabled_;
     const bool router_mlock_enabled_;
     const bool shared_mlock_enabled_;
+    const bool small_mlock_enabled_;
+    const size_t expert_hot_budget_bytes_;
     const bool expert_prefetch_disabled_;
     const bool expert_random_madv_enabled_;
     const bool expert_normal_madv_enabled_;
+    const int cross_layer_transition_topk_;
+    const bool cross_layer_transition_enabled_;
     int n_threads_;
     int window_;
     std::atomic<compute_phase> phase_{compute_phase::DECODE};
@@ -270,6 +302,24 @@ class prefetch_scheduler {
     std::vector<page_range>                        shared_locked_ranges_;
     std::atomic<uint64_t>                          shared_locked_bytes_{0};
     std::atomic<uint64_t>                          shared_lock_failures_{0};
+    std::vector<page_range>                        small_locked_ranges_;
+    std::atomic<uint64_t>                          small_locked_bytes_{0};
+    std::atomic<uint64_t>                          small_lock_failures_{0};
+    struct expert_hot_entry {
+        int layer{-1};
+        int expert_id{-1};
+        std::vector<page_range> ranges;
+        uint64_t locked_bytes{0};
+    };
+    mutable std::mutex                              expert_hot_mtx_;
+    std::vector<expert_hot_entry>                  expert_hot_entries_;
+    uint64_t                                        expert_hot_locked_bytes_{0};
+    uint64_t                                        expert_hot_admissions_{0};
+    uint64_t                                        expert_hot_hits_{0};
+    uint64_t                                        expert_hot_evictions_{0};
+    uint64_t                                        expert_hot_budget_rejections_{0};
+    uint64_t                                        expert_hot_nonresident_bytes_{0};
+    uint64_t                                        expert_hot_lock_failures_{0};
     std::vector<std::pair<void *, size_t>>         mmap_regions_;
     std::vector<page_range>                        expert_madv_ranges_;
     std::atomic<uint64_t>                          expert_madv_advice_calls_{0};
@@ -279,6 +329,8 @@ class prefetch_scheduler {
     std::vector<std::vector<expert_tensor_info>>   experts_by_layer_;
     // Guards the expert registry and router predictor/accounting state.
     mutable std::mutex                              expert_state_mtx_;
+    mutable std::mutex                              expert_transition_mtx_;
+    expert_transition_table                        expert_transition_table_;
     // Router-selected expert IDs per layer (for next-layer prediction)
     std::vector<std::vector<int>>                  cached_router_experts_;
     struct expert_prefetch_record {

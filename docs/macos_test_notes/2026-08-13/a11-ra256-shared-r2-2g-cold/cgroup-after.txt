@@ -1,0 +1,99 @@
+CGROUP_RELATIVE=/
+=== memory.current ===
+1889804288
+=== memory.max ===
+2147483648
+=== memory.peak ===
+2147483648
+=== memory.events ===
+low 0
+high 0
+max 200286
+oom 0
+oom_kill 0
+oom_group_kill 0
+=== memory.stat ===
+anon 1249280
+file 1843286016
+kernel 45105152
+kernel_stack 32768
+pagetables 102400
+sec_pagetables 0
+percpu 0
+sock 0
+vmalloc 8192
+shmem 0
+zswap 0
+zswapped 0
+file_mapped 2396160
+file_dirty 0
+file_writeback 0
+swapcached 0
+anon_thp 0
+file_thp 0
+shmem_thp 0
+inactive_anon 4096
+active_anon 1187840
+inactive_file 1017929728
+active_file 825298944
+unevictable 0
+slab_reclaimable 44202056
+slab_unreclaimable 225264
+slab 44427320
+workingset_refault_anon 0
+workingset_refault_file 9305996
+workingset_activate_anon 0
+workingset_activate_file 9292213
+workingset_restore_anon 0
+workingset_restore_file 3
+workingset_nodereclaim 207488
+pgscan 37431324
+pgsteal 25707990
+pgscan_kswapd 0
+pgscan_direct 37431324
+pgscan_khugepaged 0
+pgsteal_kswapd 0
+pgsteal_direct 25707990
+pgsteal_khugepaged 0
+pgfault 2587787
+pgmajfault 343626
+pgrefill 780
+pgactivate 20768
+pgdeactivate 0
+pglazyfree 0
+pglazyfreed 0
+zswpin 0
+zswpout 0
+zswpwb 0
+thp_fault_alloc 0
+thp_collapse_alloc 0
+thp_swpout 0
+thp_swpout_fallback 0
+=== memory.swap.current ===
+0
+=== memory.swap.max ===
+0
+=== memory.pressure ===
+some avg10=16.25 avg60=8.52 avg300=2.41 total=8034721
+full avg10=16.25 avg60=8.52 avg300=2.41 total=8034721
+=== cpu.max ===
+800000 100000
+=== cpu.stat ===
+usage_usec 98233635
+user_usec 12120918
+system_usec 86112716
+core_sched.force_idle_usec 0
+nr_periods 528
+nr_throttled 0
+throttled_usec 0
+nr_bursts 0
+burst_usec 0
+=== cpu.pressure ===
+some avg10=0.49 avg60=0.26 avg300=0.07 total=475246
+full avg10=0.49 avg60=0.26 avg300=0.07 total=461533
+=== io.stat ===
+253:16 rbytes=107143106560 wbytes=0 rios=2232249 wios=0 dbytes=0 dios=0
+253:0 rbytes=65536 wbytes=0 rios=1 wios=0 dbytes=0 dios=0
+=== io.pressure ===
+some avg10=43.85 avg60=23.98 avg300=6.41 total=20477607
+full avg10=43.85 avg60=23.98 avg300=6.41 total=20460710

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "feature_commit": "7d0c7e31bacafda882a52135ae9b6e845448f824",
+    "eager_image_id": "sha256:061f538668209893c72b4de714c6eac9a4727e53d8621eac104f7ae76313643a",
+    "onfault_image_id": "sha256:3f877135f78bfd23dd5c5bab91e8ecc819a05ce0c95ddffd79eb9f14b98063cd",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "contract": {
+    "memory_gib": 2,
+    "cpu_limit": 8,
+    "prefill_threads": 8,
+    "decode_threads": 6,
+    "poll": 50,
+    "read_ahead_kb": 128,
+    "swap_bytes": 0,
+    "n_prompt": 64,
+    "n_gen": 16,
+    "cache_state": "cold"
+  },
+  "eager_runs": [
+    {"run":"a9-eager-reference-2g-cold","prefill_tps":4.180377,"decode_tps":0.853113,"wall_seconds":55.26,"major_faults":466953,"filesystem_input_blocks":195873424,"locked_bytes":92405760},
+    {"run":"a9-eager-reference-r2-2g-cold","prefill_tps":4.415779,"decode_tps":0.815193,"wall_seconds":55.36,"major_faults":467953,"filesystem_input_blocks":196070536,"locked_bytes":92405760}
+  ],
+  "onfault_runs": [
+    {"run":"a9-onfault-shared-2g-cold","prefill_tps":4.412231,"decode_tps":0.842456,"wall_seconds":54.44,"major_faults":479912,"filesystem_input_blocks":197932304,"locked_bytes":92405760,"onfault_bytes":92405760},
+    {"run":"a9-onfault-shared-r2-2g-cold","prefill_tps":4.279489,"decode_tps":0.769291,"wall_seconds":56.83,"major_faults":468024,"filesystem_input_blocks":196040208,"locked_bytes":92405760,"onfault_bytes":92405760}
+  ],
+  "median_comparison": {
+    "eager":{"sample_count":2,"prefill_tps":4.298078,"decode_tps":0.834153,"wall_seconds":55.31,"major_faults":467453,"filesystem_input_blocks":195971980},
+    "onfault":{"sample_count":2,"prefill_tps":4.345860,"decode_tps":0.8058735,"wall_seconds":55.635,"major_faults":473968,"filesystem_input_blocks":196986256},
+    "onfault_relative_percent":{"prefill_tps":1.111706,"decode_tps":-3.390205,"wall_seconds":0.587597,"major_faults":1.393723,"filesystem_input_blocks":0.517562}
+  },
+  "decision": "reject_onfault_keep_eager"
+}

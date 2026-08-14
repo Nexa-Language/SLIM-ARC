@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "slim_arc_git_commit": "262328fdf4f28dcbd25eb9c60c35eef4c49edbbd",
+    "image_id": "sha256:8679ec6fb5684e2865767699bdbf452e12471d48ed631a1a905cd3f1acc3fb1e",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "contract": {
+    "memory_gib": 2,
+    "cpu_limit": 8,
+    "prefill_threads": 8,
+    "decode_threads": 6,
+    "poll": 50,
+    "shared_mlock": true,
+    "read_ahead_kb": 128,
+    "swap_bytes": 0,
+    "n_prompt": 64,
+    "n_gen": 64,
+    "cache_state": "cold"
+  },
+  "control": {
+    "run":"a14-small-control-2g-tg64-cold",
+    "prefill_tps":4.609123,
+    "decode_tps":1.024886,
+    "wall_seconds":96.36,
+    "major_faults":1387876,
+    "filesystem_input_blocks":418189296
+  },
+  "small_resident": {
+    "run":"a14-small-mlock-2g-tg64-cold",
+    "prefill_tps":4.361220,
+    "decode_tps":1.017529,
+    "wall_seconds":96.82,
+    "major_faults":1380515,
+    "filesystem_input_blocks":422386208,
+    "locked_bytes":25313280,
+    "lock_failures":0
+  },
+  "candidate_relative_percent": {
+    "prefill_tps":-5.378529,
+    "decode_tps":-0.717836,
+    "wall_seconds":0.477377,
+    "major_faults":-0.530379,
+    "filesystem_input_blocks":1.003591
+  },
+  "decision": "reject_small_residency_for_finalist"
+}

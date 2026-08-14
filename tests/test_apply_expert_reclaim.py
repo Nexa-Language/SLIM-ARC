@@ -12,6 +12,8 @@ APPLY_SCRIPT = REPO_ROOT / "scripts" / "apply-slim-arc.py"
 def write_fixture(root: Path) -> Path:
     src = root / "src"
     src.mkdir(parents=True)
+    models = src / "models"
+    models.mkdir()
     (src / "llama-model-loader.cpp").write_text(
         '#include "llama-model-loader.h"\n#include <regex>\n'
         "void init_mappings() {\n"
@@ -42,6 +44,7 @@ def write_fixture(root: Path) -> Path:
     (src / "llama-context.cpp").write_text(
         '#include "llama-ext.h"\n#include <limits>\n'
         "int graph_compute() {\n"
+        "    int n_threads        = batched ? cparams.n_threads_batch : cparams.n_threads;\n"
         "    auto status = ggml_backend_sched_graph_compute_async(sched.get(), gf);\n"
         "    return status;\n"
         "}\n",
@@ -59,6 +62,19 @@ def write_fixture(root: Path) -> Path:
         encoding="utf-8",
     )
     (src / "CMakeLists.txt").write_text("set(LLAMA_SOURCES llama-vocab.cpp)\n", encoding="utf-8")
+    (models / "qwen3next.cpp").write_text(
+        '#include "models.h"\n#include "llama-memory-recurrent.h"\n'
+        "void build_qwen3next_graph() {\n"
+        "    for (int il = 0; il < n_layer; ++il) {\n"
+        "        ggml_tensor * attn_post_norm = build_norm(cur, model.layers[il].attn_post_norm, nullptr, LLM_NORM_RMS, il);\n"
+        '        cb(attn_post_norm, "attn_post_norm", il);\n\n'
+        "        // FFN layer (MoE or dense) - without residual connection\n"
+        "        cur = build_layer_ffn(attn_post_norm, il);\n"
+        '        cb(cur, "ffn_out", il);\n'
+        "    }\n"
+        "}\n",
+        encoding="utf-8",
+    )
     return src
 
 
@@ -94,9 +110,9 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     src = write_fixture(tmp_path / "llama")
 
     first_run = run_apply(src.parent)
-    first = {path.name: path.read_bytes() for path in src.iterdir() if path.is_file()}
+    first = snapshot_tree(src)
     second_run = run_apply(src.parent)
-    second = {path.name: path.read_bytes() for path in src.iterdir() if path.is_file()}
+    second = snapshot_tree(src)
 
     assert first == second
     assert first_run.stdout == "SLIM-ARC integration complete\n"
@@ -114,10 +130,44 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert "auto slim_arc_runtime = slim_arc::acquire_runtime();" in context
     assert context.count('std::getenv("SLIM_ARC_SLOW_STORAGE")') == 1
     assert context.count('std::strcmp(slow_storage_raw, "1") == 0') == 1
-    assert "if (!slow_storage && !batched && max_layer > min_layer)" in context
+    assert "if (!slow_storage && !batched && slim_arc_max_layer > slim_arc_min_layer)" in context
     assert context.index("if (slim_arc_runtime) {") < context.index("ggml_graph_n_nodes(gf)")
     assert "get_global_prefetch_scheduler" not in context
     assert "get_global_unified_scheduler" not in context
+    assert 'std::getenv("SLIM_ARC_INLINE_ROUTER")' in context
+    assert "cparams.cb_eval == nullptr" in context
+    assert "slim_arc_inline_router_state" in context
+    assert "settle_pending()" in context
+    assert 'std::getenv("SLIM_ARC_EXPERT_PIPELINE_MB")' in context
+    assert "pipeline_budget_bytes" in context
+    assert "prefetch_layer(slim_arc_min_layer)" in context
+    assert "prefetch_layer(layer + 1)" in context
+    assert context.count("reset_expert_budget_usage()") >= 1
+    assert "if (!slim_arc_expert_pipeline)" in context
+    assert "ggml_backend_sched_set_eval_callback(sched.get(), cparams.cb_eval, cparams.cb_eval_user_data);" in context
+    assert "status == GGML_STATUS_SUCCESS && !slim_arc_inline_router" in context
+    assert 'std::getenv("SLIM_ARC_CROSS_LAYER_GATE")' in context
+    assert context.count('std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION")') == 1
+    assert context.count('std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK")') == 1
+    assert 'std::strstr(tensor->name, "slim_arc_cross_layer_topk")' in context
+    assert "prefetch_prediction(layer, unique)" in context
+    assert "observe_expert_transition(" in context
+    assert "predict_expert_transition(layer, unique)" in context
+    assert "record_expert_transition_result(" in context
+    assert "native_experts_by_layer" in context
+    assert "predicted_experts_by_layer" in context
+    assert "if (native && !state->cross_layer_gate && !state->cross_layer_transition)" in context
+
+    qwen3next = second["models/qwen3next.cpp"].decode(encoding="utf-8")
+    assert qwen3next.count('std::getenv("SLIM_ARC_CROSS_LAYER_GATE")') == 1
+    assert qwen3next.count('std::getenv("SLIM_ARC_CROSS_LAYER_TOPK")') == 1
+    assert qwen3next.count('std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION")') == 1
+    assert qwen3next.count('std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK")') == 1
+    assert qwen3next.count('cb(slim_arc_cross_layer_topk, "slim_arc_cross_layer_topk", il + 1)') == 1
+    assert qwen3next.count("ggml_build_forward_expand(gf, slim_arc_cross_layer_topk);") == 1
+    assert "il + 1 < n_layer" in qwen3next
+    assert "n_tokens == 1" in qwen3next
+    assert "slim_arc_cross_layer_transition_topk_count == 0" in qwen3next
 
     model = second["llama-model.cpp"].decode(encoding="utf-8")
     impl = model[model.index("struct llama_model::impl"):model.index("};", model.index("struct llama_model::impl"))]
@@ -139,6 +189,7 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert cmake.count("slim-arc-page-range.cpp") == 1
     assert cmake.count("slim-arc-expert-reclaim.cpp") == 1
     assert cmake.count("slim-arc-expert-residency.cpp") == 1
+    assert cmake.count("slim-arc-expert-transition.cpp") == 1
     assert "slim-arc-runtime.h" in second
     assert "slim-arc-runtime.cpp" in second
     assert "slim-arc-page-range.h" in second
@@ -147,6 +198,8 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert "slim-arc-expert-reclaim.cpp" in second
     assert "slim-arc-expert-residency.h" in second
     assert "slim-arc-expert-residency.cpp" in second
+    assert "slim-arc-expert-transition.h" in second
+    assert "slim-arc-expert-transition.cpp" in second
     assert "slim-arc-on-demand.h" not in second
     assert "slim-arc-on-demand.cpp" not in second
 

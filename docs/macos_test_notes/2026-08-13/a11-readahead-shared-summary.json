@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "image_id": "sha256:061f538668209893c72b4de714c6eac9a4727e53d8621eac104f7ae76313643a",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "contract": {
+    "memory_gib": 2,
+    "cpu_limit": 8,
+    "prefill_threads": 8,
+    "decode_threads": 6,
+    "poll": 50,
+    "shared_mlock": true,
+    "swap_bytes": 0,
+    "n_prompt": 64,
+    "n_gen": 16,
+    "cache_state": "cold",
+    "scheduler": "mq-deadline"
+  },
+  "ra128_reference_median": {
+    "sample_count": 2,
+    "prefill_tps": 4.298078,
+    "decode_tps": 0.834153,
+    "wall_seconds": 55.31,
+    "major_faults": 467453,
+    "filesystem_input_blocks": 195971980
+  },
+  "ra256_runs": [
+    {"run":"a11-ra256-shared-2g-cold","prefill_tps":4.929989,"decode_tps":0.811804,"wall_seconds":51.09,"major_faults":340709,"filesystem_input_blocks":207510416},
+    {"run":"a11-ra256-shared-r2-2g-cold","prefill_tps":4.534338,"decode_tps":0.795154,"wall_seconds":52.44,"major_faults":344742,"filesystem_input_blocks":209243392}
+  ],
+  "ra256_median": {
+    "sample_count": 2,
+    "prefill_tps": 4.7321635,
+    "decode_tps": 0.803479,
+    "wall_seconds": 51.765,
+    "major_faults": 342725.5,
+    "filesystem_input_blocks": 208376904,
+    "relative_percent":{"prefill_tps":10.099526,"decode_tps":-3.677263,"wall_seconds":-6.409329,"major_faults":-26.682362,"filesystem_input_blocks":6.329948}
+  },
+  "ra192_screening": {
+    "run":"a11-ra192-shared-2g-cold",
+    "prefill_tps":4.402117,
+    "decode_tps":0.813688,
+    "wall_seconds":53.94,
+    "major_faults":398937,
+    "filesystem_input_blocks":205235368,
+    "relative_percent":{"prefill_tps":2.420594,"decode_tps":-2.453387,"wall_seconds":-2.476948,"major_faults":-14.657302,"filesystem_input_blocks":4.726894}
+  },
+  "decision": "ra128_decode_profile_ra256_latency_profile"
+}

@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "source_commit": "b693106b66054327cbfa610e30ac4bba88ed410e",
+  "runtime_image_id": "sha256:15c3bf3316e1c56db9eccec2af741c6ff64a41d9f2c81f68e481b96597bfaac3",
+  "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "contract": {
+    "memory_gib": 2,
+    "cpus": 8,
+    "swap": "disabled",
+    "cache": "cold",
+    "n_prompt": 64,
+    "n_gen": 64,
+    "repetitions_per_run": 1
+  },
+  "runs": [
+    {"name": "control-r1", "prefill_tps": 3.790004, "decode_tps": 0.738163, "wall_seconds": 128.36, "major_faults": 1264169, "file_system_inputs": 493426048},
+    {"name": "control-r2", "prefill_tps": 3.553070, "decode_tps": 0.720921, "wall_seconds": 129.68, "major_faults": 1123542, "file_system_inputs": 437573248},
+    {"name": "control-r3", "prefill_tps": 3.527041, "decode_tps": 0.929391, "wall_seconds": 127.43, "major_faults": 1136379, "file_system_inputs": 434148240},
+    {"name": "transition-top2-r1", "prefill_tps": 3.669405, "decode_tps": 0.722105, "wall_seconds": 130.63, "major_faults": 1193824, "file_system_inputs": 408869000, "predicted_experts": 5888, "matched_experts": 2612},
+    {"name": "transition-top4-r1", "prefill_tps": 3.893005, "decode_tps": 0.831489, "wall_seconds": 116.28, "major_faults": 1287767, "file_system_inputs": 445450368, "predicted_experts": 11776, "matched_experts": 4937},
+    {"name": "transition-top4-r2", "prefill_tps": 3.991515, "decode_tps": 0.673784, "wall_seconds": 133.33, "major_faults": 1166088, "file_system_inputs": 412176488, "predicted_experts": 11776, "matched_experts": 4937},
+    {"name": "transition-top4-r3", "prefill_tps": 4.481298, "decode_tps": 0.934223, "wall_seconds": 101.52, "major_faults": 1352124, "file_system_inputs": 454691312, "predicted_experts": 11776, "matched_experts": 4937}
+  ],
+  "median": {
+    "control": {"prefill_tps": 3.553070, "decode_tps": 0.738163, "wall_seconds": 128.36, "major_faults": 1136379, "file_system_inputs": 437573248},
+    "transition_top4": {"prefill_tps": 3.991515, "decode_tps": 0.831489, "wall_seconds": 116.28, "major_faults": 1287767, "file_system_inputs": 445450368},
+    "transition_top4_vs_control_percent": {"prefill_tps": 12.339892, "decode_tps": 12.643007, "wall_seconds": -9.411031, "major_faults": 13.321964, "file_system_inputs": 1.800183},
+    "paired_transition_top4_vs_control_percent": {"prefill_tps": 12.339892, "decode_tps": 0.519910, "wall_seconds": -9.411031, "major_faults": 3.786774, "file_system_inputs": -5.804002}
+  },
+  "decision": "promote_top4_to_pi_screen",
+  "interpretation": "Top4 is promising but Mac cold-I/O variance is high; only the Raspberry Pi no-swap screen can promote the optimization."
+}

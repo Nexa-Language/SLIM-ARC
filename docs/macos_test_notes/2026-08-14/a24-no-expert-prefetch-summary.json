@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "source_commit": "7b519df0f887f85652efd23439a06938376778b8",
+  "runtime_image_id": "sha256:15c3bf3316e1c56db9eccec2af741c6ff64a41d9f2c81f68e481b96597bfaac3",
+  "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "contract": {
+    "memory_gib": 2,
+    "cpus": 8,
+    "swap": "disabled",
+    "cache": "cold",
+    "n_prompt": 64,
+    "n_gen": 64,
+    "repetitions_per_run": 1,
+    "environment_delta": {"SLIM_ARC_NO_EXPERT_PREFETCH": "1"}
+  },
+  "runs": [
+    {"name": "no-expert-prefetch-r1", "prefill_tps": 3.879570, "decode_tps": 0.941653, "wall_seconds": 105.56, "major_faults": 1276187, "file_system_inputs": 401655792},
+    {"name": "no-expert-prefetch-r2", "prefill_tps": 4.085922, "decode_tps": 0.858675, "wall_seconds": 111.29, "major_faults": 1297627, "file_system_inputs": 409085224},
+    {"name": "no-expert-prefetch-r3", "prefill_tps": 3.931758, "decode_tps": 0.903851, "wall_seconds": 108.18, "major_faults": 1272128, "file_system_inputs": 400668320}
+  ],
+  "median": {
+    "control": {"prefill_tps": 3.553070, "decode_tps": 0.738163, "wall_seconds": 128.36, "major_faults": 1136379, "file_system_inputs": 437573248},
+    "no_expert_prefetch": {"prefill_tps": 3.931758, "decode_tps": 0.903851, "wall_seconds": 108.18, "major_faults": 1276187, "file_system_inputs": 401655792},
+    "no_expert_prefetch_vs_control_percent": {"prefill_tps": 10.658051, "decode_tps": 22.445991, "wall_seconds": -15.721409, "major_faults": 12.300741, "file_system_inputs": -8.208330}
+  },
+  "decision": "promote_no_expert_prefetch_to_pi_screen",
+  "interpretation": "All three Mac runs are faster, but promotion still requires a no-swap Raspberry Pi result."
+}

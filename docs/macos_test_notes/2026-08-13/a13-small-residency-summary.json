@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "slim_arc_git_commit": "262328fdf4f28dcbd25eb9c60c35eef4c49edbbd",
+    "image_id": "sha256:8679ec6fb5684e2865767699bdbf452e12471d48ed631a1a905cd3f1acc3fb1e",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "inventory": {
+    "eligible_tensor_count": 325,
+    "raw_tensor_bytes": 23997440,
+    "page_aligned_locked_bytes": 25313280
+  },
+  "contract": {
+    "cpu_limit": 8,
+    "prefill_threads": 8,
+    "decode_threads": 6,
+    "poll": 50,
+    "read_ahead_kb": 128,
+    "swap_bytes": 0,
+    "n_prompt": 64,
+    "n_gen": 16,
+    "cache_state": "cold"
+  },
+  "two_gib": {
+    "control_runs": [
+      {"run":"a13-small-control-2g-cold","prefill_tps":4.664993,"decode_tps":0.919022,"wall_seconds":51.02,"major_faults":470811,"filesystem_input_blocks":196061408},
+      {"run":"a13-small-control-r2-2g-cold","prefill_tps":4.712854,"decode_tps":0.915325,"wall_seconds":50.18,"major_faults":476171,"filesystem_input_blocks":197399752}
+    ],
+    "candidate_runs": [
+      {"run":"a13-small-mlock-2g-cold","prefill_tps":4.779108,"decode_tps":0.949390,"wall_seconds":49.53,"major_faults":461267,"filesystem_input_blocks":195269064,"locked_bytes":25313280,"lock_failures":0},
+      {"run":"a13-small-mlock-r2-2g-cold","prefill_tps":4.663281,"decode_tps":0.886952,"wall_seconds":51.30,"major_faults":456761,"filesystem_input_blocks":195092864,"locked_bytes":25313280,"lock_failures":0}
+    ],
+    "median_comparison": {
+      "control":{"sample_count":2,"prefill_tps":4.6889235,"decode_tps":0.9171735,"wall_seconds":50.60,"major_faults":473491,"filesystem_input_blocks":196730580},
+      "small_resident":{"sample_count":2,"prefill_tps":4.7211945,"decode_tps":0.918171,"wall_seconds":50.415,"major_faults":459014,"filesystem_input_blocks":195180964},
+      "candidate_relative_percent":{"prefill_tps":0.688239,"decode_tps":0.108758,"wall_seconds":-0.365613,"major_faults":-3.057503,"filesystem_input_blocks":-0.787684}
+    },
+    "decision": "short_workload_candidate_superseded_by_a14"
+  },
+  "one_gib": {
+    "control":{"run":"a13-small-control-1g-cold","prefill_tps":4.653601,"decode_tps":0.892864,"wall_seconds":50.33,"major_faults":507086,"filesystem_input_blocks":201762848},
+    "candidate":{"run":"a13-small-mlock-1g-cold","prefill_tps":4.384449,"decode_tps":0.865355,"wall_seconds":51.80,"major_faults":496300,"filesystem_input_blocks":200928624,"locked_bytes":25313280,"lock_failures":0},
+    "candidate_relative_percent":{"prefill_tps":-5.783736,"decode_tps":-3.080984,"wall_seconds":2.920723,"major_faults":-2.127055,"filesystem_input_blocks":-0.413468},
+    "decision": "disable_at_1g"
+  },
+  "decision": "do_not_enable_by_default_after_a14"
+}

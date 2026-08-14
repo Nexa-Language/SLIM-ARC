@@ -55,6 +55,58 @@ int parse_popularity_k(const char * raw) noexcept {
     return parsed;
 }
 
+size_t parse_expert_hot_budget_bytes(const char * raw) noexcept {
+    if (raw == nullptr) return 0;
+    const std::string_view value{raw};
+    uint64_t parsed{0};
+    const auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
+    if (value.empty() || result.ec != std::errc{} || result.ptr != value.data() + value.size() ||
+        parsed == 0 || parsed > 512) {
+        std::fprintf(stderr, "SLIM-ARC: invalid SLIM_ARC_EXPERT_HOT_MB; expected an integer in [1,512]\n");
+        return 0;
+    }
+    return static_cast<size_t>(parsed) * (1ULL << 20);
+}
+
+struct resident_range_result {
+    std::vector<page_range> ranges;
+    uint64_t nonresident_bytes{0};
+    bool valid{false};
+};
+
+resident_range_result resident_page_ranges(const page_range & range, size_t page_size) {
+    if (!range.valid || range.length == 0 || page_size == 0 || range.length % page_size != 0) return {};
+    const size_t page_count = range.length / page_size;
+#if defined(__APPLE__)
+    std::vector<char> residency(page_count);
+#else
+    std::vector<unsigned char> residency(page_count);
+#endif
+    if (mincore(reinterpret_cast<void *>(range.address), range.length, residency.data()) != 0) return {};
+
+    resident_range_result result;
+    result.valid = true;
+    size_t run_start = page_count;
+    for (size_t page = 0; page <= page_count; ++page) {
+        const bool resident = page < page_count && (residency[page] & 1) != 0;
+        if (resident && run_start == page_count) run_start = page;
+        if ((!resident || page == page_count) && run_start != page_count) {
+            const size_t run_pages = page - run_start;
+            result.ranges.push_back({
+                range.address + run_start * page_size,
+                run_pages * page_size,
+                0,
+                true,
+                0});
+            run_start = page_count;
+        }
+        if (page < page_count && !resident) {
+            result.nonresident_bytes = saturating_add(result.nonresident_bytes, static_cast<uint64_t>(page_size));
+        }
+    }
+    return result;
+}
+
 int system_advice(void * address, size_t length, int advice) {
     return posix_madvise(address, length, advice);
 }
@@ -66,6 +118,28 @@ long system_page_size() {
 bool env_exact_one(const char * name) noexcept {
     const char * const value = std::getenv(name);
     return value != nullptr && std::strcmp(value, "1") == 0;
+}
+
+int parse_cross_layer_transition_topk() noexcept {
+    if (!env_exact_one("SLIM_ARC_CROSS_LAYER_TRANSITION")) return 0;
+    const char * const raw = std::getenv("SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK");
+    if (raw == nullptr) {
+        std::fprintf(
+            stderr,
+            "SLIM-ARC: SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK is required when transition is enabled\n");
+        return 0;
+    }
+    const std::string_view value{raw};
+    int parsed{0};
+    const auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
+    if (value.empty() || result.ec != std::errc{} || result.ptr != value.data() + value.size() ||
+        parsed < 1 || parsed > 64) {
+        std::fprintf(
+            stderr,
+            "SLIM-ARC: invalid SLIM_ARC_CROSS_LAYER_TRANSITION_TOPK; expected an integer in [1,64]\n");
+        return 0;
+    }
+    return parsed;
 }
 
 void update_atomic_peak(std::atomic<uint64_t> & peak, uint64_t candidate) noexcept {
@@ -260,9 +334,13 @@ prefetch_scheduler::prefetch_scheduler(
     , router_prefetch_enabled_(env_exact_one("SLIM_ARC_ROUTER_PREFETCH"))
     , router_mlock_enabled_(env_exact_one("SLIM_ARC_ROUTER_MLOCK"))
     , shared_mlock_enabled_(env_exact_one("SLIM_ARC_SHARED_MLOCK"))
+    , small_mlock_enabled_(env_exact_one("SLIM_ARC_SMALL_MLOCK"))
+    , expert_hot_budget_bytes_(parse_expert_hot_budget_bytes(std::getenv("SLIM_ARC_EXPERT_HOT_MB")))
     , expert_prefetch_disabled_(env_exact_one("SLIM_ARC_NO_EXPERT_PREFETCH"))
     , expert_random_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_RANDOM"))
     , expert_normal_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_NORMAL"))
+    , cross_layer_transition_topk_(parse_cross_layer_transition_topk())
+    , cross_layer_transition_enabled_(cross_layer_transition_topk_ > 0)
     , n_threads_(slow_storage_enabled_ ? 1 : std::max(1, n_threads))
     , window_(slow_storage_enabled_ ? 1 : std::max(1, window))
     , request_claim_hook_(std::move(request_claim_hook))
@@ -290,15 +368,32 @@ prefetch_scheduler::~prefetch_scheduler() {
     dump_metrics();
     std::vector<page_range> locked;
     std::vector<page_range> shared_locked;
+    std::vector<page_range> small_locked;
+    std::vector<page_range> expert_hot_locked;
     {
         std::lock_guard<std::mutex> lock(mtx_);
         locked.swap(router_locked_ranges_);
         shared_locked.swap(shared_locked_ranges_);
+        small_locked.swap(small_locked_ranges_);
+    }
+    {
+        std::lock_guard<std::mutex> lock(expert_hot_mtx_);
+        for (const expert_hot_entry & entry : expert_hot_entries_) {
+            expert_hot_locked.insert(expert_hot_locked.end(), entry.ranges.begin(), entry.ranges.end());
+        }
+        expert_hot_entries_.clear();
+        expert_hot_locked_bytes_ = 0;
     }
     for (const page_range & range : locked) {
         (void) munlock(reinterpret_cast<void *>(range.address), range.length);
     }
     for (const page_range & range : shared_locked) {
+        (void) munlock(reinterpret_cast<void *>(range.address), range.length);
+    }
+    for (const page_range & range : small_locked) {
+        (void) munlock(reinterpret_cast<void *>(range.address), range.length);
+    }
+    for (const page_range & range : expert_hot_locked) {
         (void) munlock(reinterpret_cast<void *>(range.address), range.length);
     }
 }
@@ -333,6 +428,21 @@ void prefetch_scheduler::register_tensor(const char * name, void * addr, size_t 
             atomic_saturating_add(shared_locked_bytes_, static_cast<uint64_t>(range.length));
         } else {
             atomic_saturating_add(shared_lock_failures_, uint64_t{1});
+        }
+    }
+    if (small_mlock_enabled_ && name != nullptr && size <= (1ULL << 20) &&
+        std::strstr(name, "_exps") == nullptr && std::strstr(name, "_shexp") == nullptr &&
+        std::strstr(name, "ffn_gate_inp") == nullptr) {
+        const long raw_page_size = page_size_query_();
+        const page_range range = covering_page_range(
+            reinterpret_cast<uintptr_t>(addr),
+            size,
+            raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 0);
+        if (range.valid && mlock(reinterpret_cast<void *>(range.address), range.length) == 0) {
+            small_locked_ranges_.push_back(range);
+            atomic_saturating_add(small_locked_bytes_, static_cast<uint64_t>(range.length));
+        } else {
+            atomic_saturating_add(small_lock_failures_, uint64_t{1});
         }
     }
     if (router_prefetch_enabled_ || router_mlock_enabled_) {
@@ -560,12 +670,58 @@ void prefetch_scheduler::register_expert_tensor(const char *, void * addr, size_
             size,
             raw_page_size > 0 ? static_cast<size_t>(raw_page_size) : 0);
     }
+    if (cross_layer_transition_enabled_) {
+        std::lock_guard<std::mutex> transition_lock(expert_transition_mtx_);
+        (void) expert_transition_table_.register_layer(layer, n_experts);
+    }
     std::lock_guard<std::mutex> lock(expert_state_mtx_);
     if ((size_t)layer >= experts_by_layer_.size()) {
         experts_by_layer_.resize(layer + 1);
     }
     experts_by_layer_[layer].push_back({addr, size, n_experts});
     if (random_range.valid) expert_madv_ranges_.push_back(random_range);
+}
+
+void prefetch_scheduler::observe_expert_transition(
+    int layer,
+    const std::vector<int> & source,
+    const std::vector<int> & target) {
+    if (!cross_layer_transition_enabled_ || source.empty() || target.empty()) return;
+    std::lock_guard<std::mutex> lock(expert_transition_mtx_);
+    expert_transition_table_.observe(
+        layer,
+        source.data(),
+        static_cast<int>(source.size()),
+        target.data(),
+        static_cast<int>(target.size()));
+}
+
+std::vector<int> prefetch_scheduler::predict_expert_transition(
+    int layer, const std::vector<int> & source) {
+    if (!cross_layer_transition_enabled_ || source.empty()) return {};
+    std::lock_guard<std::mutex> lock(expert_transition_mtx_);
+    return expert_transition_table_.predict(
+        layer,
+        source.data(),
+        static_cast<int>(source.size()),
+        cross_layer_transition_topk_);
+}
+
+void prefetch_scheduler::record_expert_transition_result(
+    const std::vector<int> & predicted,
+    const std::vector<int> & actual) {
+    if (!cross_layer_transition_enabled_ || predicted.empty() || actual.empty()) return;
+    std::lock_guard<std::mutex> lock(expert_transition_mtx_);
+    expert_transition_table_.record_result(
+        predicted.data(),
+        static_cast<int>(predicted.size()),
+        actual.data(),
+        static_cast<int>(actual.size()));
+}
+
+expert_transition_stats prefetch_scheduler::expert_transition_statistics() const noexcept {
+    std::lock_guard<std::mutex> lock(expert_transition_mtx_);
+    return expert_transition_table_.statistics();
 }
 
 void prefetch_scheduler::cache_router_experts(int layer, const int * expert_ids, int n) {
@@ -584,10 +740,25 @@ void prefetch_scheduler::cache_router_experts(
 
     std::vector<int> prefetched;
     std::vector<expert_tensor_info> reclaim_tensors;
+    std::vector<int> stable_experts;
+    std::vector<expert_tensor_info> hot_tensors;
     {
         std::lock_guard<std::mutex> lock(expert_state_mtx_);
         if ((size_t)layer >= cached_router_experts_.size()) {
             cached_router_experts_.resize(layer + 1);
+        }
+        if (expert_hot_budget_bytes_ > 0) {
+            for (const int expert_id : current) {
+                if (std::find(
+                        cached_router_experts_[layer].begin(),
+                        cached_router_experts_[layer].end(),
+                        expert_id) != cached_router_experts_[layer].end()) {
+                    stable_experts.push_back(expert_id);
+                }
+            }
+            if (!stable_experts.empty() && static_cast<size_t>(layer) < experts_by_layer_.size()) {
+                hot_tensors = experts_by_layer_[layer];
+            }
         }
         // 每个 router 观察只能结算调用方携带的精确预取代次；token 0 仅更新预测器。
         if (generation != 0 && static_cast<size_t>(layer) < pending_expert_prefetches_.size()) {
@@ -667,6 +838,9 @@ void prefetch_scheduler::cache_router_experts(
     }
     if (!prefetched.empty()) {
         reclaim_wrong_expert_pages(prefetched, current, reclaim_tensors);
+    }
+    if (!stable_experts.empty() && !hot_tensors.empty()) {
+        update_expert_hot_cache(layer, stable_experts, hot_tensors);
     }
 }
 
@@ -785,6 +959,109 @@ uint64_t prefetch_scheduler::expert_waste_sample_count() const {
 bool prefetch_scheduler::expert_waste_restricted() const {
     std::lock_guard<std::mutex> lock(expert_state_mtx_);
     return expert_waste_restricted_;
+}
+
+expert_hot_cache_stats prefetch_scheduler::expert_hot_cache_statistics() const noexcept {
+    std::lock_guard<std::mutex> lock(expert_hot_mtx_);
+    return {
+        static_cast<uint64_t>(expert_hot_budget_bytes_),
+        expert_hot_locked_bytes_,
+        expert_hot_admissions_,
+        expert_hot_hits_,
+        expert_hot_evictions_,
+        expert_hot_budget_rejections_,
+        expert_hot_nonresident_bytes_,
+        expert_hot_lock_failures_};
+}
+
+void prefetch_scheduler::update_expert_hot_cache(
+    int layer,
+    const std::vector<int> & stable_experts,
+    const std::vector<expert_tensor_info> & tensors) {
+    if (expert_hot_budget_bytes_ == 0 || stable_experts.empty() || tensors.empty() || stop_.load()) return;
+    const long raw_page_size = page_size_query_();
+    if (raw_page_size <= 0) return;
+    const size_t page_size = static_cast<size_t>(raw_page_size);
+
+    std::vector<expert_tensor_view> tensor_views;
+    tensor_views.reserve(tensors.size());
+    for (const expert_tensor_info & tensor : tensors) {
+        tensor_views.push_back({reinterpret_cast<uintptr_t>(tensor.addr), tensor.size, tensor.n_experts});
+    }
+
+    std::lock_guard<std::mutex> lock(expert_hot_mtx_);
+    auto entry = expert_hot_entries_.begin();
+    while (entry != expert_hot_entries_.end()) {
+        if (entry->layer != layer ||
+            std::find(stable_experts.begin(), stable_experts.end(), entry->expert_id) != stable_experts.end()) {
+            ++entry;
+            continue;
+        }
+        for (const page_range & range : entry->ranges) {
+            (void) munlock(reinterpret_cast<void *>(range.address), range.length);
+        }
+        expert_hot_locked_bytes_ -= entry->locked_bytes;
+        expert_hot_evictions_ = saturating_add(expert_hot_evictions_, uint64_t{1});
+        entry = expert_hot_entries_.erase(entry);
+    }
+
+    for (const int expert_id : stable_experts) {
+        const auto existing = std::find_if(
+            expert_hot_entries_.begin(), expert_hot_entries_.end(), [layer, expert_id](const expert_hot_entry & item) {
+                return item.layer == layer && item.expert_id == expert_id;
+            });
+        if (existing != expert_hot_entries_.end()) {
+            expert_hot_hits_ = saturating_add(expert_hot_hits_, uint64_t{1});
+            continue;
+        }
+
+        const expert_reclaim_plan plan = build_expert_reclaim_plan(tensor_views, {expert_id}, page_size);
+        std::vector<page_range> resident_ranges;
+        uint64_t candidate_bytes{0};
+        bool valid = !plan.items.empty();
+        for (const expert_reclaim_item & item : plan.items) {
+            const resident_range_result resident = resident_page_ranges(
+                {item.address, item.length, 0, true, 0}, page_size);
+            if (!resident.valid) {
+                valid = false;
+                break;
+            }
+            expert_hot_nonresident_bytes_ = saturating_add(
+                expert_hot_nonresident_bytes_, resident.nonresident_bytes);
+            for (const page_range & range : resident.ranges) {
+                candidate_bytes = saturating_add(candidate_bytes, static_cast<uint64_t>(range.length));
+                resident_ranges.push_back(range);
+            }
+        }
+        if (!valid || resident_ranges.empty()) {
+            expert_hot_lock_failures_ = saturating_add(expert_hot_lock_failures_, uint64_t{1});
+            continue;
+        }
+        if (candidate_bytes > static_cast<uint64_t>(expert_hot_budget_bytes_) - expert_hot_locked_bytes_) {
+            expert_hot_budget_rejections_ = saturating_add(expert_hot_budget_rejections_, uint64_t{1});
+            continue;
+        }
+
+        std::vector<page_range> locked_ranges;
+        bool lock_failed = false;
+        for (const page_range & range : resident_ranges) {
+            if (mlock(reinterpret_cast<void *>(range.address), range.length) != 0) {
+                expert_hot_lock_failures_ = saturating_add(expert_hot_lock_failures_, uint64_t{1});
+                lock_failed = true;
+                break;
+            }
+            locked_ranges.push_back(range);
+        }
+        if (lock_failed) {
+            for (const page_range & range : locked_ranges) {
+                (void) munlock(reinterpret_cast<void *>(range.address), range.length);
+            }
+            continue;
+        }
+        expert_hot_entries_.push_back({layer, expert_id, std::move(locked_ranges), candidate_bytes});
+        expert_hot_locked_bytes_ = saturating_add(expert_hot_locked_bytes_, candidate_bytes);
+        expert_hot_admissions_ = saturating_add(expert_hot_admissions_, uint64_t{1});
+    }
 }
 
 void prefetch_scheduler::reclaim_wrong_expert_pages(
@@ -1174,6 +1451,19 @@ void prefetch_scheduler::dump_metrics() const {
             static_cast<unsigned long long>(router_samples_.load()),
             issued / 1048576.0, hit / 1048576.0, waste / 1048576.0, hr,
             total / 1048576.0);
+    if (cross_layer_transition_enabled_) {
+        const expert_transition_stats transition = expert_transition_statistics();
+        std::fprintf(
+            stderr,
+            "[SLIM-ARC-TRANSITION] schema=1 updates=%llu prediction_rounds=%llu "
+            "empty_rounds=%llu predicted_experts=%llu matched_experts=%llu decays=%llu\n",
+            static_cast<unsigned long long>(transition.updates),
+            static_cast<unsigned long long>(transition.prediction_rounds),
+            static_cast<unsigned long long>(transition.empty_rounds),
+            static_cast<unsigned long long>(transition.predicted_experts),
+            static_cast<unsigned long long>(transition.matched_experts),
+            static_cast<unsigned long long>(transition.decays));
+    }
     if (router_mlock_enabled_) {
         std::fprintf(
             stderr,
@@ -1187,6 +1477,28 @@ void prefetch_scheduler::dump_metrics() const {
             "[SLIM-ARC-SHARED] locked_bytes=%llu lock_failures=%llu\n",
             static_cast<unsigned long long>(shared_locked_bytes_.load()),
             static_cast<unsigned long long>(shared_lock_failures_.load()));
+    }
+    if (small_mlock_enabled_) {
+        std::fprintf(
+            stderr,
+            "[SLIM-ARC-SMALL] locked_bytes=%llu lock_failures=%llu\n",
+            static_cast<unsigned long long>(small_locked_bytes_.load()),
+            static_cast<unsigned long long>(small_lock_failures_.load()));
+    }
+    if (expert_hot_budget_bytes_ > 0) {
+        const expert_hot_cache_stats stats = expert_hot_cache_statistics();
+        std::fprintf(
+            stderr,
+            "[SLIM-ARC-HOT] budget_bytes=%llu locked_bytes=%llu admissions=%llu hits=%llu "
+            "evictions=%llu budget_rejections=%llu nonresident_bytes=%llu lock_failures=%llu\n",
+            static_cast<unsigned long long>(stats.budget_bytes),
+            static_cast<unsigned long long>(stats.locked_bytes),
+            static_cast<unsigned long long>(stats.admissions),
+            static_cast<unsigned long long>(stats.hits),
+            static_cast<unsigned long long>(stats.evictions),
+            static_cast<unsigned long long>(stats.budget_rejections),
+            static_cast<unsigned long long>(stats.nonresident_bytes),
+            static_cast<unsigned long long>(stats.lock_failures));
     }
     if (expert_random_madv_enabled_ || expert_normal_madv_enabled_) {
         std::fprintf(

@@ -1,0 +1,153 @@
+{
+  "schema_version": 1,
+  "identity": {
+    "slim_arc_git_commit": "6dea8336c8365a9dd06dbbf81ba984defe902a67",
+    "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+    "patched_source_sha256": "8e275b2ae3988d823eb6238c15bc6a3f61178ea9bb2ca088d35843b035389c9c",
+    "build_context_sha256": "87d965dd4620e746de07021cbca0679c0450eee356a07f70075f9751e0c7dd79",
+    "image_id": "sha256:8fa06c5dcee6e18eebbfc05cfd40a108a160e5c392412bc61d0a7a202ce55f5f",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "contract": {
+    "memory_gib": 2,
+    "swap_bytes": 0,
+    "cpu_limit": 8,
+    "prefill_threads": 8,
+    "decode_threads": 6,
+    "poll": 50,
+    "read_ahead_kb": 256,
+    "io_scheduler": "mq-deadline",
+    "n_prompt": 64,
+    "n_gen": 64,
+    "cache_state": "cold",
+    "pressure_reserve_mb": 512,
+    "shared_mlock": true,
+    "slow_storage": true
+  },
+  "control": {
+    "run": "a17-hot-control-2g-tg64-cold",
+    "note": "Default-off reference from the immediately preceding image; the inline callback and hot cache were both disabled.",
+    "prefill_tps": 5.261280,
+    "decode_tps": 1.019083,
+    "wall_seconds": 92.37,
+    "major_faults": 1028236,
+    "filesystem_input_blocks": 453055720
+  },
+  "budget_runs": {
+    "64_mib": [
+      {
+        "run": "a18-inline-hot64-2g-tg64-cold",
+        "prefill_tps": 5.396057,
+        "decode_tps": 1.028238,
+        "wall_seconds": 90.47,
+        "major_faults": 1028381,
+        "filesystem_input_blocks": 454772232,
+        "locked_bytes": 66772992,
+        "admissions": 442,
+        "hits": 1770,
+        "evictions": 406,
+        "budget_rejections": 10369,
+        "nonresident_bytes": 0,
+        "lock_failures": 0
+      }
+    ],
+    "128_mib": [
+      {
+        "run": "a18-inline-hot128-2g-tg64-cold",
+        "prefill_tps": 5.432041,
+        "decode_tps": 1.078514,
+        "wall_seconds": 87.22,
+        "major_faults": 1011338,
+        "filesystem_input_blocks": 449814416,
+        "locked_bytes": 132870144,
+        "admissions": 827,
+        "hits": 3556,
+        "evictions": 756,
+        "budget_rejections": 8198,
+        "nonresident_bytes": 0,
+        "lock_failures": 0
+      },
+      {
+        "run": "a18-inline-hot128-r2-2g-tg64-cold",
+        "prefill_tps": 5.462723,
+        "decode_tps": 1.093027,
+        "wall_seconds": 86.66,
+        "major_faults": 994780,
+        "filesystem_input_blocks": 444423856,
+        "locked_bytes": 132870144,
+        "admissions": 827,
+        "hits": 3556,
+        "evictions": 756,
+        "budget_rejections": 8198,
+        "nonresident_bytes": 0,
+        "lock_failures": 0
+      }
+    ],
+    "256_mib": [
+      {
+        "run": "a18-inline-hot256-2g-tg64-cold",
+        "prefill_tps": 5.446159,
+        "decode_tps": 1.109769,
+        "wall_seconds": 85.81,
+        "major_faults": 982956,
+        "filesystem_input_blocks": 442713456,
+        "locked_bytes": 268308480,
+        "admissions": 2053,
+        "hits": 6660,
+        "evictions": 1910,
+        "budget_rejections": 3868,
+        "nonresident_bytes": 0,
+        "lock_failures": 0
+      }
+    ],
+    "512_mib": [
+      {
+        "run": "a18-inline-hot512-2g-tg64-cold",
+        "prefill_tps": 5.413442,
+        "decode_tps": 1.126194,
+        "wall_seconds": 85.23,
+        "major_faults": 951763,
+        "filesystem_input_blocks": 433194368,
+        "locked_bytes": 444162048,
+        "admissions": 3903,
+        "hits": 8316,
+        "evictions": 3667,
+        "budget_rejections": 0,
+        "nonresident_bytes": 290705408,
+        "lock_failures": 362
+      },
+      {
+        "run": "a18-inline-hot512-r2-2g-tg64-cold",
+        "prefill_tps": 5.478316,
+        "decode_tps": 1.122854,
+        "wall_seconds": 85.15,
+        "major_faults": 953444,
+        "filesystem_input_blocks": 433429080,
+        "locked_bytes": 443846656,
+        "admissions": 3921,
+        "hits": 8310,
+        "evictions": 3685,
+        "budget_rejections": 0,
+        "nonresident_bytes": 425320448,
+        "lock_failures": 350
+      }
+    ]
+  },
+  "promoted_median": {
+    "expert_hot_mb": 512,
+    "sample_count": 2,
+    "prefill_tps": 5.445879,
+    "decode_tps": 1.124524,
+    "wall_seconds": 85.19,
+    "major_faults": 952603.5,
+    "filesystem_input_blocks": 433311724,
+    "relative_to_control_percent": {
+      "prefill_tps": 3.508633,
+      "decode_tps": 10.346655,
+      "wall_seconds": -7.773086,
+      "major_faults": -7.355558,
+      "filesystem_input_blocks": -4.357962
+    }
+  },
+  "decision": "promote_inline_router_with_512_mib_hot_cache_at_2g"
+}
