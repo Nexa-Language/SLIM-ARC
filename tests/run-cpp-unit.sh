@@ -61,6 +61,10 @@ case "$target" in
         readonly test_source="$test_root/test-slim-arc-expert-residency.cpp"
         readonly module_sources=("$source_root/slim-arc-expert-residency.cpp")
         ;;
+    test-slim-arc-expert-transition)
+        readonly test_source="$test_root/test-slim-arc-expert-transition.cpp"
+        readonly module_sources=("$source_root/slim-arc-expert-transition.cpp")
+        ;;
     test-slim-arc-unified-pressure)
         readonly test_source="$test_root/test-slim-arc-unified-pressure.cpp"
         readonly module_sources=(
