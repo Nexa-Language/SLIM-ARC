@@ -2,6 +2,35 @@
 
 ---
 
+## 2026-08-14 A22 Mac 与树莓派无交换筛选完成
+
+### 变更描述
+- Mac 2 GiB/no-swap/冷缓存 `pp64/tg64` 完成 Top1/2/4/8、confidence 和 decode
+  线程消融；Top2 两次重复的 decode 中位数为 1.007538 tok/s，相对关闭 A22 的
+  control 提升 9.96%，wall time 降低 7.77%。
+- 树莓派 5 4GB 在禁用 zram swap 的真实 80A3B `pp16/tg4` 下完成
+  control/Top2/8/10/16 筛选；全部运行成功、无 advice failure/invalid range，结束后
+  zram 已自动恢复。
+- 树莓派单次筛选中 Top10 decode 为 0.056144 tok/s，相对 control 为 +1.48%；
+  因缺少重复，仅作为下一轮候选，不作为稳定性能结论。
+- 新增可恢复 zram 的无交换串行脚本与结构化 A22 汇总；原始日志总量低于 1 MiB，
+  不复制 48 GB 模型或构建目录。
+
+### 涉及文件
+- `scripts/pi/run-a22-noswap-screen.sh`
+- `docs/macos_test_notes/2026-08-14/a22-*`
+- `docs/pi5_4GB_test_notes/2026-08-14-a22-noswap-screen/`
+- `docs/macos_test_notes/2026-08-14/a22-cross-layer-prefetch-summary.{json,md}`
+- `ROADMAP.md`
+
+### 决策原因
+- A22 Top2 的 expert hit rate 达到 88.56%，证明真实下一层 Router 能显著提高 expert
+  选择精度，但额外 Router matmul 使它仍未超过 A20 的总体最佳性能。
+- 后续优化应保留跨层选择精度，同时移除额外 matmul；Mac 采用 Top2、树莓派采用
+  Top10 作为设备相关对照，不将单次微小差异过度解读为稳定提升。
+
+---
+
 ## 2026-08-14 A22 跨层 Router 预测预取启动
 
 ### 变更描述
