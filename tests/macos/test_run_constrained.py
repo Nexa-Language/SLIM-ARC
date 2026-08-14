@@ -305,6 +305,7 @@ def test_cross_layer_transition_requires_flag_and_topk_together() -> None:
             "SLIM_ARC_EXPERT_RECLAIM_WASTE",
             "SLIM_ARC_EXPERT_RESIDENCY",
             "SLIM_ARC_NO_EXPERT_PREFETCH",
+            "SLIM_ARC_NO_WEIGHT_PREFETCH",
             "SLIM_ARC_ROUTER_MLOCK",
             "SLIM_ARC_ROUTER_PREFETCH",
             "SLIM_ARC_SLOW_STORAGE",
@@ -325,6 +326,7 @@ def test_allows_finalist_policy_flags_only_when_enabled() -> None:
             "SLIM_ARC_EXPERT_RECLAIM_WASTE": "1",
             "SLIM_ARC_EXPERT_RESIDENCY": "1",
             "SLIM_ARC_NO_EXPERT_PREFETCH": "1",
+            "SLIM_ARC_NO_WEIGHT_PREFETCH": "1",
             "SLIM_ARC_ROUTER_MLOCK": "1",
             "SLIM_ARC_ROUTER_PREFETCH": "1",
             "SLIM_ARC_SLOW_STORAGE": "1",
@@ -340,6 +342,7 @@ def test_docker_command_carries_each_enabled_finalist_policy(tmp_path: Path) -> 
             "SLIM_ARC_EXPERT_RECLAIM_WASTE": "1",
             "SLIM_ARC_EXPERT_RESIDENCY": "1",
             "SLIM_ARC_NO_EXPERT_PREFETCH": "1",
+            "SLIM_ARC_NO_WEIGHT_PREFETCH": "1",
             "SLIM_ARC_ROUTER_MLOCK": "1",
             "SLIM_ARC_ROUTER_PREFETCH": "1",
             "SLIM_ARC_SLOW_STORAGE": "1",
@@ -353,6 +356,7 @@ def test_docker_command_carries_each_enabled_finalist_policy(tmp_path: Path) -> 
     assert command.count("SLIM_ARC_EXPERT_RECLAIM_WASTE=1") == 1
     assert command.count("SLIM_ARC_EXPERT_RESIDENCY=1") == 1
     assert command.count("SLIM_ARC_NO_EXPERT_PREFETCH=1") == 1
+    assert command.count("SLIM_ARC_NO_WEIGHT_PREFETCH=1") == 1
     assert command.count("SLIM_ARC_ROUTER_MLOCK=1") == 1
     assert command.count("SLIM_ARC_ROUTER_PREFETCH=1") == 1
     assert command.count("SLIM_ARC_SLOW_STORAGE=1") == 1
