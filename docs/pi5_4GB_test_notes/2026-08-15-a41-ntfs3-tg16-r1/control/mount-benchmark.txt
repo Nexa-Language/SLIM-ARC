@@ -1,0 +1,1 @@
+/dev/sda1 ntfs3 ro,noatime,uid=1000,gid=1000,dmask=0022,fmask=0022,iocharset=utf8

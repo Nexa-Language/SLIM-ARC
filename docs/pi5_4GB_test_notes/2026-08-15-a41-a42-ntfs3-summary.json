@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "experiment": "NTFS-3G/FUSE versus read-only kernel NTFS3 on the same Samsung 870 EVO model SSD",
+  "device": {
+    "board": "Raspberry Pi 5 Model B Rev 1.1",
+    "kernel": "Linux 6.18.34+rpt-rpi-2712 aarch64",
+    "memory_gib": 4,
+    "storage": "Samsung SSD 870 EVO 1TB through Innostor IS621 USB 3 bridge",
+    "usb_interface": "Mass Storage SCSI Bulk-Only protocol 80; no UAS interface",
+    "source_device": "/dev/sda1",
+    "original_filesystem": "NTFS-3G/FUSE",
+    "candidate_filesystem": "kernel NTFS3 read-only",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "fio_contract": {
+    "fio_version": "fio-3.39",
+    "rw": "randread",
+    "block_size_bytes": 1048576,
+    "ioengine": "psync",
+    "iodepth": 1,
+    "direct": true,
+    "readonly": true,
+    "runtime_seconds": 12,
+    "ramp_seconds": 2,
+    "randseed": 1,
+    "samples_per_filesystem": 2
+  },
+  "fio_medians": {
+    "ntfs_3g_fuse": {
+      "bandwidth_bytes_per_second": 72606166.5,
+      "iops": 69.2426365,
+      "completion_latency_ns": 14436984.703439
+    },
+    "kernel_ntfs3_readonly": {
+      "bandwidth_bytes_per_second": 114193995.5,
+      "iops": 108.9038815,
+      "completion_latency_ns": 9180292.4289375
+    },
+    "ntfs3_relative_percent": {
+      "bandwidth": 57.278646,
+      "iops": 57.278646,
+      "completion_latency": -36.411289
+    }
+  },
+  "a41_binary_compatibility": {
+    "exit_status": 127,
+    "wall_seconds": 0,
+    "result": "rejected",
+    "reason": "NTFS-3G-created POSIX symlinks in build/bin were not represented as usable ELF symlinks by kernel NTFS3; the dynamic loader reported libllama-common.so.0 file too short. Copying the 11 MiB runtime bundle to the native Linux SD filesystem fixed startup without copying the model."
+  },
+  "a42_end_to_end_screen": {
+    "source_commit": "d41cda703642c15a3268684a88b4ce677253ad48",
+    "filesystem": "kernel NTFS3 read-only",
+    "binary_storage": "native Linux SD filesystem",
+    "model_storage": "same single 48 GB SSD model file",
+    "result_storage": "native Linux SD filesystem",
+    "threads": 4,
+    "swap": "disabled during run and restored afterwards with zero used bytes",
+    "cache": "cold",
+    "n_prompt": 16,
+    "n_gen_requested": 16,
+    "prefill_tps": 0.0700322,
+    "a36_fuse_lru_prefill_median_tps": 0.20415,
+    "relative_prefill_percent": -65.695714,
+    "decode_tps": null,
+    "exit_status": 143,
+    "wall_seconds_until_stop": 723,
+    "screening_note": "The run was intentionally stopped during decode after the prefill regression. A concurrent read-only source grep may have added some SSD contention, so wall time is not promoted as a precise comparison; the 65.70 percent prefill loss is large enough to reject this mmap path without another long run."
+  },
+  "decision": "reject_kernel_ntfs3_for_llama_mmap_on_this_pi",
+  "reason": "Kernel NTFS3 improved controlled 1 MiB direct random reads but severely regressed the real mmap page-fault workload. Keep NTFS-3G/FUSE for the current model and move the next experiment to application-level coalesced or direct I/O rather than changing the default filesystem."
+}
