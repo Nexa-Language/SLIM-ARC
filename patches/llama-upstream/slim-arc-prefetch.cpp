@@ -337,6 +337,7 @@ prefetch_scheduler::prefetch_scheduler(
     , small_mlock_enabled_(env_exact_one("SLIM_ARC_SMALL_MLOCK"))
     , expert_hot_budget_bytes_(parse_expert_hot_budget_bytes(std::getenv("SLIM_ARC_EXPERT_HOT_MB")))
     , expert_hot_lru_enabled_(env_exact_one("SLIM_ARC_EXPERT_HOT_LRU"))
+    , expert_hot_lfru_enabled_(expert_hot_lru_enabled_ && env_exact_one("SLIM_ARC_EXPERT_HOT_LFRU"))
     , expert_prefetch_disabled_(env_exact_one("SLIM_ARC_NO_EXPERT_PREFETCH"))
     , expert_random_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_RANDOM"))
     , expert_normal_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_NORMAL"))
@@ -1016,6 +1017,7 @@ void prefetch_scheduler::update_expert_hot_cache(
             });
         if (existing != expert_hot_entries_.end()) {
             expert_hot_hits_ = saturating_add(expert_hot_hits_, uint64_t{1});
+            existing->frequency = saturating_add(existing->frequency, uint64_t{1});
             if (expert_hot_touch_clock_ != std::numeric_limits<uint64_t>::max()) ++expert_hot_touch_clock_;
             existing->last_touch = expert_hot_touch_clock_;
             continue;
@@ -1054,7 +1056,30 @@ void prefetch_scheduler::update_expert_hot_cache(
                     const bool selected_now = entry->layer == layer && std::find(
                         stable_experts.begin(), stable_experts.end(), entry->expert_id) != stable_experts.end();
                     if (selected_now) continue;
-                    if (victim == expert_hot_entries_.end() || entry->last_touch < victim->last_touch) {
+                    const auto lower_lfru_score = [this](
+                                                        const expert_hot_entry & candidate,
+                                                        const expert_hot_entry & incumbent) {
+                        const uint64_t candidate_age = saturating_add(
+                            expert_hot_touch_clock_ - candidate.last_touch, uint64_t{1});
+                        const uint64_t incumbent_age = saturating_add(
+                            expert_hot_touch_clock_ - incumbent.last_touch, uint64_t{1});
+                        using wide_uint = unsigned __int128;
+                        const wide_uint candidate_score =
+                            static_cast<wide_uint>(candidate.frequency) * incumbent_age;
+                        const wide_uint incumbent_score =
+                            static_cast<wide_uint>(incumbent.frequency) * candidate_age;
+                        if (candidate_score != incumbent_score) return candidate_score < incumbent_score;
+                        if (candidate.last_touch != incumbent.last_touch) {
+                            return candidate.last_touch < incumbent.last_touch;
+                        }
+                        if (candidate.layer != incumbent.layer) return candidate.layer < incumbent.layer;
+                        return candidate.expert_id < incumbent.expert_id;
+                    };
+                    const bool replace_victim = victim == expert_hot_entries_.end() ||
+                        (expert_hot_lfru_enabled_
+                             ? lower_lfru_score(*entry, *victim)
+                             : entry->last_touch < victim->last_touch);
+                    if (replace_victim) {
                         victim = entry;
                     }
                 }
@@ -1090,7 +1115,7 @@ void prefetch_scheduler::update_expert_hot_cache(
         }
         if (expert_hot_touch_clock_ != std::numeric_limits<uint64_t>::max()) ++expert_hot_touch_clock_;
         expert_hot_entries_.push_back(
-            {layer, expert_id, std::move(locked_ranges), candidate_bytes, expert_hot_touch_clock_});
+            {layer, expert_id, std::move(locked_ranges), candidate_bytes, expert_hot_touch_clock_, 1});
         expert_hot_locked_bytes_ = saturating_add(expert_hot_locked_bytes_, candidate_bytes);
         expert_hot_admissions_ = saturating_add(expert_hot_admissions_, uint64_t{1});
     }
@@ -1523,7 +1548,7 @@ void prefetch_scheduler::dump_metrics() const {
             stderr,
             "[SLIM-ARC-HOT] budget_bytes=%llu locked_bytes=%llu admissions=%llu hits=%llu "
             "evictions=%llu budget_rejections=%llu nonresident_bytes=%llu lock_failures=%llu "
-            "entries=%llu lru=%d\n",
+            "entries=%llu lru=%d lfru=%d\n",
             static_cast<unsigned long long>(stats.budget_bytes),
             static_cast<unsigned long long>(stats.locked_bytes),
             static_cast<unsigned long long>(stats.admissions),
@@ -1533,7 +1558,8 @@ void prefetch_scheduler::dump_metrics() const {
             static_cast<unsigned long long>(stats.nonresident_bytes),
             static_cast<unsigned long long>(stats.lock_failures),
             static_cast<unsigned long long>(stats.entries),
-            expert_hot_lru_enabled_ ? 1 : 0);
+            expert_hot_lru_enabled_ ? 1 : 0,
+            expert_hot_lfru_enabled_ ? 1 : 0);
     }
     if (expert_random_madv_enabled_ || expert_normal_madv_enabled_) {
         std::fprintf(
