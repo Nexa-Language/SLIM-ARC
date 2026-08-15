@@ -1012,9 +1012,11 @@ void prefetch_scheduler::update_expert_hot_cache(
     }
 
     std::lock_guard<std::mutex> lock(expert_hot_mtx_);
-    const bool filter_decode_admission =
-        expert_hot_admission_threshold_ > 1 && phase_.load() == compute_phase::DECODE;
-    if (filter_decode_admission) {
+    const uint64_t admission_headroom = std::max<uint64_t>(
+        static_cast<uint64_t>(expert_hot_budget_bytes_) / 100, uint64_t{1});
+    const bool filter_saturated_admission = expert_hot_admission_threshold_ > 1 &&
+        expert_hot_locked_bytes_ >= static_cast<uint64_t>(expert_hot_budget_bytes_) - admission_headroom;
+    if (filter_saturated_admission) {
         int n_experts = 0;
         for (const expert_tensor_info & tensor : tensors) {
             n_experts = std::max(n_experts, tensor.n_experts);
@@ -1045,7 +1047,7 @@ void prefetch_scheduler::update_expert_hot_cache(
 
     for (const int expert_id : stable_experts) {
         uint32_t admission_count = expert_hot_admission_threshold_;
-        if (filter_decode_admission) {
+        if (filter_saturated_admission) {
             if (expert_id < 0 || static_cast<size_t>(expert_id) >= expert_hot_admission_counts_[layer].size()) {
                 continue;
             }
@@ -1064,7 +1066,7 @@ void prefetch_scheduler::update_expert_hot_cache(
             existing->last_touch = expert_hot_touch_clock_;
             continue;
         }
-        if (filter_decode_admission && admission_count < expert_hot_admission_threshold_) {
+        if (filter_saturated_admission && admission_count < expert_hot_admission_threshold_) {
             expert_hot_admission_skips_ = saturating_add(expert_hot_admission_skips_, uint64_t{1});
             continue;
         }
