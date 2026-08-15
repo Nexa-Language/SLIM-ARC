@@ -45,6 +45,10 @@
     "swap_used_after_bytes": 0,
     "termination": "intentionally stopped during decode after the prefill regression"
   },
-  "decision": "reject",
-  "reason": "Expanding the hot-expert resident-set target from the validated 512 MiB candidate to 768 MiB reduced prefill throughput by 54.67 percent. The larger target increases memory-pressure and page-churn costs on the 4 GiB device, so 1024 MiB is not tested and 512 MiB remains the candidate."
+  "validity": {
+    "status": "invalidated_for_single-variable_attribution",
+    "reason": "The launch used unrecognized SLIM_ARC_EXPERT_HOT_SHARED_MLOCK and SLIM_ARC_EXPERT_TOTAL_BUDGET_MS names instead of the A36 SLIM_ARC_SHARED_MLOCK and SLIM_ARC_TOTAL_BUDGET_MB controls. Shared-expert mlock was therefore unintentionally disabled and the total runtime budget fell back to its default."
+  },
+  "decision": "invalidated",
+  "reason": "The observed combined configuration is much slower, but the 54.67 percent regression cannot be attributed specifically to increasing the hot-expert target to 768 MiB because two A36 controls were not preserved."
 }

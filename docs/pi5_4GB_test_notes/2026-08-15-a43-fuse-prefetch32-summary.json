@@ -44,6 +44,10 @@
     "swap_used_after_bytes": 0,
     "termination": "intentionally stopped during decode after the prefill regression"
   },
-  "decision": "reject",
-  "reason": "A 32 MiB bounded expert WILLNEED stream reduced prefill throughput by 54.46 percent relative to the A36 FUSE plus 512 MiB hot-expert LRU median. On this USB Bulk-Only and NTFS-3G/FUSE path, speculative expert reads still compete with demand faults. No decode or wall-time performance claim is made from the intentionally terminated run."
+  "validity": {
+    "status": "invalidated_for_single-variable_attribution",
+    "reason": "The launch used unrecognized SLIM_ARC_EXPERT_HOT_SHARED_MLOCK and SLIM_ARC_EXPERT_TOTAL_BUDGET_MS names instead of the A36 SLIM_ARC_SHARED_MLOCK and SLIM_ARC_TOTAL_BUDGET_MB controls. Shared-expert mlock was therefore unintentionally disabled and the total runtime budget fell back to its default."
+  },
+  "decision": "invalidated",
+  "reason": "The observed combined configuration is much slower, but the 54.46 percent regression cannot be attributed specifically to the 32 MiB expert prefetch because two A36 controls were not preserved."
 }
