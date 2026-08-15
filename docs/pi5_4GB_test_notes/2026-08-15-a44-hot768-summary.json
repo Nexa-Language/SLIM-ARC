@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "experiment": "A44 768 MiB hot-expert cache on Raspberry Pi 5",
+  "date": "2026-08-15",
+  "platform": {
+    "device": "Raspberry Pi 5",
+    "memory_bytes": 4245815296,
+    "model_path": "/home/yituodabian/data/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf",
+    "model_bytes_reported_by_llama_bench": 48405005312,
+    "filesystem": "NTFS-3G/FUSE",
+    "usb_bridge": "Innostor IS621, USB 3.0 Bulk-Only",
+    "swap": "off"
+  },
+  "identity": {
+    "slim_arc_commit": "163d0cfe34388c6a3f978cd06f01c47b77bc76cc",
+    "llama_cpp_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+    "generated_prefetch_source_sha256": "20468a5e8b546a0e6604a6377e037f8148b12cec563d7ea03fe2e9b2cd6853e4",
+    "generated_prefetch_header_sha256": "9f18b93c46c8973434136730e71c0d1909b63327daa8ec7f42e549b63eda69f2",
+    "libllama_sha256": "f82e685f1f2384a92ff40369d657d8f6f4bd85e44d299f8e14feb8dd9b7eee09",
+    "llama_bench_sha256": "d9bf4920c263be3f33c72c566204acc1738672c0abfb8b3c777ddef4f1ef6c61",
+    "runner_sha256": "624cf8de711a668d408d5ec40303cdc2fd0491d6913ed8e4d90e57aa3dbec646"
+  },
+  "configuration": {
+    "prompt_tokens": 16,
+    "generation_tokens": 16,
+    "threads": 4,
+    "cache_state": "cold",
+    "expert_prefetch": false,
+    "weight_prefetch": false,
+    "hot_expert_cache_mib": 768,
+    "hot_expert_lru": true,
+    "hot_expert_lfru": false,
+    "hot_expert_admit_hits": 1,
+    "shared_mlock": true
+  },
+  "screening_result": {
+    "prefill_tps": 0.0925394,
+    "a36_hot512_prefill_median_tps": 0.20415,
+    "relative_prefill_percent": -54.670879,
+    "exit_status": 143,
+    "wall_seconds": 620,
+    "temperature_before_c": 42.8,
+    "temperature_after_c": 45.5,
+    "swap_used_before_bytes": 0,
+    "swap_used_after_bytes": 0,
+    "termination": "intentionally stopped during decode after the prefill regression"
+  },
+  "decision": "reject",
+  "reason": "Expanding the hot-expert resident-set target from the validated 512 MiB candidate to 768 MiB reduced prefill throughput by 54.67 percent. The larger target increases memory-pressure and page-churn costs on the 4 GiB device, so 1024 MiB is not tested and 512 MiB remains the candidate."
+}
