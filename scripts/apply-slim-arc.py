@@ -245,11 +245,16 @@ static int slim_arc_expert_top_k(int default_count) {
 }
 '''
     expert_top_k_marker = "static int slim_arc_expert_top_k(int default_count)"
+    expert_top_k_assignment = "hparams.n_expert_used = slim_arc_expert_top_k(hparams.n_expert_used);"
     pristine_expert_count = "n_expert, n_expert_used,"
     screened_expert_count = "n_expert, slim_arc_expert_top_k(n_expert_used),"
     if expert_top_k_marker in content:
-        if content.count(expert_top_k_marker) != 1 or content.count(screened_expert_count) != 2 or pristine_expert_count in content:
+        if content.count(expert_top_k_marker) != 1:
             raise RuntimeError("expert top-k patch is incomplete")
+        if content.count(screened_expert_count) == 2 and pristine_expert_count not in content:
+            content = content.replace(screened_expert_count, pristine_expert_count)
+        elif content.count(pristine_expert_count) != 2 or screened_expert_count in content:
+            raise RuntimeError("expert top-k call-site state is incomplete")
     else:
         if content.count(pristine_expert_count) != 2 or screened_expert_count in content:
             raise RuntimeError("required Qwen3-Next expert count anchors not found")
@@ -259,7 +264,19 @@ static int slim_arc_expert_top_k(int default_count) {
             "#include <cstring>" + expert_top_k_helper,
             "Qwen3-Next expert top-k helper",
         )
-        content = content.replace(pristine_expert_count, screened_expert_count)
+    if expert_top_k_assignment not in content:
+        hparams_anchor = (
+            '    GGML_ASSERT(hparams.n_layer_nextn < hparams.n_layer_all && '
+            '"n_layer_nextn must be < n_layer_all");'
+        )
+        content = replace_required(
+            content,
+            hparams_anchor,
+            hparams_anchor + "\n\n    " + expert_top_k_assignment,
+            "Qwen3-Next expert top-k hparams",
+        )
+    elif content.count(expert_top_k_assignment) != 1:
+        raise RuntimeError("expert top-k hparams patch is incomplete")
 
     if marker in content:
         required = (

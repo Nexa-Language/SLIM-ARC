@@ -11,8 +11,10 @@ artifact, which is outside the current disk contract.
 
 `SLIM_ARC_EXPERT_TOP_K=N` replaces Qwen3-Next's configured routed-expert count only when `N` is a strict
 decimal integer in `[1, configured_top_k)`. Missing, malformed, zero, negative, equal, or larger values preserve
-the model default. Both the trunk and the MTP MoE calls use the same selected value. Other model families are
-unchanged.
+the model default. The override is applied once to `hparams.n_expert_used` before graph construction, so routing,
+graph reservation, expert tensor shapes, trunk aggregation, and MTP aggregation all use the same value. Changing
+only the two `build_moe_ffn()` arguments is invalid because llama.cpp deliberately aggregates
+`hparams.n_expert_used` expert views. Other model families are unchanged.
 
 The switch is deliberately opt-in because it changes model semantics: fewer routed experts can reduce quality
 and alter all later router decisions. It is a performance/quality screening mechanism, not a default runtime

@@ -64,6 +64,10 @@ def write_fixture(root: Path) -> Path:
     (src / "CMakeLists.txt").write_text("set(LLAMA_SOURCES llama-vocab.cpp)\n", encoding="utf-8")
     (models / "qwen3next.cpp").write_text(
         '#include "models.h"\n#include "llama-memory-recurrent.h"\n'
+        "void llama_model_qwen3next::load_arch_hparams(llama_model_loader & ml) {\n"
+        "    ml.get_key(LLM_KV_NEXTN_PREDICT_LAYERS, hparams.n_layer_nextn, false);\n"
+        '    GGML_ASSERT(hparams.n_layer_nextn < hparams.n_layer_all && "n_layer_nextn must be < n_layer_all");\n'
+        "}\n"
         "void build_qwen3next_graph() {\n"
         "    for (int il = 0; il < n_layer; ++il) {\n"
         "        ggml_tensor * attn_post_norm = build_norm(cur, model.layers[il].attn_post_norm, nullptr, LLM_NORM_RMS, il);\n"
@@ -177,10 +181,11 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert "n_tokens == 1" in qwen3next
     assert "slim_arc_cross_layer_transition_topk_count == 0" in qwen3next
     assert qwen3next.count('std::getenv("SLIM_ARC_EXPERT_TOP_K")') == 1
-    assert qwen3next.count("slim_arc_expert_top_k(n_expert_used)") == 2
+    assert qwen3next.count("hparams.n_expert_used = slim_arc_expert_top_k(hparams.n_expert_used);") == 1
     assert qwen3next.count("static int slim_arc_expert_top_k(int default_count)") == 1
     assert "parsed >= 1 && parsed < default_count" in qwen3next
-    assert "n_expert, n_expert_used," not in qwen3next
+    assert qwen3next.count("n_expert, n_expert_used,") == 2
+    assert "slim_arc_expert_top_k(n_expert_used)" not in qwen3next
 
     model = second["llama-model.cpp"].decode(encoding="utf-8")
     impl = model[model.index("struct llama_model::impl"):model.index("};", model.index("struct llama_model::impl"))]
