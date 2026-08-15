@@ -1,0 +1,30 @@
+# Hot-expert repeated-stability admission
+
+## 问题
+
+Pi 5 的 A36/A37 表明，替换策略可以改善 cache hit/eviction 计数，却仍然降低端到端 TPS。
+`update_expert_hot_cache()` 对每个首次出现的稳定候选执行 page-plan、`mincore` resident 扫描和
+`mlock`；短暂稳定一次的 expert 即使很快不再使用，也会进入 512 MiB 池并触发后续淘汰。
+
+## 设计
+
+增加 `SLIM_ARC_EXPERT_HOT_ADMIT_HITS=N`，取值为 `[1,64]`，默认 `1`：
+
+- 计数键为 `(layer, expert_id)`，只在候选属于连续 token 稳定集合时递增；
+- 候选达到第 `N` 次稳定观察前，不执行 page-plan、resident 扫描、`mlock` 或 LRU 淘汰；
+- 已在 cache 中的条目仍按原路径计 hit 和刷新 LRU/LFRU 状态；
+- 计数使用饱和 `uint32_t`，不会回绕；
+- 无变量、非法变量或 `N=1` 时保持已有行为。
+
+这是 admission filter，不修改替换策略。Pi 首轮只比较 `N=1` 与 `N=2`，保持 512 MiB LRU、
+cold cache、no-swap、pp16/tg16 及其余环境完全一致。
+
+## 指标与决策
+
+`[SLIM-ARC-HOT]` 新增：
+
+- `admission_skips`：尚未达到阈值而跳过的首次候选数；
+- `admission_threshold`：本次运行解析后的阈值。
+
+只有 wall time 和 TPS 改善才允许推广。admission、eviction 或扫描字节下降但端到端退化时，
+保留默认 `N=1`。该机制不主动 fault-in 冷页，也不增加模型或镜像副本。

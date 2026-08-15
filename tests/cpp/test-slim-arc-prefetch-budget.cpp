@@ -1565,6 +1565,51 @@ void test_expert_hot_lfru_retains_frequent_idle_entry() {
     run(true);
 }
 
+void test_expert_hot_admission_waits_for_repeated_stability() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    const size_t expert_bytes = 48 * page_size;
+    void * const mapping = mmap(nullptr, expert_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    std::memset(mapping, 1, expert_bytes);
+
+    scoped_env hot_budget{"SLIM_ARC_EXPERT_HOT_MB", "1"};
+    scoped_env hot_lru{"SLIM_ARC_EXPERT_HOT_LRU", "1"};
+    scoped_env admission_hits{"SLIM_ARC_EXPERT_HOT_ADMIT_HITS", "2"};
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1};
+        scheduler.register_expert_tensor("blk.25.exps", mapping, expert_bytes, 25, 1);
+        const int expert_zero = 0;
+
+        scheduler.cache_router_experts(25, &expert_zero, 1);
+        scheduler.cache_router_experts(25, &expert_zero, 1);
+        const auto observed_once = scheduler.expert_hot_cache_statistics();
+        assert(observed_once.admission_threshold == 2);
+        assert(observed_once.admission_skips == 1);
+        assert(observed_once.admissions == 0);
+        assert(observed_once.nonresident_bytes == 0);
+
+        scheduler.cache_router_experts(25, &expert_zero, 1);
+        const auto admitted = scheduler.expert_hot_cache_statistics();
+        assert(admitted.admission_skips == 1);
+        assert(admitted.admissions == 1);
+        assert(admitted.locked_bytes == expert_bytes);
+
+        scheduler.cache_router_experts(25, &expert_zero, 1);
+        const auto reused = scheduler.expert_hot_cache_statistics();
+        assert(reused.hits == 1);
+        assert(reused.admissions == 1);
+    }
+    assert(munmap(mapping, expert_bytes) == 0);
+}
+
+void test_expert_hot_admission_invalid_threshold_uses_legacy_one_hit() {
+    for (const char * value : {"", "0", "65", "true"}) {
+        scoped_env admission_hits{"SLIM_ARC_EXPERT_HOT_ADMIT_HITS", value};
+        slim_arc::prefetch_scheduler scheduler{0, 1};
+        assert(scheduler.expert_hot_cache_statistics().admission_threshold == 1);
+    }
+}
+
 void test_cross_layer_transition_flag_requires_exact_pair() {
     for (const char * value : {"0", "01", "true", ""}) {
         scoped_env enabled{"SLIM_ARC_CROSS_LAYER_TRANSITION", value};
@@ -1688,6 +1733,8 @@ int main() {
     test_expert_hot_lru_retains_gap_reuse_and_evicts_oldest_entry();
     test_expert_hot_lfru_requires_exact_pair();
     test_expert_hot_lfru_retains_frequent_idle_entry();
+    test_expert_hot_admission_waits_for_repeated_stability();
+    test_expert_hot_admission_invalid_threshold_uses_legacy_one_hit();
     test_cross_layer_transition_flag_requires_exact_pair();
     test_scheduler_learns_and_accounts_cross_layer_transition();
     test_cross_layer_transition_calls_are_thread_safe();
