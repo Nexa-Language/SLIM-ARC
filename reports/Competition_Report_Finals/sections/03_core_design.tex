@@ -1,8 +1,64 @@
 \section{决赛运行时设计}
 
+\subsection{阶段感知的映射建议}
+
+一次性对整个模型设置固定页建议并不可靠。Prefill 通常按层扫描较大范围，连续预读可以摊薄缺页与存储请求开销；Decode 只激活少量专家，但在内存远小于模型且存储随机访问较弱时，彻底关闭预读反而会把大块顺序 I/O 分裂为同步小读。SLIM-ARC 因而把页建议作为设备策略：加载与 Prefill 使用 \texttt{SEQUENTIAL}；Decode 在随机按需和保留预读之间由设备配置选择。该机制只改变内核 readahead 提示，不改变计算图或 Router 结果。
+
+\subsection{层感知预取调度}
+
+层级预取只覆盖本轮计算图及其有限前瞻窗口。设 $l_{\min}$ 和 $l_{\max}$ 为计算图中出现的最小、最大 Transformer 层，$w$ 为随 Prefill/Decode 阶段变化的前瞻层数，$T_l$ 为第 $l$ 层已注册的 mmap 权重张量集合。算法\ref{alg:layer-prefetch}给出调度路径；循环上界已经截断到 $l_{\max}$，因此不再保留旧稿中永远不可满足的 $l>l_{\max}$ 分支。
+
+\begin{algorithm}[H]
+  \caption{有界层感知预取}
+  \label{alg:layer-prefetch}
+  \renewcommand{\algorithmicrequire}{\textbf{输入:}}
+  \renewcommand{\algorithmicensure}{\textbf{输出:}}
+  \begin{algorithmic}[1]
+    \REQUIRE 计算图 $G$，阶段相关窗口 $w$
+    \ENSURE 对有限后续层发出 best-effort 页建议
+    \STATE $(l_{\min},l_{\max}) \gets \mathrm{layer\_range}(G)$
+    \STATE $l_{\mathrm{end}} \gets \min(l_{\max},l_{\min}+w)$
+    \FOR{$l=l_{\min}$ \TO $l_{\mathrm{end}}$}
+      \FORALL{$t \in T_l$}
+        \STATE $\mathrm{madvise}(t.\mathrm{addr},t.\mathrm{size},\mathrm{WILLNEED})$
+      \ENDFOR
+    \ENDFOR
+  \end{algorithmic}
+\end{algorithm}
+
+Router 观测不通过裸指针跨线程共享。每次预取分配单调递增的 generation token，并把层号、专家集合和成功建议字节作为不可变记录发布；实际 Router 结果只结算同 token 的记录。计算失败、缺少 Router 节点或过滤后集合为空时显式取消 token，从而避免旧预测占满有界队列。
+
+\subsection{统一预算：计算方式与生效范围}
+
+调度器先从静态周期额度 $B_{\mathrm{static}}$ 出发；压力准入开启时，根据 cgroup 当前占用、上限和保留量得到有效额度 $B_{\mathrm{eff}}\le B_{\mathrm{static}}$。随后按阶段系数 $\boldsymbol{\alpha}_p=(\alpha_w,\alpha_{kv},\alpha_e)$ 计算
+\begin{equation}
+  (B_w,B_{kv},B_e)=B_{\mathrm{eff}}\boldsymbol{\alpha}_p,
+  \qquad \alpha_w+\alpha_{kv}+\alpha_e=1.
+\end{equation}
+运行时统计可在有限范围内调高发生 stall 的路径，并缩减另外两路。当前实现采用启发式乘法调整，没有在每次调整后对三路比例做二次归一化；因此这些额度应解释为各路径的 admission 上限，而不是三路实际 I/O 字节和严格等于 $B_{\mathrm{eff}}$。表\ref{tab:budget-ratios-finals}列出当前初始系数。
+
+\begin{table}[H]
+  \centering
+  \caption{统一预算的阶段初始比例（策略参数，不是测得带宽占比）}
+  \label{tab:budget-ratios-finals}
+  \begin{tabular}{lccc}
+    \toprule
+    阶段 & 权重 $\alpha_w$ & KV $\alpha_{kv}$ & 专家 $\alpha_e$ \\
+    \midrule
+    PREFILL\_SHORT & 60\% & 10\% & 30\% \\
+    PREFILL\_LONG  & 50\% & 20\% & 30\% \\
+    DECODE\_SHORT  & 70\% & 20\% & 10\% \\
+    DECODE\_LONG   & 30\% & 60\% & 10\% \\
+    MOE\_DECODE    & 20\% & 20\% & 60\% \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+必须区分“计算出额度”和“严格执行额度”。当前权重预取通过 \texttt{set\_memory\_budget} 执行 $B_w$，专家路径在压力准入、驻留或专家预算开关启用时执行 $B_e$；决赛的 model-owned runtime 尚未绑定 KV manager，因此 $B_{kv}$ 只存在于策略计算中，没有进入正式实验路径。即使后续绑定 KV manager，现有接口也尚未把 $B_{kv}$ 作为逐周期硬 admission。因此本报告将其称为\textbf{统一预算策略与两路执行路径}，不宣称权重、KV、专家三路已经完成同等强度的带宽隔离。补齐 KV manager 绑定、字节级 admission 和比例归一化后，才能把表中 KV 比例解释为实际约束。
+
 \subsection{错误专家页回收：安全优先的候选建议}
 
-每轮 Router 观测产生已预取集合和实际选中集合。回收规划器保留前者中未出现在后者的 ID，并保持首次出现顺序。对于每个候选专家，它验证张量的专家数、可整除布局、ID 范围和无溢出的偏移计算；再把专家切片向内收缩到完整页面。零长度、跨越张量边界、非整除布局或非法 ID 都不产生页面建议，而是记录可审核的原因。这样，建议绝不覆盖选中专家，也不触及专家切片外的字节。
+每轮 Router 观测产生已预取集合和实际选中集合。回收规划器保留前者中未出现在后者的 ID，并保持首次出现顺序。对于每个候选专家，它验证张量的专家数、可整除布局、ID 范围和无溢出的偏移计算；再把专家切片向内收缩到完整页面。一个专家通常跨越多个页面，边界页还可能与相邻切片共享，因此系统只对完全位于该专家切片内部的页面提出建议。零长度、跨越张量边界、非整除布局或非法 ID 都不产生页面建议，而是记录可审核的原因。这样，建议绝不覆盖选中专家，也不触及专家切片外的字节。
 
 \begin{figure}[H]
 \centering

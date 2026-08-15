@@ -1,6 +1,61 @@
 \newpage
 \section{附录：可追溯性清单}
 
+\subsection{初赛到决赛的里程碑}
+
+旧稿按六天计划罗列 Phase 0--5，且包含“留待决赛”等已经过期的状态。本版不再保留该开发计划，而以已经发生并可定位到提交或实验目录的里程碑替代，如表\ref{tab:finals-milestones}所示。
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{初赛到决赛的可验证里程碑}
+  \label{tab:finals-milestones}
+  \begin{tabular}{p{0.16\textwidth}p{0.30\textwidth}p{0.46\textwidth}}
+    \toprule
+    时间 & 阶段结果 & 决赛口径 \\
+    \midrule
+    6/21--6/26 & 完成初赛基线、mmap/MADV、量化、预取与初步消融 & 作为技术起点保留；跨缓存、跨设备或审计失效的倍数不沿用 \\
+    8/5--8/10 & 在 RK3588 上跑通 80B，并定位静态 RANDOM 的严重负优化 & 实现阶段感知建议；动态策略在匹配工作负载下追平禁用路径 \\
+    8/11--8/12 & 完成 Mac 2\,GiB/no-swap 身份绑定矩阵 & 20 次成功运行由同一 JSON 导入；回收/驻留 opt-in，组合拒绝 \\
+    8/13--8/15 & 转向真实边缘设备与慢存储链路 & 树莓派精确文件预读无收益；继续研究减少专家读取量而非只提前读取 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{决赛阶段的主要问题与处理}
+
+\begin{longtable}{p{0.28\textwidth}p{0.64\textwidth}}
+  \toprule
+  \textbf{问题} & \textbf{证据与处理} \\
+  \midrule
+  \endhead
+  固定页建议不能跨硬件复用
+    & RK3588 上静态 RANDOM 将 \texttt{p32/n16/t4} 降到 0.44/0.26\,t/s；改为阶段感知 SEQUENTIAL/设备相关 Decode 策略后达到 2.84/1.40\,t/s。 \\
+  预取状态与 Router 结果可能错配
+    & 使用非复用 generation token；成功、空结果、缺节点和计算失败都必须结算或取消，避免记录泄漏与错误归因。 \\
+  模型卸载与后台线程共享地址
+    & 将运行时归属于模型，图执行持有租约；销毁时拒绝新租约、等待在途租约并 join worker，再释放映射。 \\
+  Mac patched 变体曾错误链接 baseline 库
+    & 旧 patched 性能行全部作废；正式矩阵在每次运行中绑定镜像、源码树、variant linkage、模型和 cgroup 证据。 \\
+  慢 FUSE/USB 存储提前读无收益
+    & 树莓派 A45/A46 显示精确 expert \texttt{fadvise} 为 $-0.251714\%$；默认关闭，后续优先低比特专家、静态裁剪或缓存替换策略。 \\
+  \bottomrule
+\end{longtable}
+
+\subsection{提交材料与代码入口}
+
+材料入口如下；初赛报告目录保持独立，不被本次修订覆盖。
+
+\begin{itemize}
+  \item 核心运行时：\path{patches/llama-upstream/slim-arc-*}；
+  \item 幂等集成脚本：\path{scripts/apply-slim-arc.py}；
+  \item Mac 控制器与证据工具：\path{scripts/macos/}；
+  \item 端侧记录：\path{docs/rk3588_test_notes/} 与 \path{docs/pi5_4GB_test_notes/}；
+  \item 决赛报告：\path{reports/Competition_Report_Finals/}。
+\end{itemize}
+
+\subsection{实验可追溯性}
+
 \begin{longtable}{p{0.30\textwidth}p{0.62\textwidth}}
 \toprule
 \textbf{对象} & \textbf{决赛要求} \\
@@ -16,6 +71,6 @@
 \bottomrule
 \end{longtable}
 
-\subsection{构建保护}
+\subsection{报告构建保护}
 
 当固定路径的正式 JSON 不存在、无效、不是恰好两轮完整 20 次成功运行，或生成的 TeX 与当前 JSON hash 不一致时，构建驱动将以明确错误退出，不留下可能被误交付的 ``final'' PDF。该错误是发布门，而不是 TeX 环境错误。本次输入已到位并通过该门禁；维护者在结果文件变化后仍必须按 \texttt{RESULTS\_IMPORT.md} 重新运行构建驱动，并对新 PDF 逐页检查。
