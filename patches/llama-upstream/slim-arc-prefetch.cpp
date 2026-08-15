@@ -61,8 +61,8 @@ size_t parse_expert_hot_budget_bytes(const char * raw) noexcept {
     uint64_t parsed{0};
     const auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
     if (value.empty() || result.ec != std::errc{} || result.ptr != value.data() + value.size() ||
-        parsed == 0 || parsed > 512) {
-        std::fprintf(stderr, "SLIM-ARC: invalid SLIM_ARC_EXPERT_HOT_MB; expected an integer in [1,512]\n");
+        parsed == 0 || parsed > 1024) {
+        std::fprintf(stderr, "SLIM-ARC: invalid SLIM_ARC_EXPERT_HOT_MB; expected an integer in [1,1024]\n");
         return 0;
     }
     return static_cast<size_t>(parsed) * (1ULL << 20);

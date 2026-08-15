@@ -1419,6 +1419,19 @@ void test_expert_hot_cache_requires_stability_and_respects_budget() {
     assert(munmap(second, tensor_bytes) == 0);
 }
 
+void test_expert_hot_cache_accepts_one_gib_budget_boundary() {
+    {
+        scoped_env hot_budget{"SLIM_ARC_EXPERT_HOT_MB", "1024"};
+        slim_arc::prefetch_scheduler scheduler{0, 1};
+        assert(scheduler.expert_hot_cache_statistics().budget_bytes == (1ULL << 30));
+    }
+    {
+        scoped_env hot_budget{"SLIM_ARC_EXPERT_HOT_MB", "1025"};
+        slim_arc::prefetch_scheduler scheduler{0, 1};
+        assert(scheduler.expert_hot_cache_statistics().budget_bytes == 0);
+    }
+}
+
 void test_expert_hot_lru_retains_gap_reuse_and_evicts_oldest_entry() {
     const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
     const size_t expert_bytes = 24 * page_size;
@@ -1748,6 +1761,7 @@ int main() {
     test_flag_off_target_and_advice_order_equal_legacy_path();
     test_residency_advice_callback_can_read_expert_state_without_deadlock();
     test_expert_hot_cache_requires_stability_and_respects_budget();
+    test_expert_hot_cache_accepts_one_gib_budget_boundary();
     test_expert_hot_lru_retains_gap_reuse_and_evicts_oldest_entry();
     test_expert_hot_lfru_requires_exact_pair();
     test_expert_hot_lfru_retains_frequent_idle_entry();

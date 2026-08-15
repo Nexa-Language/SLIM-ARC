@@ -226,6 +226,17 @@ def test_pressure_environment_is_allowlisted() -> None:
     cfg.validate()
 
 
+@pytest.mark.parametrize("value", ["1", "512", "768", "1024"])
+def test_allows_extended_hot_expert_budget(value: str) -> None:
+    config(env={"SLIM_ARC_EXPERT_HOT_MB": value}).validate()
+
+
+@pytest.mark.parametrize("value", ["", "0", "1025", "-1", "1.5", "true"])
+def test_rejects_invalid_hot_expert_budget(value: str) -> None:
+    with pytest.raises(ValueError, match="SLIM_ARC_EXPERT_HOT_MB"):
+        config(env={"SLIM_ARC_EXPERT_HOT_MB": value}).validate()
+
+
 @pytest.mark.parametrize("value", ["1", "32", "64"])
 def test_allows_bounded_layer_local_expert_pipeline(value: str) -> None:
     cfg = config(env={"SLIM_ARC_EXPERT_PIPELINE_MB": value})

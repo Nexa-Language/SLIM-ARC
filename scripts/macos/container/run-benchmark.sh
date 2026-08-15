@@ -90,8 +90,8 @@ while IFS= read -r variable_name; do
         fi
     fi
     if [[ "${variable_name}" == "SLIM_ARC_EXPERT_HOT_MB" ]]; then
-        if [[ ! "${!variable_name}" =~ ^[1-9][0-9]{0,2}$ ]] || (( 10#${!variable_name} > 512 )); then
-            printf 'SLIM_ARC_EXPERT_HOT_MB must be an integer between 1 and 512\n' >&2
+        if [[ ! "${!variable_name}" =~ ^[1-9][0-9]{0,3}$ ]] || (( 10#${!variable_name} > 1024 )); then
+            printf 'SLIM_ARC_EXPERT_HOT_MB must be an integer between 1 and 1024\n' >&2
             exit 2
         fi
     fi
