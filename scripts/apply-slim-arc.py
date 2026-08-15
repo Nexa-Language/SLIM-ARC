@@ -221,6 +221,46 @@ def patch_model(filepath: str) -> None:
 def transform_qwen3next(content: str) -> str:
     """Install one decode-only next-layer Router root in Qwen3-Next graphs."""
     marker = "// SLIM-ARC: compute the next Router before the current expert FFN."
+    include_anchor = '#include "llama-memory-recurrent.h"'
+    for header in ("<cstdlib>", "<cstring>"):
+        if f"#include {header}" not in content:
+            content = replace_required(
+                content,
+                include_anchor,
+                f"{include_anchor}\n#include {header}",
+                f"Qwen3-Next {header} include",
+            )
+            include_anchor = f"#include {header}"
+
+    expert_top_k_helper = r'''
+
+// SLIM-ARC: opt-in routed-expert reduction for performance/quality screening.
+static int slim_arc_expert_top_k(int default_count) {
+    const char * raw = std::getenv("SLIM_ARC_EXPERT_TOP_K");
+    if (raw == nullptr || default_count <= 1) return default_count;
+    char * end = nullptr;
+    const long parsed = std::strtol(raw, &end, 10);
+    return end != raw && *end == '\0' && parsed >= 1 && parsed < default_count ?
+        static_cast<int>(parsed) : default_count;
+}
+'''
+    expert_top_k_marker = "static int slim_arc_expert_top_k(int default_count)"
+    pristine_expert_count = "n_expert, n_expert_used,"
+    screened_expert_count = "n_expert, slim_arc_expert_top_k(n_expert_used),"
+    if expert_top_k_marker in content:
+        if content.count(expert_top_k_marker) != 1 or content.count(screened_expert_count) != 2 or pristine_expert_count in content:
+            raise RuntimeError("expert top-k patch is incomplete")
+    else:
+        if content.count(pristine_expert_count) != 2 or screened_expert_count in content:
+            raise RuntimeError("required Qwen3-Next expert count anchors not found")
+        content = replace_required(
+            content,
+            "#include <cstring>",
+            "#include <cstring>" + expert_top_k_helper,
+            "Qwen3-Next expert top-k helper",
+        )
+        content = content.replace(pristine_expert_count, screened_expert_count)
+
     if marker in content:
         required = (
             'std::getenv("SLIM_ARC_CROSS_LAYER_GATE")',
@@ -234,17 +274,6 @@ def transform_qwen3next(content: str) -> str:
         if content.count(marker) != 1 or any(content.count(item) != 1 for item in required):
             raise RuntimeError("cross-layer Router patch is incomplete")
         return content
-
-    include_anchor = '#include "llama-memory-recurrent.h"'
-    for header in ("<cstdlib>", "<cstring>"):
-        if f"#include {header}" not in content:
-            content = replace_required(
-                content,
-                include_anchor,
-                f"{include_anchor}\n#include {header}",
-                f"Qwen3-Next {header} include",
-            )
-            include_anchor = f"#include {header}"
 
     loop_anchor = "    for (int il = 0; il < n_layer; ++il) {"
     setup = r'''    const char * slim_arc_cross_layer_transition_raw =

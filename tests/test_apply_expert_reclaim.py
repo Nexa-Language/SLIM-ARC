@@ -72,6 +72,14 @@ def write_fixture(root: Path) -> Path:
         "        cur = build_layer_ffn(attn_post_norm, il);\n"
         '        cb(cur, "ffn_out", il);\n'
         "    }\n"
+        "}\n"
+        "void build_trunk_moe() {\n"
+        "    build_moe_ffn(cur, gate, up, gate_exp, down, nullptr,\n"
+        "        n_expert, n_expert_used, LLM_FFN_SILU);\n"
+        "}\n"
+        "void build_mtp_moe() {\n"
+        "    build_moe_ffn(cur, gate, up, gate_exp, down, nullptr,\n"
+        "        n_expert, n_expert_used, LLM_FFN_SILU);\n"
         "}\n",
         encoding="utf-8",
     )
@@ -168,6 +176,11 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert "il + 1 < n_layer" in qwen3next
     assert "n_tokens == 1" in qwen3next
     assert "slim_arc_cross_layer_transition_topk_count == 0" in qwen3next
+    assert qwen3next.count('std::getenv("SLIM_ARC_EXPERT_TOP_K")') == 1
+    assert qwen3next.count("slim_arc_expert_top_k(n_expert_used)") == 2
+    assert qwen3next.count("static int slim_arc_expert_top_k(int default_count)") == 1
+    assert "parsed >= 1 && parsed < default_count" in qwen3next
+    assert "n_expert, n_expert_used," not in qwen3next
 
     model = second["llama-model.cpp"].decode(encoding="utf-8")
     impl = model[model.index("struct llama_model::impl"):model.index("};", model.index("struct llama_model::impl"))]
