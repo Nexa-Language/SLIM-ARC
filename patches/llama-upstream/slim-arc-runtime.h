@@ -48,7 +48,7 @@ class runtime_owner {
 
     void activate() noexcept;
     void deactivate() noexcept;
-    bool register_mapping(void * addr, size_t size);
+    bool register_mapping(void * addr, size_t size, int file_id = -1);
     prefetch_scheduler & prefetch() noexcept { return prefetch_scheduler_; }
     unified_io_scheduler & unified() noexcept { return unified_io_scheduler_; }
 

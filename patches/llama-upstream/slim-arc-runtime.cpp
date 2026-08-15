@@ -75,10 +75,10 @@ void runtime_owner::deactivate() noexcept {
     prefetch_scheduler_.shutdown();
 }
 
-bool runtime_owner::register_mapping(void * addr, size_t size) {
+bool runtime_owner::register_mapping(void * addr, size_t size, int file_id) {
     std::lock_guard<std::mutex> state_lock(state_mtx_);
     if (accepting_calls_ || permanently_deactivated_) return false;
-    return prefetch_scheduler_.register_mapping(addr, size);
+    return prefetch_scheduler_.register_mapping(addr, size, file_id);
 }
 
 void runtime_owner::release_call() noexcept {

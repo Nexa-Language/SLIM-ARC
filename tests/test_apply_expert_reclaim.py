@@ -172,7 +172,13 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     model = second["llama-model.cpp"].decode(encoding="utf-8")
     impl = model[model.index("struct llama_model::impl"):model.index("};", model.index("struct llama_model::impl"))]
     assert impl.rstrip().endswith("std::unique_ptr<slim_arc::runtime_owner> slim_arc_runtime;")
+    assert "llama_files slim_arc_files;" in impl
+    assert impl.index("llama_files slim_arc_files;") < impl.index("std::unique_ptr<slim_arc::runtime_owner>")
     assert model.index("pimpl->mappings.emplace_back(std::move(mapping));") < model.index("std::make_unique<slim_arc::runtime_owner>")
+    assert "pimpl->slim_arc_files.emplace_back(std::move(file));" in model
+    assert model.index("pimpl->slim_arc_files.emplace_back(std::move(file));") < model.index("std::make_unique<slim_arc::runtime_owner>")
+    assert "pimpl->slim_arc_files[mapping_index]->file_id()" in model
+    assert "runtime->register_mapping(mapping->addr(), mapping->size(), file_id)" in model
     assert "runtime->activate();" in model
     assert '#include <cstring>' in model
     admission = "if (slim_arc::model_runtime_admitted(use_mmap_buffer, pimpl->mappings.size(), ml.size_data, slim_arc_enabled))"
@@ -286,6 +292,10 @@ def test_pristine_member_with_generated_setup_is_rejected_as_hybrid(tmp_path: Pa
     transfer = """    if (use_mmap_buffer) {
         for (auto & mapping : ml.mappings) {
             pimpl->mappings.emplace_back(std::move(mapping));
+        }
+        pimpl->slim_arc_files.reserve(ml.files.size());
+        for (auto & file : ml.files) {
+            pimpl->slim_arc_files.emplace_back(std::move(file));
         }
     }"""
     setup_start = generated.index(transfer) + len(transfer)

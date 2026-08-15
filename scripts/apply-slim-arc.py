@@ -57,20 +57,57 @@ def transform_model(content: str) -> str:
     if legacy_budget_setup in content:
         content = content.replace(legacy_budget_setup, budget_setup)
     final_member = "    std::vector<float> tensor_split_owned;"
+    file_member = "    llama_files slim_arc_files;"
     runtime_member = "    std::unique_ptr<slim_arc::runtime_owner> slim_arc_runtime;"
     unpatched_members = final_member + "\n};"
-    patched_members = final_member + "\n\n" + runtime_member + "\n};"
+    legacy_patched_members = final_member + "\n\n" + runtime_member + "\n};"
+    patched_members = final_member + "\n\n" + file_member + "\n" + runtime_member + "\n};"
+    if legacy_patched_members in content:
+        content = content.replace(legacy_patched_members, patched_members, 1)
     if runtime_member in content:
         member_state = "generated" if content.count(runtime_member) == 1 and patched_members in content else "corrupt"
     else:
         member_state = "pristine" if unpatched_members in content else "corrupt"
 
-    transfer = """    if (use_mmap_buffer) {
+    pristine_transfer = """    if (use_mmap_buffer) {
         for (auto & mapping : ml.mappings) {
             pimpl->mappings.emplace_back(std::move(mapping));
         }
     }"""
+    transfer = """    if (use_mmap_buffer) {
+        for (auto & mapping : ml.mappings) {
+            pimpl->mappings.emplace_back(std::move(mapping));
+        }
+        pimpl->slim_arc_files.reserve(ml.files.size());
+        for (auto & file : ml.files) {
+            pimpl->slim_arc_files.emplace_back(std::move(file));
+        }
+    }"""
     marker = "// SLIM-ARC: model-owned runtime begins after mmap ownership transfer."
+    legacy_mapping_registration = """            for (const auto & mapping : pimpl->mappings) {
+                if (mapping == nullptr || !runtime->register_mapping(mapping->addr(), mapping->size())) {
+                    slim_arc_weights_valid = false;
+                    break;
+                }
+            }"""
+    mapping_registration = """            for (size_t mapping_index = 0; mapping_index < pimpl->mappings.size(); ++mapping_index) {
+                const auto & mapping = pimpl->mappings[mapping_index];
+                if (mapping == nullptr || mapping_index >= pimpl->slim_arc_files.size() ||
+                    pimpl->slim_arc_files[mapping_index] == nullptr) {
+                    slim_arc_weights_valid = false;
+                    break;
+                }
+                const int file_id = pimpl->slim_arc_files[mapping_index]->file_id();
+                if (!runtime->register_mapping(mapping->addr(), mapping->size(), file_id)) {
+                    slim_arc_weights_valid = false;
+                    break;
+                }
+            }"""
+    if marker in content:
+        if pristine_transfer in content:
+            content = content.replace(pristine_transfer, transfer, 1)
+        if legacy_mapping_registration in content:
+            content = content.replace(legacy_mapping_registration, mapping_registration, 1)
     setup = r'''
 
     // SLIM-ARC: model-owned runtime begins after mmap ownership transfer.
@@ -95,8 +132,15 @@ def transform_model(content: str) -> str:
         }
         if (slim_arc_weights_valid && slim_arc_weight_bytes > (6ULL << 30)) {
             auto runtime = std::make_unique<slim_arc::runtime_owner>(slim_arc::default_runtime_budget_bytes());
-            for (const auto & mapping : pimpl->mappings) {
-                if (mapping == nullptr || !runtime->register_mapping(mapping->addr(), mapping->size())) {
+            for (size_t mapping_index = 0; mapping_index < pimpl->mappings.size(); ++mapping_index) {
+                const auto & mapping = pimpl->mappings[mapping_index];
+                if (mapping == nullptr || mapping_index >= pimpl->slim_arc_files.size() ||
+                    pimpl->slim_arc_files[mapping_index] == nullptr) {
+                    slim_arc_weights_valid = false;
+                    break;
+                }
+                const int file_id = pimpl->slim_arc_files[mapping_index]->file_id();
+                if (!runtime->register_mapping(mapping->addr(), mapping->size(), file_id)) {
                     slim_arc_weights_valid = false;
                     break;
                 }
@@ -139,7 +183,7 @@ def transform_model(content: str) -> str:
     if marker in content:
         setup_state = "generated" if content.count(marker) == 1 and transfer + setup in content else "corrupt"
     else:
-        setup_state = "pristine" if transfer in content else "corrupt"
+        setup_state = "pristine" if pristine_transfer in content else "corrupt"
 
     if member_state == "corrupt":
         raise RuntimeError("required llama_model::impl final member anchor is incomplete")
@@ -158,10 +202,10 @@ def transform_model(content: str) -> str:
                                        f'#include "slim-arc-runtime.h"\n#include {header}', f"{header} include")
 
     if runtime_member not in content:
-        content = replace_required(content, final_member, final_member + "\n\n" + runtime_member,
+        content = replace_required(content, final_member, final_member + "\n\n" + file_member + "\n" + runtime_member,
                                    "llama_model::impl final member")
     if marker not in content:
-        content = replace_required(content, transfer, transfer + setup, "mmap transfer")
+        content = replace_required(content, pristine_transfer, transfer + setup, "mmap transfer")
     return content
 
 

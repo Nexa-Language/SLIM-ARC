@@ -9,6 +9,7 @@
 #include "slim-arc-page-range.h"
 
 #include <algorithm>
+#include <cerrno>
 #include <charconv>
 #include <cstdio>
 #include <cstdlib>
@@ -19,6 +20,9 @@
 #include <sys/mman.h>
 #include <system_error>
 #include <unistd.h>
+#if defined(__linux__)
+#include <fcntl.h>
+#endif
 
 namespace slim_arc {
 
@@ -124,6 +128,26 @@ resident_range_result resident_page_ranges(const page_range & range, size_t page
 
 int system_advice(void * address, size_t length, int advice) {
     return posix_madvise(address, length, advice);
+}
+
+int system_file_advice(int file_id, uint64_t offset, size_t length) {
+#if defined(__linux__)
+    if (file_id < 0 || length == 0 ||
+        offset > static_cast<uint64_t>(std::numeric_limits<off_t>::max()) ||
+        length > static_cast<size_t>(std::numeric_limits<off_t>::max())) {
+        return EINVAL;
+    }
+    return posix_fadvise(
+        file_id,
+        static_cast<off_t>(offset),
+        static_cast<off_t>(length),
+        POSIX_FADV_WILLNEED);
+#else
+    (void) file_id;
+    (void) offset;
+    (void) length;
+    return ENOTSUP;
+#endif
 }
 
 long system_page_size() {
@@ -299,7 +323,10 @@ void prefetch_scheduler::set_phase(compute_phase phase) {
     std::vector<std::pair<void *, size_t>> regions;
     {
         std::lock_guard<std::mutex> lock(mtx_);
-        regions = mmap_regions_;
+        regions.reserve(mmap_regions_.size());
+        for (const mmap_region_info & region : mmap_regions_) {
+            regions.emplace_back(region.addr, region.size);
+        }
     }
     for (const auto & region : regions) {
         (void) advice_(region.first, region.second, advice);
@@ -344,7 +371,8 @@ prefetch_scheduler::prefetch_scheduler(
     int window,
     std::function<void()> request_claim_hook,
     advice_fn advice,
-    page_size_query_fn page_size_query)
+    page_size_query_fn page_size_query,
+    file_advice_fn file_advice)
     : slow_storage_enabled_(env_exact_one("SLIM_ARC_SLOW_STORAGE"))
     , router_prefetch_enabled_(env_exact_one("SLIM_ARC_ROUTER_PREFETCH"))
     , router_mlock_enabled_(env_exact_one("SLIM_ARC_ROUTER_MLOCK"))
@@ -356,6 +384,7 @@ prefetch_scheduler::prefetch_scheduler(
     , expert_hot_admission_threshold_(
           parse_expert_hot_admission_threshold(std::getenv("SLIM_ARC_EXPERT_HOT_ADMIT_HITS")))
     , expert_prefetch_disabled_(env_exact_one("SLIM_ARC_NO_EXPERT_PREFETCH"))
+    , expert_file_advice_enabled_(env_exact_one("SLIM_ARC_EXPERT_FADVISE"))
     , expert_random_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_RANDOM"))
     , expert_normal_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_NORMAL"))
     , cross_layer_transition_topk_(parse_cross_layer_transition_topk())
@@ -365,6 +394,7 @@ prefetch_scheduler::prefetch_scheduler(
     , request_claim_hook_(std::move(request_claim_hook))
     , advice_(advice ? std::move(advice) : advice_fn{system_advice})
     , page_size_query_(page_size_query ? std::move(page_size_query) : page_size_query_fn{system_page_size})
+    , file_advice_(file_advice ? std::move(file_advice) : file_advice_fn{system_file_advice})
     , reclaim_waste_enabled_([] {
         const char * const value = std::getenv("SLIM_ARC_EXPERT_RECLAIM_WASTE");
         return value != nullptr && std::strcmp(value, "1") == 0;
@@ -491,12 +521,12 @@ void prefetch_scheduler::register_tensor(const char * name, void * addr, size_t 
     tensors_by_layer_[layer].push_back({addr, size, layer, 0});
 }
 
-bool prefetch_scheduler::register_mapping(void * addr, size_t size) {
+bool prefetch_scheduler::register_mapping(void * addr, size_t size, int file_id) {
     if (addr == nullptr || size == 0) return false;
     {
         std::lock_guard<std::mutex> lock(mtx_);
         if (stop_.load()) return false;
-        mmap_regions_.emplace_back(addr, size);
+        mmap_regions_.push_back({addr, size, file_id});
     }
     const char * dyn = std::getenv("SLIM_ARC_DYNAMIC_MADV");
     if (dyn == nullptr || std::strcmp(dyn, "0") != 0) {
@@ -693,11 +723,28 @@ void prefetch_scheduler::register_expert_tensor(const char *, void * addr, size_
         std::lock_guard<std::mutex> transition_lock(expert_transition_mtx_);
         (void) expert_transition_table_.register_layer(layer, n_experts);
     }
+    int file_id = -1;
+    uint64_t file_offset = 0;
+    if (expert_file_advice_enabled_) {
+        const uintptr_t tensor_start = reinterpret_cast<uintptr_t>(addr);
+        std::lock_guard<std::mutex> mapping_lock(mtx_);
+        for (const mmap_region_info & mapping : mmap_regions_) {
+            const uintptr_t mapping_start = reinterpret_cast<uintptr_t>(mapping.addr);
+            if (mapping_start == 0 || tensor_start < mapping_start ||
+                tensor_start - mapping_start > mapping.size ||
+                size > mapping.size - (tensor_start - mapping_start)) {
+                continue;
+            }
+            file_id = mapping.file_id;
+            file_offset = static_cast<uint64_t>(tensor_start - mapping_start);
+            break;
+        }
+    }
     std::lock_guard<std::mutex> lock(expert_state_mtx_);
     if ((size_t)layer >= experts_by_layer_.size()) {
         experts_by_layer_.resize(layer + 1);
     }
-    experts_by_layer_[layer].push_back({addr, size, n_experts});
+    experts_by_layer_[layer].push_back({addr, size, n_experts, file_id, file_offset});
     if (random_range.valid) expert_madv_ranges_.push_back(random_range);
 }
 
@@ -761,6 +808,7 @@ void prefetch_scheduler::cache_router_experts(
     std::vector<expert_tensor_info> reclaim_tensors;
     std::vector<int> stable_experts;
     std::vector<expert_tensor_info> hot_tensors;
+    std::vector<expert_tensor_info> file_tensors;
     {
         std::lock_guard<std::mutex> lock(expert_state_mtx_);
         if ((size_t)layer >= cached_router_experts_.size()) {
@@ -778,6 +826,10 @@ void prefetch_scheduler::cache_router_experts(
             if (!stable_experts.empty() && static_cast<size_t>(layer) < experts_by_layer_.size()) {
                 hot_tensors = experts_by_layer_[layer];
             }
+        }
+        if (expert_file_advice_enabled_ && !current.empty() &&
+            static_cast<size_t>(layer) < experts_by_layer_.size()) {
+            file_tensors = experts_by_layer_[layer];
         }
         // 每个 router 观察只能结算调用方携带的精确预取代次；token 0 仅更新预测器。
         if (generation != 0 && static_cast<size_t>(layer) < pending_expert_prefetches_.size()) {
@@ -857,6 +909,9 @@ void prefetch_scheduler::cache_router_experts(
     }
     if (!prefetched.empty()) {
         reclaim_wrong_expert_pages(prefetched, current, reclaim_tensors);
+    }
+    if (!file_tensors.empty()) {
+        advise_selected_expert_files(current, file_tensors);
     }
     if (!stable_experts.empty() && !hot_tensors.empty()) {
         update_expert_hot_cache(layer, stable_experts, hot_tensors);
@@ -994,6 +1049,43 @@ expert_hot_cache_stats prefetch_scheduler::expert_hot_cache_statistics() const n
         static_cast<uint64_t>(expert_hot_entries_.size()),
         expert_hot_admission_skips_,
         expert_hot_admission_threshold_};
+}
+
+expert_file_advice_stats prefetch_scheduler::expert_file_advice_statistics() const noexcept {
+    return {
+        expert_file_advice_calls_.load(),
+        expert_file_advice_bytes_.load(),
+        expert_file_advice_failures_.load(),
+        expert_file_advice_invalid_ranges_.load()};
+}
+
+void prefetch_scheduler::advise_selected_expert_files(
+    const std::vector<int> & selected,
+    const std::vector<expert_tensor_info> & tensors) {
+    if (!expert_file_advice_enabled_ || selected.empty() || stop_.load()) return;
+    for (const expert_tensor_info & tensor : tensors) {
+        if (tensor.file_id < 0 || tensor.size == 0 || tensor.n_experts < 1 ||
+            tensor.size % static_cast<size_t>(tensor.n_experts) != 0) {
+            atomic_saturating_add(expert_file_advice_invalid_ranges_, uint64_t{1});
+            continue;
+        }
+        const size_t expert_bytes = tensor.size / static_cast<size_t>(tensor.n_experts);
+        for (const int expert_id : selected) {
+            if (expert_id < 0 || expert_id >= tensor.n_experts ||
+                static_cast<uint64_t>(expert_id) >
+                    (std::numeric_limits<uint64_t>::max() - tensor.file_offset) / expert_bytes) {
+                atomic_saturating_add(expert_file_advice_invalid_ranges_, uint64_t{1});
+                continue;
+            }
+            const uint64_t offset = tensor.file_offset + static_cast<uint64_t>(expert_id) * expert_bytes;
+            atomic_saturating_add(expert_file_advice_calls_, uint64_t{1});
+            if (file_advice_(tensor.file_id, offset, expert_bytes) == 0) {
+                atomic_saturating_add(expert_file_advice_bytes_, static_cast<uint64_t>(expert_bytes));
+            } else {
+                atomic_saturating_add(expert_file_advice_failures_, uint64_t{1});
+            }
+        }
+    }
 }
 
 void prefetch_scheduler::update_expert_hot_cache(
