@@ -1,0 +1,1 @@
+/home/yituodabian/data/llama-a23-39c88493/build/bin/llama-bench: error while loading shared libraries: /home/yituodabian/data/llama-a23-39c88493/build/bin/libllama-common.so.0: file too short

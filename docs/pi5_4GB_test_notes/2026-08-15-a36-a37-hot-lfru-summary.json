@@ -1,0 +1,131 @@
+{
+  "schema_version": 1,
+  "optimization": "A37 frequency-over-age LFRU replacement for the resident hot expert cache",
+  "source_commit": "a1f57230f5c23ffef2463301f8b45c15f040467c",
+  "generated_source_sha256": "33dc7d7b83eda26cf74a104bbd8138d61dd9dfc767d3b4a3cabc0c920a8ab4cd",
+  "generated_header_sha256": "182d87c0f372836111465d135dcccc3db8e50183da0fdc5e90c41e99fedd85a4",
+  "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+  "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+  "contract": {
+    "device": "Raspberry Pi 5 Model B Rev 1.1",
+    "kernel": "Linux 6.18.34+rpt-rpi-2712 aarch64",
+    "memory_gib": 4,
+    "threads": 4,
+    "swap": "disabled during each run and restored afterwards",
+    "cache": "cold",
+    "model_storage": "Samsung 870 EVO SSD over USB 3 using NTFS-3G/FUSE; the USB bridge reports ROTA=1",
+    "read_ahead_kb": 2048,
+    "nr_requests": 4,
+    "n_prompt": 16,
+    "n_gen": 16,
+    "common_environment": {
+      "SLIM_ARC_SLOW_STORAGE": "1",
+      "SLIM_ARC_INLINE_ROUTER": "1",
+      "SLIM_ARC_EXPERT_PIPELINE_MB": "32",
+      "SLIM_ARC_EXPERT_CONF": "0",
+      "SLIM_ARC_NO_EXPERT_PREFETCH": "1",
+      "SLIM_ARC_NO_WEIGHT_PREFETCH": "1",
+      "SLIM_ARC_EXPERT_HOT_MB": "512",
+      "SLIM_ARC_EXPERT_HOT_LRU": "1",
+      "SLIM_ARC_SHARED_MLOCK": "1",
+      "SLIM_ARC_TOTAL_BUDGET_MB": "16"
+    }
+  },
+  "a36_lru_runs": [
+    {
+      "name": "a36-lru-r1",
+      "lfru": false,
+      "prefill_tps": 0.202022,
+      "decode_tps": 0.0655646,
+      "wall_seconds": 503,
+      "hot_locked_bytes": 535789568,
+      "hot_entries": 321,
+      "hot_admissions": 947,
+      "hot_hits": 1734,
+      "hot_evictions": 626,
+      "hot_nonresident_bytes": 154796032,
+      "hot_lock_failures": 0
+    },
+    {
+      "name": "a36-lru-r2",
+      "lfru": false,
+      "prefill_tps": 0.206278,
+      "decode_tps": 0.0667521,
+      "wall_seconds": 497,
+      "hot_locked_bytes": 534986752,
+      "hot_entries": 325,
+      "hot_admissions": 947,
+      "hot_hits": 1734,
+      "hot_evictions": 622,
+      "hot_nonresident_bytes": 184795136,
+      "hot_lock_failures": 0
+    }
+  ],
+  "a36_lru_median": {
+    "sample_count": 2,
+    "prefill_tps": 0.20415,
+    "decode_tps": 0.06615835,
+    "wall_seconds": 500.0,
+    "hot_locked_bytes": 535388160,
+    "hot_entries": 323.0,
+    "hot_admissions": 947.0,
+    "hot_hits": 1734.0,
+    "hot_evictions": 624.0,
+    "hot_nonresident_bytes": 169795584
+  },
+  "a37_lfru_runs": [
+    {
+      "name": "a37-lfru-r1",
+      "lfru": true,
+      "prefill_tps": 0.200242,
+      "decode_tps": 0.0646835,
+      "wall_seconds": 508,
+      "hot_locked_bytes": 535658496,
+      "hot_entries": 406,
+      "hot_admissions": 792,
+      "hot_hits": 1889,
+      "hot_evictions": 386,
+      "hot_nonresident_bytes": 438501376,
+      "hot_lock_failures": 0
+    },
+    {
+      "name": "a37-lfru-r2",
+      "lfru": true,
+      "prefill_tps": 0.201525,
+      "decode_tps": 0.0650058,
+      "wall_seconds": 507,
+      "hot_locked_bytes": 535904256,
+      "hot_entries": 304,
+      "hot_admissions": 911,
+      "hot_hits": 1770,
+      "hot_evictions": 607,
+      "hot_nonresident_bytes": 92372992,
+      "hot_lock_failures": 0
+    }
+  ],
+  "a37_lfru_median": {
+    "sample_count": 2,
+    "prefill_tps": 0.2008835,
+    "decode_tps": 0.06484465,
+    "wall_seconds": 507.5,
+    "hot_locked_bytes": 535781376,
+    "hot_entries": 355.0,
+    "hot_admissions": 851.5,
+    "hot_hits": 1829.5,
+    "hot_evictions": 496.5,
+    "hot_nonresident_bytes": 265437184
+  },
+  "a37_relative_to_a36_percent": {
+    "prefill_tps": -1.600049,
+    "decode_tps": -1.985690,
+    "wall_seconds": 1.500000,
+    "hot_locked_bytes": 0.073443,
+    "hot_entries": 9.907121,
+    "hot_admissions": -10.084477,
+    "hot_hits": 5.507497,
+    "hot_evictions": -20.432692,
+    "hot_nonresident_bytes": 56.327496
+  },
+  "decision": "reject_lfru_for_pi_slow_storage_keep_opt_in_for_other_hardware",
+  "reason": "LFRU improved cache counters but lost both throughput metrics in both reverse-interleaved cold runs. Its median wall time increased 1.50 percent, prefill throughput fell 1.60 percent, decode throughput fell 1.99 percent, and the median nonresident scan volume increased 56.33 percent. Pure LRU remains the Pi slow-storage default candidate."
+}

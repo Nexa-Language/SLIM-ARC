@@ -477,6 +477,21 @@ def test_manifest_records_no_weight_prefetch() -> None:
     ) == {"SLIM_ARC_NO_WEIGHT_PREFETCH": "1"}
 
 
+@pytest.mark.parametrize("value", ["1", "512", "768", "1024"])
+def test_manifest_records_extended_hot_expert_budget(value: str) -> None:
+    assert run_manifest.collect_slim_arc_environment(
+        {"SLIM_ARC_EXPERT_HOT_MB": value}
+    ) == {"SLIM_ARC_EXPERT_HOT_MB": value}
+
+
+@pytest.mark.parametrize("value", ["", "0", "1025", "-1", "1.5", "true"])
+def test_manifest_rejects_invalid_hot_expert_budget(value: str) -> None:
+    with pytest.raises(ValueError, match="SLIM_ARC_EXPERT_HOT_MB"):
+        run_manifest.collect_slim_arc_environment(
+            {"SLIM_ARC_EXPERT_HOT_MB": value}
+        )
+
+
 @pytest.mark.parametrize("value", ["1", "32", "64"])
 def test_manifest_records_bounded_layer_local_expert_pipeline(value: str) -> None:
     assert run_manifest.collect_slim_arc_environment(

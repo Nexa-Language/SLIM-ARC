@@ -11,7 +11,7 @@
     "threads": 4,
     "swap": "disabled during each run and restored afterwards",
     "cache": "cold",
-    "model_storage": "USB NTFS/FUSE rotational disk",
+    "model_storage": "Samsung 870 EVO SSD over USB 3 using NTFS-3G/FUSE; the USB bridge reports ROTA=1",
     "read_ahead_kb": 2048,
     "nr_requests": 4,
     "n_prompt": 16,

@@ -61,11 +61,26 @@ size_t parse_expert_hot_budget_bytes(const char * raw) noexcept {
     uint64_t parsed{0};
     const auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
     if (value.empty() || result.ec != std::errc{} || result.ptr != value.data() + value.size() ||
-        parsed == 0 || parsed > 512) {
-        std::fprintf(stderr, "SLIM-ARC: invalid SLIM_ARC_EXPERT_HOT_MB; expected an integer in [1,512]\n");
+        parsed == 0 || parsed > 1024) {
+        std::fprintf(stderr, "SLIM-ARC: invalid SLIM_ARC_EXPERT_HOT_MB; expected an integer in [1,1024]\n");
         return 0;
     }
     return static_cast<size_t>(parsed) * (1ULL << 20);
+}
+
+uint32_t parse_expert_hot_admission_threshold(const char * raw) noexcept {
+    if (raw == nullptr) return 1;
+    const std::string_view value{raw};
+    uint32_t parsed{0};
+    const auto result = std::from_chars(value.data(), value.data() + value.size(), parsed);
+    if (value.empty() || result.ec != std::errc{} || result.ptr != value.data() + value.size() ||
+        parsed < 1 || parsed > 64) {
+        std::fprintf(
+            stderr,
+            "SLIM-ARC: invalid SLIM_ARC_EXPERT_HOT_ADMIT_HITS; expected an integer in [1,64]\n");
+        return 1;
+    }
+    return parsed;
 }
 
 struct resident_range_result {
@@ -337,6 +352,9 @@ prefetch_scheduler::prefetch_scheduler(
     , small_mlock_enabled_(env_exact_one("SLIM_ARC_SMALL_MLOCK"))
     , expert_hot_budget_bytes_(parse_expert_hot_budget_bytes(std::getenv("SLIM_ARC_EXPERT_HOT_MB")))
     , expert_hot_lru_enabled_(env_exact_one("SLIM_ARC_EXPERT_HOT_LRU"))
+    , expert_hot_lfru_enabled_(expert_hot_lru_enabled_ && env_exact_one("SLIM_ARC_EXPERT_HOT_LFRU"))
+    , expert_hot_admission_threshold_(
+          parse_expert_hot_admission_threshold(std::getenv("SLIM_ARC_EXPERT_HOT_ADMIT_HITS")))
     , expert_prefetch_disabled_(env_exact_one("SLIM_ARC_NO_EXPERT_PREFETCH"))
     , expert_random_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_RANDOM"))
     , expert_normal_madv_enabled_(env_exact_one("SLIM_ARC_EXPERT_MADV_NORMAL"))
@@ -973,7 +991,9 @@ expert_hot_cache_stats prefetch_scheduler::expert_hot_cache_statistics() const n
         expert_hot_budget_rejections_,
         expert_hot_nonresident_bytes_,
         expert_hot_lock_failures_,
-        static_cast<uint64_t>(expert_hot_entries_.size())};
+        static_cast<uint64_t>(expert_hot_entries_.size()),
+        expert_hot_admission_skips_,
+        expert_hot_admission_threshold_};
 }
 
 void prefetch_scheduler::update_expert_hot_cache(
@@ -992,6 +1012,22 @@ void prefetch_scheduler::update_expert_hot_cache(
     }
 
     std::lock_guard<std::mutex> lock(expert_hot_mtx_);
+    const uint64_t admission_headroom = std::max<uint64_t>(
+        static_cast<uint64_t>(expert_hot_budget_bytes_) / 100, uint64_t{1});
+    const bool filter_saturated_admission = expert_hot_admission_threshold_ > 1 &&
+        expert_hot_locked_bytes_ >= static_cast<uint64_t>(expert_hot_budget_bytes_) - admission_headroom;
+    if (filter_saturated_admission) {
+        int n_experts = 0;
+        for (const expert_tensor_info & tensor : tensors) {
+            n_experts = std::max(n_experts, tensor.n_experts);
+        }
+        if (static_cast<size_t>(layer) >= expert_hot_admission_counts_.size()) {
+            expert_hot_admission_counts_.resize(static_cast<size_t>(layer) + 1);
+        }
+        if (n_experts > 0 && expert_hot_admission_counts_[layer].size() < static_cast<size_t>(n_experts)) {
+            expert_hot_admission_counts_[layer].resize(static_cast<size_t>(n_experts), 0);
+        }
+    }
     if (!expert_hot_lru_enabled_) {
         auto entry = expert_hot_entries_.begin();
         while (entry != expert_hot_entries_.end()) {
@@ -1010,14 +1046,28 @@ void prefetch_scheduler::update_expert_hot_cache(
     }
 
     for (const int expert_id : stable_experts) {
+        uint32_t admission_count = expert_hot_admission_threshold_;
+        if (filter_saturated_admission) {
+            if (expert_id < 0 || static_cast<size_t>(expert_id) >= expert_hot_admission_counts_[layer].size()) {
+                continue;
+            }
+            uint32_t & observed = expert_hot_admission_counts_[layer][expert_id];
+            observed = saturating_add(observed, uint32_t{1});
+            admission_count = observed;
+        }
         const auto existing = std::find_if(
             expert_hot_entries_.begin(), expert_hot_entries_.end(), [layer, expert_id](const expert_hot_entry & item) {
                 return item.layer == layer && item.expert_id == expert_id;
             });
         if (existing != expert_hot_entries_.end()) {
             expert_hot_hits_ = saturating_add(expert_hot_hits_, uint64_t{1});
+            existing->frequency = saturating_add(existing->frequency, uint64_t{1});
             if (expert_hot_touch_clock_ != std::numeric_limits<uint64_t>::max()) ++expert_hot_touch_clock_;
             existing->last_touch = expert_hot_touch_clock_;
+            continue;
+        }
+        if (filter_saturated_admission && admission_count < expert_hot_admission_threshold_) {
+            expert_hot_admission_skips_ = saturating_add(expert_hot_admission_skips_, uint64_t{1});
             continue;
         }
 
@@ -1054,7 +1104,30 @@ void prefetch_scheduler::update_expert_hot_cache(
                     const bool selected_now = entry->layer == layer && std::find(
                         stable_experts.begin(), stable_experts.end(), entry->expert_id) != stable_experts.end();
                     if (selected_now) continue;
-                    if (victim == expert_hot_entries_.end() || entry->last_touch < victim->last_touch) {
+                    const auto lower_lfru_score = [this](
+                                                        const expert_hot_entry & candidate,
+                                                        const expert_hot_entry & incumbent) {
+                        const uint64_t candidate_age = saturating_add(
+                            expert_hot_touch_clock_ - candidate.last_touch, uint64_t{1});
+                        const uint64_t incumbent_age = saturating_add(
+                            expert_hot_touch_clock_ - incumbent.last_touch, uint64_t{1});
+                        using wide_uint = unsigned __int128;
+                        const wide_uint candidate_score =
+                            static_cast<wide_uint>(candidate.frequency) * incumbent_age;
+                        const wide_uint incumbent_score =
+                            static_cast<wide_uint>(incumbent.frequency) * candidate_age;
+                        if (candidate_score != incumbent_score) return candidate_score < incumbent_score;
+                        if (candidate.last_touch != incumbent.last_touch) {
+                            return candidate.last_touch < incumbent.last_touch;
+                        }
+                        if (candidate.layer != incumbent.layer) return candidate.layer < incumbent.layer;
+                        return candidate.expert_id < incumbent.expert_id;
+                    };
+                    const bool replace_victim = victim == expert_hot_entries_.end() ||
+                        (expert_hot_lfru_enabled_
+                             ? lower_lfru_score(*entry, *victim)
+                             : entry->last_touch < victim->last_touch);
+                    if (replace_victim) {
                         victim = entry;
                     }
                 }
@@ -1090,7 +1163,7 @@ void prefetch_scheduler::update_expert_hot_cache(
         }
         if (expert_hot_touch_clock_ != std::numeric_limits<uint64_t>::max()) ++expert_hot_touch_clock_;
         expert_hot_entries_.push_back(
-            {layer, expert_id, std::move(locked_ranges), candidate_bytes, expert_hot_touch_clock_});
+            {layer, expert_id, std::move(locked_ranges), candidate_bytes, expert_hot_touch_clock_, 1});
         expert_hot_locked_bytes_ = saturating_add(expert_hot_locked_bytes_, candidate_bytes);
         expert_hot_admissions_ = saturating_add(expert_hot_admissions_, uint64_t{1});
     }
@@ -1523,7 +1596,7 @@ void prefetch_scheduler::dump_metrics() const {
             stderr,
             "[SLIM-ARC-HOT] budget_bytes=%llu locked_bytes=%llu admissions=%llu hits=%llu "
             "evictions=%llu budget_rejections=%llu nonresident_bytes=%llu lock_failures=%llu "
-            "entries=%llu lru=%d\n",
+            "entries=%llu admission_skips=%llu admission_threshold=%llu lru=%d lfru=%d\n",
             static_cast<unsigned long long>(stats.budget_bytes),
             static_cast<unsigned long long>(stats.locked_bytes),
             static_cast<unsigned long long>(stats.admissions),
@@ -1533,7 +1606,10 @@ void prefetch_scheduler::dump_metrics() const {
             static_cast<unsigned long long>(stats.nonresident_bytes),
             static_cast<unsigned long long>(stats.lock_failures),
             static_cast<unsigned long long>(stats.entries),
-            expert_hot_lru_enabled_ ? 1 : 0);
+            static_cast<unsigned long long>(stats.admission_skips),
+            static_cast<unsigned long long>(stats.admission_threshold),
+            expert_hot_lru_enabled_ ? 1 : 0,
+            expert_hot_lfru_enabled_ ? 1 : 0);
     }
     if (expert_random_madv_enabled_ || expert_normal_madv_enabled_) {
         std::fprintf(

@@ -1,0 +1,1 @@
+/dev/sda1 fuseblk rw,relatime,user_id=0,group_id=0,default_permissions,allow_other,blksize=16384

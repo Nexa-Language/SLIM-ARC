@@ -1419,6 +1419,19 @@ void test_expert_hot_cache_requires_stability_and_respects_budget() {
     assert(munmap(second, tensor_bytes) == 0);
 }
 
+void test_expert_hot_cache_accepts_one_gib_budget_boundary() {
+    {
+        scoped_env hot_budget{"SLIM_ARC_EXPERT_HOT_MB", "1024"};
+        slim_arc::prefetch_scheduler scheduler{0, 1};
+        assert(scheduler.expert_hot_cache_statistics().budget_bytes == (1ULL << 30));
+    }
+    {
+        scoped_env hot_budget{"SLIM_ARC_EXPERT_HOT_MB", "1025"};
+        slim_arc::prefetch_scheduler scheduler{0, 1};
+        assert(scheduler.expert_hot_cache_statistics().budget_bytes == 0);
+    }
+}
+
 void test_expert_hot_lru_retains_gap_reuse_and_evicts_oldest_entry() {
     const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
     const size_t expert_bytes = 24 * page_size;
@@ -1468,6 +1481,164 @@ void test_expert_hot_lru_retains_gap_reuse_and_evicts_oldest_entry() {
     assert(munmap(first, expert_bytes) == 0);
     assert(munmap(second, expert_bytes) == 0);
     assert(munmap(third, expert_bytes) == 0);
+}
+
+void test_expert_hot_lfru_requires_exact_pair() {
+    for (const char * value : {"0", "01", "true", ""}) {
+        scoped_env hot_lru{"SLIM_ARC_EXPERT_HOT_LRU", "1"};
+        scoped_env hot_lfru{"SLIM_ARC_EXPERT_HOT_LFRU", value};
+        slim_arc::prefetch_scheduler scheduler{0, 1};
+        assert(!scheduler.expert_hot_lfru_enabled());
+    }
+    {
+        scoped_env hot_lru{"SLIM_ARC_EXPERT_HOT_LRU", "0"};
+        scoped_env hot_lfru{"SLIM_ARC_EXPERT_HOT_LFRU", "1"};
+        slim_arc::prefetch_scheduler scheduler{0, 1};
+        assert(!scheduler.expert_hot_lfru_enabled());
+    }
+    {
+        scoped_env hot_lru{"SLIM_ARC_EXPERT_HOT_LRU", "1"};
+        scoped_env hot_lfru{"SLIM_ARC_EXPERT_HOT_LFRU", "1"};
+        slim_arc::prefetch_scheduler scheduler{0, 1};
+        assert(scheduler.expert_hot_lfru_enabled());
+    }
+}
+
+void test_expert_hot_lfru_retains_frequent_idle_entry() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    const size_t budget_bytes = 1ULL << 20;
+    const size_t expert_bytes = budget_bytes / 2 / page_size * page_size;
+    assert(expert_bytes > 0);
+
+    const auto run = [&](bool lfru_enabled) {
+        void * const first = mmap(nullptr, expert_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+        void * const second = mmap(nullptr, expert_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+        void * const third = mmap(nullptr, expert_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+        assert(first != MAP_FAILED);
+        assert(second != MAP_FAILED);
+        assert(third != MAP_FAILED);
+        std::memset(first, 1, expert_bytes);
+        std::memset(second, 1, expert_bytes);
+        std::memset(third, 1, expert_bytes);
+
+        scoped_env hot_budget{"SLIM_ARC_EXPERT_HOT_MB", "1"};
+        scoped_env hot_lru{"SLIM_ARC_EXPERT_HOT_LRU", "1"};
+        scoped_env hot_lfru{"SLIM_ARC_EXPERT_HOT_LFRU", lfru_enabled ? "1" : "0"};
+        {
+            slim_arc::prefetch_scheduler scheduler{1, 1};
+            scheduler.register_expert_tensor("blk.25.exps", first, expert_bytes, 25, 1);
+            scheduler.register_expert_tensor("blk.26.exps", second, expert_bytes, 26, 1);
+            scheduler.register_expert_tensor("blk.27.exps", third, expert_bytes, 27, 1);
+            const int expert_zero = 0;
+
+            scheduler.cache_router_experts(25, &expert_zero, 1);
+            scheduler.cache_router_experts(25, &expert_zero, 1);
+            scheduler.cache_router_experts(25, &expert_zero, 1);
+            scheduler.cache_router_experts(25, &expert_zero, 1);
+            scheduler.cache_router_experts(25, &expert_zero, 1);
+            scheduler.cache_router_experts(26, &expert_zero, 1);
+            scheduler.cache_router_experts(26, &expert_zero, 1);
+            const auto full = scheduler.expert_hot_cache_statistics();
+            assert(full.admissions == 2);
+            assert(full.hits == 3);
+            assert(full.evictions == 0);
+            assert(full.entries == 2);
+            assert(full.locked_bytes == budget_bytes);
+
+            scheduler.cache_router_experts(27, &expert_zero, 1);
+            scheduler.cache_router_experts(27, &expert_zero, 1);
+            const auto replaced = scheduler.expert_hot_cache_statistics();
+            assert(replaced.admissions == 3);
+            assert(replaced.hits == 3);
+            assert(replaced.evictions == 1);
+            assert(replaced.entries == 2);
+            assert(replaced.locked_bytes == budget_bytes);
+
+            scheduler.cache_router_experts(25, &expert_zero, 1);
+            const auto after_frequent = scheduler.expert_hot_cache_statistics();
+            assert(after_frequent.admissions == (lfru_enabled ? 3 : 4));
+            assert(after_frequent.hits == (lfru_enabled ? 4 : 3));
+            assert(after_frequent.evictions == (lfru_enabled ? 1 : 2));
+
+            scheduler.cache_router_experts(26, &expert_zero, 1);
+            const auto after_recent = scheduler.expert_hot_cache_statistics();
+            assert(after_recent.admissions == (lfru_enabled ? 4 : 5));
+            assert(after_recent.hits == (lfru_enabled ? 4 : 3));
+            assert(after_recent.evictions == (lfru_enabled ? 2 : 3));
+            assert(after_recent.entries == 2);
+            assert(after_recent.locked_bytes == budget_bytes);
+        }
+
+        assert(munmap(first, expert_bytes) == 0);
+        assert(munmap(second, expert_bytes) == 0);
+        assert(munmap(third, expert_bytes) == 0);
+    };
+
+    run(false);
+    run(true);
+}
+
+void test_expert_hot_admission_filters_only_after_cache_saturates() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    const size_t budget_bytes = 1ULL << 20;
+    const size_t expert_bytes = budget_bytes / 2 / page_size * page_size;
+    void * const first = mmap(nullptr, expert_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    void * const second = mmap(nullptr, expert_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    void * const third = mmap(nullptr, expert_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(first != MAP_FAILED);
+    assert(second != MAP_FAILED);
+    assert(third != MAP_FAILED);
+    std::memset(first, 1, expert_bytes);
+    std::memset(second, 1, expert_bytes);
+    std::memset(third, 1, expert_bytes);
+
+    scoped_env hot_budget{"SLIM_ARC_EXPERT_HOT_MB", "1"};
+    scoped_env hot_lru{"SLIM_ARC_EXPERT_HOT_LRU", "1"};
+    scoped_env admission_hits{"SLIM_ARC_EXPERT_HOT_ADMIT_HITS", "2"};
+    {
+        slim_arc::prefetch_scheduler scheduler{1, 1};
+        scheduler.register_expert_tensor("blk.25.exps", first, expert_bytes, 25, 1);
+        scheduler.register_expert_tensor("blk.26.exps", second, expert_bytes, 26, 1);
+        scheduler.register_expert_tensor("blk.27.exps", third, expert_bytes, 27, 1);
+        const int expert_zero = 0;
+
+        scheduler.set_phase(slim_arc::compute_phase::PREFILL);
+        scheduler.cache_router_experts(25, &expert_zero, 1);
+        scheduler.cache_router_experts(25, &expert_zero, 1);
+        scheduler.cache_router_experts(26, &expert_zero, 1);
+        scheduler.cache_router_experts(26, &expert_zero, 1);
+        const auto warmed = scheduler.expert_hot_cache_statistics();
+        assert(warmed.admission_threshold == 2);
+        assert(warmed.admission_skips == 0);
+        assert(warmed.admissions == 2);
+        assert(warmed.locked_bytes == budget_bytes);
+
+        scheduler.cache_router_experts(27, &expert_zero, 1);
+        scheduler.cache_router_experts(27, &expert_zero, 1);
+        const auto observed_once = scheduler.expert_hot_cache_statistics();
+        assert(observed_once.admission_skips == 1);
+        assert(observed_once.admissions == 2);
+        assert(observed_once.evictions == 0);
+        assert(observed_once.nonresident_bytes == 0);
+
+        scheduler.cache_router_experts(27, &expert_zero, 1);
+        const auto admitted = scheduler.expert_hot_cache_statistics();
+        assert(admitted.admission_skips == 1);
+        assert(admitted.admissions == 3);
+        assert(admitted.evictions == 1);
+        assert(admitted.locked_bytes == budget_bytes);
+    }
+    assert(munmap(first, expert_bytes) == 0);
+    assert(munmap(second, expert_bytes) == 0);
+    assert(munmap(third, expert_bytes) == 0);
+}
+
+void test_expert_hot_admission_invalid_threshold_uses_legacy_one_hit() {
+    for (const char * value : {"", "0", "65", "true"}) {
+        scoped_env admission_hits{"SLIM_ARC_EXPERT_HOT_ADMIT_HITS", value};
+        slim_arc::prefetch_scheduler scheduler{0, 1};
+        assert(scheduler.expert_hot_cache_statistics().admission_threshold == 1);
+    }
 }
 
 void test_cross_layer_transition_flag_requires_exact_pair() {
@@ -1590,7 +1761,12 @@ int main() {
     test_flag_off_target_and_advice_order_equal_legacy_path();
     test_residency_advice_callback_can_read_expert_state_without_deadlock();
     test_expert_hot_cache_requires_stability_and_respects_budget();
+    test_expert_hot_cache_accepts_one_gib_budget_boundary();
     test_expert_hot_lru_retains_gap_reuse_and_evicts_oldest_entry();
+    test_expert_hot_lfru_requires_exact_pair();
+    test_expert_hot_lfru_retains_frequent_idle_entry();
+    test_expert_hot_admission_filters_only_after_cache_saturates();
+    test_expert_hot_admission_invalid_threshold_uses_legacy_one_hit();
     test_cross_layer_transition_flag_requires_exact_pair();
     test_scheduler_learns_and_accounts_cross_layer_transition();
     test_cross_layer_transition_calls_are_thread_safe();

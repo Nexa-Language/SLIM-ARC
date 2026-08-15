@@ -190,9 +190,9 @@ def collect_slim_arc_environment(environment: Mapping[str, str]) -> dict[str, st
         ):
             raise ValueError("SLIM_ARC_POLL must be an integer between 0 and 100")
         if name == "SLIM_ARC_EXPERT_HOT_MB" and (
-            not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 512
+            not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 1024
         ):
-            raise ValueError("SLIM_ARC_EXPERT_HOT_MB must be an integer between 1 and 512")
+            raise ValueError("SLIM_ARC_EXPERT_HOT_MB must be an integer between 1 and 1024")
         if name == "SLIM_ARC_EXPERT_PIPELINE_MB" and (
             not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 64
         ):
