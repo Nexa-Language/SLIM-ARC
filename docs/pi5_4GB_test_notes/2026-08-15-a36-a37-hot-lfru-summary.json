@@ -126,6 +126,13 @@
     "hot_evictions": -20.432692,
     "hot_nonresident_bytes": 56.327496
   },
+  "reproducibility_update": {
+    "status": "absolute_cold_baseline_withdrawn_for_cross_campaign_comparisons",
+    "a47_exact_source_policy_reproduction_prefill_tps": 0.0944048,
+    "a47_relative_to_historical_a36_median_percent": -53.757139,
+    "retained_scope": "The reverse-interleaved A36 versus A37 relative comparison within this campaign remains usable.",
+    "reference": "2026-08-15-a45-a47-file-advice-repro-summary.json"
+  },
   "decision": "reject_lfru_for_pi_slow_storage_keep_opt_in_for_other_hardware",
   "reason": "LFRU improved cache counters but lost both throughput metrics in both reverse-interleaved cold runs. Its median wall time increased 1.50 percent, prefill throughput fell 1.60 percent, decode throughput fell 1.99 percent, and the median nonresident scan volume increased 56.33 percent. Pure LRU remains the Pi slow-storage default candidate."
 }

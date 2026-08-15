@@ -45,6 +45,15 @@ struct expert_tensor_info {
     void * addr;        // mmap address of the merged 3D expert tensor
     size_t size;        // total bytes of the merged tensor
     int    n_experts;   // number of experts (ne[2])
+    int    file_id{-1};
+    uint64_t file_offset{0};
+};
+
+struct expert_file_advice_stats {
+    uint64_t calls{0};
+    uint64_t issued_bytes{0};
+    uint64_t failures{0};
+    uint64_t invalid_ranges{0};
 };
 
 struct prefetch_budget_stats {
@@ -120,13 +129,15 @@ class prefetch_scheduler {
   public:
     using advice_fn = std::function<int(void *, size_t, int)>;
     using page_size_query_fn = std::function<long()>;
+    using file_advice_fn = std::function<int(int, uint64_t, size_t)>;
 
     explicit prefetch_scheduler(
         int n_threads = 2,
         int window = 3,
         std::function<void()> request_claim_hook = {},
         advice_fn advice = {},
-        page_size_query_fn page_size_query = {});
+        page_size_query_fn page_size_query = {},
+        file_advice_fn file_advice = {});
     ~prefetch_scheduler();
     prefetch_scheduler(const prefetch_scheduler &) = delete;
     prefetch_scheduler & operator=(const prefetch_scheduler &) = delete;
@@ -134,7 +145,7 @@ class prefetch_scheduler {
 
     // Register a tensor for potential prefetch. Called during model load.
     void register_tensor(const char * name, void * addr, size_t size, int layer);
-    bool register_mapping(void * addr, size_t size);
+    bool register_mapping(void * addr, size_t size, int file_id = -1);
 
     // Notify that we are about to compute layer `current_layer`.
     // This triggers async madvise(WILLNEED) for layers
@@ -186,6 +197,7 @@ class prefetch_scheduler {
     expert_residency_runtime_stats expert_residency_statistics() const noexcept;
     expert_runtime_metrics expert_runtime_statistics() const noexcept;
     expert_hot_cache_stats expert_hot_cache_statistics() const noexcept;
+    expert_file_advice_stats expert_file_advice_statistics() const noexcept;
     bool expert_hot_lfru_enabled() const noexcept { return expert_hot_lfru_enabled_; }
     std::vector<uint32_t> expert_popularity_snapshot(int layer) const;
     uint64_t popularity_decay_count() const noexcept { return popularity_decay_count_.load(); }
@@ -225,6 +237,9 @@ class prefetch_scheduler {
         int layer,
         const std::vector<int> & stable_experts,
         const std::vector<expert_tensor_info> & tensors);
+    void advise_selected_expert_files(
+        const std::vector<int> & selected,
+        const std::vector<expert_tensor_info> & tensors);
 
     const bool slow_storage_enabled_;
     const bool router_prefetch_enabled_;
@@ -236,6 +251,7 @@ class prefetch_scheduler {
     const bool expert_hot_lfru_enabled_;
     const uint32_t expert_hot_admission_threshold_;
     const bool expert_prefetch_disabled_;
+    const bool expert_file_advice_enabled_;
     const bool expert_random_madv_enabled_;
     const bool expert_normal_madv_enabled_;
     const int cross_layer_transition_topk_;
@@ -277,6 +293,7 @@ class prefetch_scheduler {
     std::function<void()>             request_claim_hook_;
     const advice_fn                   advice_;
     const page_size_query_fn          page_size_query_;
+    const file_advice_fn              file_advice_;
     const bool                        reclaim_waste_enabled_;
     const bool                        expert_residency_enabled_;
     std::mutex                        shutdown_mtx_;
@@ -332,11 +349,20 @@ class prefetch_scheduler {
     uint64_t                                        expert_hot_touch_clock_{0};
     uint64_t                                        expert_hot_admission_skips_{0};
     std::vector<std::vector<uint32_t>>              expert_hot_admission_counts_;
-    std::vector<std::pair<void *, size_t>>         mmap_regions_;
+    struct mmap_region_info {
+        void * addr;
+        size_t size;
+        int file_id;
+    };
+    std::vector<mmap_region_info>                  mmap_regions_;
     std::vector<page_range>                        expert_madv_ranges_;
     std::atomic<uint64_t>                          expert_madv_advice_calls_{0};
     std::atomic<uint64_t>                          expert_madv_advice_bytes_{0};
     std::atomic<uint64_t>                          expert_madv_advice_failures_{0};
+    std::atomic<uint64_t>                          expert_file_advice_calls_{0};
+    std::atomic<uint64_t>                          expert_file_advice_bytes_{0};
+    std::atomic<uint64_t>                          expert_file_advice_failures_{0};
+    std::atomic<uint64_t>                          expert_file_advice_invalid_ranges_{0};
     // MoE expert registry indexed by layer
     std::vector<std::vector<expert_tensor_info>>   experts_by_layer_;
     // Guards the expert registry and router predictor/accounting state.

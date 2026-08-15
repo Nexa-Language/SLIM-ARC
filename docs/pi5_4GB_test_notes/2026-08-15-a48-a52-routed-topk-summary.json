@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "experiment": "Qwen3-Next routed expert top-k screen on Raspberry Pi 5",
+  "device": "Raspberry Pi 5 Model B, 4 GiB, four CPU threads, swap disabled",
+  "llama_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+  "model": {
+    "filename": "Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf",
+    "sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "runs": {
+    "a48_top8_before_graph_fix": {
+      "source_commit": "93c3bf8544c06e5bd51b2293e2de12d27385ebeb",
+      "outcome": "error",
+      "exit_code": 134,
+      "wall_seconds": 421,
+      "reason": "The reduced expert count reached ggml_view_2d with the old graph shape and tripped the tensor bounds assertion. This row is not a performance sample."
+    },
+    "a49_top8_after_graph_fix": {
+      "source_commit": "15b23a113c64b69b242d208f5c02c718e0d8469e",
+      "outcome": "success",
+      "n_prompt": 4,
+      "n_gen": 1,
+      "prefill_tps": 0.0542854,
+      "decode_tps": 0.0293539,
+      "wall_seconds": 528
+    },
+    "a50_top10_control": {
+      "source_commit": "15b23a113c64b69b242d208f5c02c718e0d8469e",
+      "outcome": "success",
+      "n_prompt": 4,
+      "n_gen": 1,
+      "prefill_tps": 0.046178,
+      "decode_tps": 0.0265563,
+      "wall_seconds": 546
+    }
+  },
+  "single_run_relative_to_top10_percent": {
+    "top8_prefill_tps": 17.556845250985333,
+    "top8_decode_tps": 10.534600076064793,
+    "top8_wall_seconds": -3.296703296703296
+  },
+  "quality_probe": {
+    "prompt": "如果一个盒子里有12个红球和8个蓝球，取走5个红球后，红球占剩余球总数的百分之多少？",
+    "expected_answer": "46.67%",
+    "a51_top8_answer": "50%",
+    "a51_wall_seconds": 873,
+    "a52_top10_answer": "50%",
+    "a52_wall_seconds": 927,
+    "interpretation": "Both top-8 and the original top-10 produced the same incorrect answer, so this prompt cannot attribute a quality loss to pruning."
+  },
+  "decision": "keep_top8_opt_in_pending_real_quality_gate",
+  "reason": "The one-run performance direction is large and consistent with 20 percent less routed expert work, but one run is not a promotion result and the one-question quality probe has no discriminating power. Use ARC-Challenge multiple-choice accuracy before making top-8 a default."
+}

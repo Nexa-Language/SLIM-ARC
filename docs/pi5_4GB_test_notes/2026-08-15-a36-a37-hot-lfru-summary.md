@@ -1,5 +1,10 @@
 # A36–A37：hot-expert LRU 与 LFRU
 
+> 2026-08-15 复现修正：A47 使用完全相同的 A36 源码和策略仅得到
+> `0.0944048 t/s`，无法复现这里的 `0.20415 t/s`。本页同批次交错运行的 LRU/LFRU
+> 相对结论继续保留，但该绝对值不再作为后续跨批次 cold baseline。详见
+> `2026-08-15-a45-a47-file-advice-repro-summary.md`。
+
 ## 结论
 
 A37 在 A36 的 512 MiB 跨 token LRU 上增加 `frequency / age` 受害者评分。两组配置都关闭

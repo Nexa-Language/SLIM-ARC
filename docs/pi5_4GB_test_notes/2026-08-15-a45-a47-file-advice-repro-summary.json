@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "experiment": "Exact expert file advice A/B and A36 cold-baseline reproducibility screen",
+  "device": {
+    "board": "Raspberry Pi 5 Model B Rev 1.1",
+    "kernel": "Linux 6.18.34+rpt-rpi-2712 aarch64",
+    "memory_gib": 4,
+    "threads": 4,
+    "model_storage": "Samsung 870 EVO SSD over USB 3 using NTFS-3G/FUSE and Bulk-Only transport",
+    "model_sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a",
+    "model_size_bytes": 48410988384,
+    "read_ahead_kb": 2048,
+    "nr_requests": 4
+  },
+  "contract": {
+    "swap": "disabled during each run and restored afterwards with zero used bytes",
+    "cache_label": "cold",
+    "cache_boundary": "Linux page cache was dropped, but the NTFS-3G/FUSE and USB bridge cache state cannot be proven cold",
+    "n_prompt": 16,
+    "n_gen_requested": 16,
+    "threads": 4,
+    "common_environment": {
+      "SLIM_ARC_SLOW_STORAGE": "1",
+      "SLIM_ARC_INLINE_ROUTER": "1",
+      "SLIM_ARC_EXPERT_PIPELINE_MB": "32",
+      "SLIM_ARC_EXPERT_CONF": "0",
+      "SLIM_ARC_NO_EXPERT_PREFETCH": "1",
+      "SLIM_ARC_NO_WEIGHT_PREFETCH": "1",
+      "SLIM_ARC_EXPERT_HOT_MB": "512",
+      "SLIM_ARC_EXPERT_HOT_LRU": "1",
+      "SLIM_ARC_EXPERT_HOT_LFRU": "0",
+      "SLIM_ARC_SHARED_MLOCK": "1",
+      "SLIM_ARC_TOTAL_BUDGET_MB": "16"
+    }
+  },
+  "runtime_identities": {
+    "current": {
+      "source_commit": "1a5abcb5489203ef4208c74d35fcf2b453f90443",
+      "generated_source_sha256": "e63aafc3e55deb432dd26829455f0fdbe0b5d26dc4e5c7ea7518417130c1fa58",
+      "llama_bench_sha256": "d9bf4920c263be3f33c72c566204acc1738672c0abfb8b3c777ddef4f1ef6c61",
+      "libllama_sha256": "df00a592aa84bf3a947aa4f5d700b0a6eb864eb7dade10e617750e80e15746ff"
+    },
+    "a36_reproduction": {
+      "source_commit": "a1f57230f5c23ffef2463301f8b45c15f040467c",
+      "generated_source_sha256": "33dc7d7b83eda26cf74a104bbd8138d61dd9dfc767d3b4a3cabc0c920a8ab4cd",
+      "llama_bench_sha256": "d9bf4920c263be3f33c72c566204acc1738672c0abfb8b3c777ddef4f1ef6c61",
+      "libllama_sha256": "d41af6f6e2af071ea2479088b3d54411038efb1c63540e35e417570c2dd9f530"
+    }
+  },
+  "runs": [
+    {
+      "id": "A45",
+      "source": "current",
+      "expert_fadvise": true,
+      "prefill_tps": 0.0936006,
+      "decode_tps": null,
+      "wall_seconds_until_stop": 638,
+      "exit_status": 143,
+      "stdout_sha256": "02590aa0bb80bb3d64b150e3900143bdbaad48dc0966dfda494a609a6d5d9cc1",
+      "note": "Intentionally stopped during decode after the prefill screen completed."
+    },
+    {
+      "id": "A46",
+      "source": "current",
+      "expert_fadvise": false,
+      "prefill_tps": 0.0938368,
+      "decode_tps": null,
+      "wall_seconds_until_stop": 654,
+      "exit_status": 143,
+      "stdout_sha256": "e9f28155d3708c4f62d855f7f4e0ac94db9801677378e8d8846bd1d2a8f19284",
+      "note": "Matched flag-off control; intentionally stopped during decode."
+    },
+    {
+      "id": "A47",
+      "source": "a36_reproduction",
+      "expert_fadvise": false,
+      "prefill_tps": 0.0944048,
+      "decode_tps": null,
+      "wall_seconds_until_stop": 634,
+      "exit_status": 143,
+      "stdout_sha256": "8352d29fade605543ed6714280d44b5e9c4c624a11c8ea78a62aee7af16715d3",
+      "note": "Exact A36 source and policy reproduction; intentionally stopped during decode."
+    }
+  ],
+  "comparisons": {
+    "a45_fadvise_relative_to_a46_control_prefill_percent": -0.251714,
+    "a47_old_source_relative_to_a46_current_source_prefill_percent": 0.605306,
+    "a47_reproduction_relative_to_historical_a36_median_percent": -53.757139,
+    "historical_a36_median_divided_by_a47_reproduction": 2.162496
+  },
+  "validity": {
+    "matched_a45_a46_result": "valid_screen",
+    "decode_result": "not_measured",
+    "historical_a36_absolute_baseline": "not_reproducible_as_a_current_cold_baseline",
+    "historical_a36_a37_interleaved_relative_comparison": "retained",
+    "reason": "A47 used the exact A36 source and policy but reproduced 0.0944048 rather than the historical 0.20415 t/s. The application-level cache drop did not establish a reproducible cold boundary across NTFS-3G/FUSE and the USB bridge. Cross-campaign claims that use 0.20415 as an absolute cold baseline are therefore withdrawn."
+  },
+  "decision": "keep_exact_expert_fadvise_disabled_on_pi_slow_storage",
+  "reason": "The matched current-source A/B showed -0.251714 percent prefill throughput with exact expert POSIX_FADV_WILLNEED. The old-source reproduction was within 0.61 percent of the current flag-off control, so no source-code regression explains the historical 2.16x discrepancy."
+}

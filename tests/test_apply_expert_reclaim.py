@@ -64,6 +64,10 @@ def write_fixture(root: Path) -> Path:
     (src / "CMakeLists.txt").write_text("set(LLAMA_SOURCES llama-vocab.cpp)\n", encoding="utf-8")
     (models / "qwen3next.cpp").write_text(
         '#include "models.h"\n#include "llama-memory-recurrent.h"\n'
+        "void llama_model_qwen3next::load_arch_hparams(llama_model_loader & ml) {\n"
+        "    ml.get_key(LLM_KV_NEXTN_PREDICT_LAYERS, hparams.n_layer_nextn, false);\n"
+        '    GGML_ASSERT(hparams.n_layer_nextn < hparams.n_layer_all && "n_layer_nextn must be < n_layer_all");\n'
+        "}\n"
         "void build_qwen3next_graph() {\n"
         "    for (int il = 0; il < n_layer; ++il) {\n"
         "        ggml_tensor * attn_post_norm = build_norm(cur, model.layers[il].attn_post_norm, nullptr, LLM_NORM_RMS, il);\n"
@@ -72,6 +76,14 @@ def write_fixture(root: Path) -> Path:
         "        cur = build_layer_ffn(attn_post_norm, il);\n"
         '        cb(cur, "ffn_out", il);\n'
         "    }\n"
+        "}\n"
+        "void build_trunk_moe() {\n"
+        "    build_moe_ffn(cur, gate, up, gate_exp, down, nullptr,\n"
+        "        n_expert, n_expert_used, LLM_FFN_SILU);\n"
+        "}\n"
+        "void build_mtp_moe() {\n"
+        "    build_moe_ffn(cur, gate, up, gate_exp, down, nullptr,\n"
+        "        n_expert, n_expert_used, LLM_FFN_SILU);\n"
         "}\n",
         encoding="utf-8",
     )
@@ -168,11 +180,23 @@ def test_expert_prefetch_uses_value_snapshots_and_remains_idempotent(tmp_path: P
     assert "il + 1 < n_layer" in qwen3next
     assert "n_tokens == 1" in qwen3next
     assert "slim_arc_cross_layer_transition_topk_count == 0" in qwen3next
+    assert qwen3next.count('std::getenv("SLIM_ARC_EXPERT_TOP_K")') == 1
+    assert qwen3next.count("hparams.n_expert_used = slim_arc_expert_top_k(hparams.n_expert_used);") == 1
+    assert qwen3next.count("static int slim_arc_expert_top_k(int default_count)") == 1
+    assert "parsed >= 1 && parsed < default_count" in qwen3next
+    assert qwen3next.count("n_expert, n_expert_used,") == 2
+    assert "slim_arc_expert_top_k(n_expert_used)" not in qwen3next
 
     model = second["llama-model.cpp"].decode(encoding="utf-8")
     impl = model[model.index("struct llama_model::impl"):model.index("};", model.index("struct llama_model::impl"))]
     assert impl.rstrip().endswith("std::unique_ptr<slim_arc::runtime_owner> slim_arc_runtime;")
+    assert "llama_files slim_arc_files;" in impl
+    assert impl.index("llama_files slim_arc_files;") < impl.index("std::unique_ptr<slim_arc::runtime_owner>")
     assert model.index("pimpl->mappings.emplace_back(std::move(mapping));") < model.index("std::make_unique<slim_arc::runtime_owner>")
+    assert "pimpl->slim_arc_files.emplace_back(std::move(file));" in model
+    assert model.index("pimpl->slim_arc_files.emplace_back(std::move(file));") < model.index("std::make_unique<slim_arc::runtime_owner>")
+    assert "pimpl->slim_arc_files[mapping_index]->file_id()" in model
+    assert "runtime->register_mapping(mapping->addr(), mapping->size(), file_id)" in model
     assert "runtime->activate();" in model
     assert '#include <cstring>' in model
     admission = "if (slim_arc::model_runtime_admitted(use_mmap_buffer, pimpl->mappings.size(), ml.size_data, slim_arc_enabled))"
@@ -286,6 +310,10 @@ def test_pristine_member_with_generated_setup_is_rejected_as_hybrid(tmp_path: Pa
     transfer = """    if (use_mmap_buffer) {
         for (auto & mapping : ml.mappings) {
             pimpl->mappings.emplace_back(std::move(mapping));
+        }
+        pimpl->slim_arc_files.reserve(ml.files.size());
+        for (auto & file : ml.files) {
+            pimpl->slim_arc_files.emplace_back(std::move(file));
         }
     }"""
     setup_start = generated.index(transfer) + len(transfer)

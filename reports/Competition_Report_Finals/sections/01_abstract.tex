@@ -2,11 +2,11 @@
 {\Large \kaishu \bfseries 摘\quad 要}
 \end{center}
 
-端侧混合专家（Mixture-of-Experts, MoE）模型可将大量参数与每个 token 的实际计算解耦，但受限内存环境仍会因模型映射、页缓存和运行时缓冲之间的竞争而失效。本决赛阶段报告聚焦一个可检验的运行时闭环：利用 Router 观测提出专家驻留或错误预取回收建议，在明确内存压力下进行有界准入，并以不改变模型权重、路由结果、KV 内容或张量地址为安全边界。
+端侧混合专家（Mixture-of-Experts, MoE）模型可将大量参数与每个 token 的实际计算解耦，但受限内存环境仍会因模型映射、页缓存、运行时缓冲和低速存储之间的竞争而失效。本决赛阶段报告聚焦一个可检验的专家权重页管理闭环：利用 Router 观测提出有界预取和驻留建议，根据实际选择撤回错误建议，并以不改变模型权重、路由结果、KV 内容或张量地址为安全边界。
 
-我们实现了两项可选机制：安全错误专家页回收，以及压力/准确性导向的专家驻留。前者只对未被本轮选中的预取专家、且完全落在专家张量内部的页提出建议；后者使用压力状态、错误率和饱和的热度计数决定是否准入。运行时归属于模型而非进程全局对象，图执行路径通过租约访问它；销毁时先拒绝新租约并等待在途租约，再停止工作线程和释放地址注册表，从而使地址生命周期和并发边界可审计。
+系统以阶段感知的内存建议、层级预取、错误专家页回收和压力/准确性导向的专家驻留组成闭环。回收只针对未被本轮选中的预取专家、且完全落在专家张量内部的页；驻留使用压力状态、预测浪费和饱和热度决定准入。运行时归属于模型而非进程全局对象，图执行路径通过租约访问它；销毁时先拒绝新租约并等待在途租约，再停止工作线程和释放地址注册表，从而使地址生命周期和并发边界可审计。
 
-本文不把已失效的初赛跨设备、跨内存档位结果作为决赛性能结论。我们在固定 Mac/Colima、2\,GiB、4 vCPU、no-swap、\texttt{pp64}/\texttt{tg16} 条件下完成两轮五配置 cold/warm 矩阵，\FinalsResultsRunCount{} 次运行全部成功。所有配置的聚合峰值均为 \FinalsPeakMinimumGiB--\FinalsPeakMaximumGiB\,GiB，因而本轮没有证明峰值内存下降；组合策略的 cold wall time 为 \FinalsCombinedColdWall\,s，相对 control 的 \FinalsControlColdWall\,s 回退 \FinalsCombinedColdRegressionPercent\%，最终被拒绝。错误专家回收和专家驻留均只保留为 opt-in 机制，不升级为默认路径。所有表格由 hash 绑定的 \texttt{finals-results.json} 生成，避免将设计正确性或随机波动误写为优化收益。
+本文不把已失效的初赛跨设备、跨内存档位结果作为决赛性能结论。我们在固定 Mac/Colima、2\,GiB、4 vCPU、no-swap、\texttt{pp64}/\texttt{tg16} 条件下完成两轮五配置 cold/warm 矩阵，\FinalsResultsRunCount{} 次运行全部成功。所有配置的聚合峰值均为 \FinalsPeakMinimumGiB--\FinalsPeakMaximumGiB\,GiB，因而本轮没有证明峰值内存下降；组合策略的 cold wall time 为 \FinalsCombinedColdWall\,s，相对 control 的 \FinalsControlColdWall\,s 回退 \FinalsCombinedColdRegressionPercent\%，最终被拒绝。RK3588 和树莓派实验进一步说明：静态页建议与提前文件预读不能跨设备直接复用，策略必须匹配存储链路和访问阶段。所有正式数值都绑定原始日志或结构化证据，避免将机制正确性或随机波动误写为优化收益。
 
 \vspace{1em}
 \noindent\textbf{关键词}：端侧 LLM 推理；MoE；虚拟内存；专家页回收；自适应驻留；可复现实验

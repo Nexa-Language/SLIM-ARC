@@ -1712,6 +1712,92 @@ void test_cross_layer_transition_calls_are_thread_safe() {
     assert(scheduler.expert_transition_statistics().updates == 1);
 }
 
+struct file_advice_call {
+    int fd;
+    uint64_t offset;
+    size_t length;
+};
+
+void test_selected_expert_file_advice_uses_exact_mapping_offset() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(
+        nullptr,
+        6 * page_size,
+        PROT_READ | PROT_WRITE,
+        MAP_PRIVATE | MAP_ANON,
+        -1,
+        0);
+    assert(mapping != MAP_FAILED);
+    scoped_env enabled{"SLIM_ARC_EXPERT_FADVISE", "1"};
+    std::vector<file_advice_call> calls;
+    {
+        slim_arc::prefetch_scheduler scheduler{
+            0,
+            1,
+            {},
+            {},
+            {},
+            [&](int fd, uint64_t offset, size_t length) {
+                calls.push_back({fd, offset, length});
+                return 0;
+            }};
+        assert(scheduler.register_mapping(mapping, 6 * page_size, 17));
+        scheduler.register_expert_tensor(
+            "blk.28.exps",
+            static_cast<uint8_t *>(mapping) + page_size,
+            4 * page_size,
+            28,
+            4);
+        const int selected = 2;
+        scheduler.cache_router_experts(28, &selected, 1);
+        const int invalid = -1;
+        scheduler.cache_router_experts(28, &invalid, 1);
+
+        assert(calls.size() == 1);
+        assert(calls[0].fd == 17);
+        assert(calls[0].offset == 3 * page_size);
+        assert(calls[0].length == page_size);
+        const auto stats = scheduler.expert_file_advice_statistics();
+        assert(stats.calls == 1);
+        assert(stats.issued_bytes == page_size);
+        assert(stats.failures == 0);
+        assert(stats.invalid_ranges == 0);
+    }
+    assert(munmap(mapping, 6 * page_size) == 0);
+}
+
+void test_selected_expert_file_advice_is_strictly_opt_in() {
+    const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
+    void * const mapping = mmap(nullptr, page_size, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
+    assert(mapping != MAP_FAILED);
+    const char * const values[] = {nullptr, "0", "01", "true", ""};
+    for (const char * value : values) {
+        scoped_env enabled{"SLIM_ARC_EXPERT_FADVISE", value};
+        int calls = 0;
+        slim_arc::prefetch_scheduler scheduler{
+            0,
+            1,
+            {},
+            {},
+            {},
+            [&](int, uint64_t, size_t) {
+                ++calls;
+                return 0;
+            }};
+        assert(scheduler.register_mapping(mapping, page_size, 19));
+        scheduler.register_expert_tensor("blk.29.exps", mapping, page_size, 29, 1);
+        const int selected = 0;
+        scheduler.cache_router_experts(29, &selected, 1);
+        assert(calls == 0);
+        const auto stats = scheduler.expert_file_advice_statistics();
+        assert(stats.calls == 0);
+        assert(stats.issued_bytes == 0);
+        assert(stats.failures == 0);
+        assert(stats.invalid_ranges == 0);
+    }
+    assert(munmap(mapping, page_size) == 0);
+}
+
 } // namespace
 
 int main() {
@@ -1770,5 +1856,7 @@ int main() {
     test_cross_layer_transition_flag_requires_exact_pair();
     test_scheduler_learns_and_accounts_cross_layer_transition();
     test_cross_layer_transition_calls_are_thread_safe();
+    test_selected_expert_file_advice_uses_exact_mapping_offset();
+    test_selected_expert_file_advice_is_strictly_opt_in();
     return 0;
 }
