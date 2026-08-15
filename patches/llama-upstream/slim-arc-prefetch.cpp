@@ -1012,15 +1012,19 @@ void prefetch_scheduler::update_expert_hot_cache(
     }
 
     std::lock_guard<std::mutex> lock(expert_hot_mtx_);
-    int n_experts = 0;
-    for (const expert_tensor_info & tensor : tensors) {
-        n_experts = std::max(n_experts, tensor.n_experts);
-    }
-    if (static_cast<size_t>(layer) >= expert_hot_admission_counts_.size()) {
-        expert_hot_admission_counts_.resize(static_cast<size_t>(layer) + 1);
-    }
-    if (n_experts > 0 && expert_hot_admission_counts_[layer].size() < static_cast<size_t>(n_experts)) {
-        expert_hot_admission_counts_[layer].resize(static_cast<size_t>(n_experts), 0);
+    const bool filter_decode_admission =
+        expert_hot_admission_threshold_ > 1 && phase_.load() == compute_phase::DECODE;
+    if (filter_decode_admission) {
+        int n_experts = 0;
+        for (const expert_tensor_info & tensor : tensors) {
+            n_experts = std::max(n_experts, tensor.n_experts);
+        }
+        if (static_cast<size_t>(layer) >= expert_hot_admission_counts_.size()) {
+            expert_hot_admission_counts_.resize(static_cast<size_t>(layer) + 1);
+        }
+        if (n_experts > 0 && expert_hot_admission_counts_[layer].size() < static_cast<size_t>(n_experts)) {
+            expert_hot_admission_counts_[layer].resize(static_cast<size_t>(n_experts), 0);
+        }
     }
     if (!expert_hot_lru_enabled_) {
         auto entry = expert_hot_entries_.begin();
@@ -1040,11 +1044,15 @@ void prefetch_scheduler::update_expert_hot_cache(
     }
 
     for (const int expert_id : stable_experts) {
-        if (expert_id < 0 || static_cast<size_t>(expert_id) >= expert_hot_admission_counts_[layer].size()) {
-            continue;
+        uint32_t admission_count = expert_hot_admission_threshold_;
+        if (filter_decode_admission) {
+            if (expert_id < 0 || static_cast<size_t>(expert_id) >= expert_hot_admission_counts_[layer].size()) {
+                continue;
+            }
+            uint32_t & observed = expert_hot_admission_counts_[layer][expert_id];
+            observed = saturating_add(observed, uint32_t{1});
+            admission_count = observed;
         }
-        uint32_t & admission_count = expert_hot_admission_counts_[layer][expert_id];
-        admission_count = saturating_add(admission_count, uint32_t{1});
         const auto existing = std::find_if(
             expert_hot_entries_.begin(), expert_hot_entries_.end(), [layer, expert_id](const expert_hot_entry & item) {
                 return item.layer == layer && item.expert_id == expert_id;
@@ -1056,7 +1064,7 @@ void prefetch_scheduler::update_expert_hot_cache(
             existing->last_touch = expert_hot_touch_clock_;
             continue;
         }
-        if (admission_count < expert_hot_admission_threshold_) {
+        if (filter_decode_admission && admission_count < expert_hot_admission_threshold_) {
             expert_hot_admission_skips_ = saturating_add(expert_hot_admission_skips_, uint64_t{1});
             continue;
         }
