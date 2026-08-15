@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "optimization": "Repeated-hit admission for the resident hot expert cache",
+  "baseline": {
+    "name": "A36 LRU 512 MiB median",
+    "sample_count": 2,
+    "prefill_tps": 0.20415,
+    "decode_tps": 0.06615835,
+    "wall_seconds": 500.0
+  },
+  "contract": {
+    "device": "Raspberry Pi 5 Model B Rev 1.1",
+    "kernel": "Linux 6.18.34+rpt-rpi-2712 aarch64",
+    "memory_gib": 4,
+    "threads": 4,
+    "swap": "disabled during each screen and restored afterwards",
+    "cache": "cold",
+    "model_storage": "Samsung 870 EVO SSD over USB 3 using NTFS-3G/FUSE; the USB bridge reports ROTA=1",
+    "read_ahead_kb": 2048,
+    "nr_requests": 4,
+    "n_prompt": 16,
+    "n_gen_requested": 16,
+    "common_environment": {
+      "SLIM_ARC_SLOW_STORAGE": "1",
+      "SLIM_ARC_INLINE_ROUTER": "1",
+      "SLIM_ARC_EXPERT_PIPELINE_MB": "32",
+      "SLIM_ARC_EXPERT_CONF": "0",
+      "SLIM_ARC_NO_EXPERT_PREFETCH": "1",
+      "SLIM_ARC_NO_WEIGHT_PREFETCH": "1",
+      "SLIM_ARC_EXPERT_HOT_MB": "512",
+      "SLIM_ARC_EXPERT_HOT_LRU": "1",
+      "SLIM_ARC_EXPERT_HOT_LFRU": "0",
+      "SLIM_ARC_EXPERT_HOT_ADMIT_HITS": "2",
+      "SLIM_ARC_SHARED_MLOCK": "1",
+      "SLIM_ARC_TOTAL_BUDGET_MB": "16"
+    }
+  },
+  "screens": [
+    {
+      "name": "A38 all-phase admission",
+      "source_commit": "d588509024fc46fdafc16627e5cc348d0e905604",
+      "prefill_tps": 0.0943808,
+      "relative_to_a36_prefill_percent": -53.768895,
+      "decode_tps": null,
+      "exit_status": 143,
+      "wall_seconds_until_stop": 707,
+      "stop_reason": "intentionally stopped during decode after deterministic prefill regression"
+    },
+    {
+      "name": "A39 decode-phase admission",
+      "source_commit": "c617346714256597e6cc483c777e4305d9ad1a55",
+      "prefill_tps": 0.0942793,
+      "relative_to_a36_prefill_percent": -53.818614,
+      "decode_tps": null,
+      "exit_status": 143,
+      "wall_seconds_until_stop": 692,
+      "stop_reason": "intentionally stopped during decode after recurrent single-token microbatches bypassed the phase distinction"
+    },
+    {
+      "name": "A40 near-capacity admission",
+      "source_commit": "d41cda703642c15a3268684a88b4ce677253ad48",
+      "prefill_tps": 0.0937173,
+      "relative_to_a36_prefill_percent": -54.093902,
+      "decode_tps": null,
+      "exit_status": 143,
+      "wall_seconds_until_stop": 637,
+      "stop_reason": "intentionally stopped during decode after capacity gating reproduced the same prefill regression"
+    }
+  ],
+  "decision": "reject_hot_admission_threshold_above_one_for_pi_qwen3_next",
+  "reason": "All three threshold-two variants cut prefill throughput by about 54 percent. Qwen3-Next recurrent execution exposes prefill as single-token microbatches, so delaying a first resident expert admission discards reuse needed by later recurrent steps. The Pi candidate therefore keeps SLIM_ARC_EXPERT_HOT_ADMIT_HITS=1."
+}

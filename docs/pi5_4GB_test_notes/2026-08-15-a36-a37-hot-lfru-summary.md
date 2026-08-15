@@ -3,7 +3,7 @@
 ## 结论
 
 A37 在 A36 的 512 MiB 跨 token LRU 上增加 `frequency / age` 受害者评分。两组配置都关闭
-speculative expert/weight prefetch，使用相同 Pi 5、USB NTFS/FUSE 旋转盘、4 线程、cold cache、
+speculative expert/weight prefetch，使用相同 Pi 5、USB 3 Samsung 870 EVO SSD、NTFS-3G/FUSE、4 线程、cold cache、
 no-swap、pp16/tg16 合同，并按 LRU → LFRU → LFRU → LRU 反向交错运行。
 
 LFRU 的缓存计数优于 LRU：中位 admissions 下降 `10.08%`，hits 增加 `5.51%`，evictions
