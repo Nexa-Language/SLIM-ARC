@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "experiment": "A43 bounded expert prefetch on Raspberry Pi 5",
+  "date": "2026-08-15",
+  "platform": {
+    "device": "Raspberry Pi 5",
+    "memory_bytes": 4245815296,
+    "model_path": "/home/yituodabian/data/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf",
+    "model_bytes_reported_by_llama_bench": 48405005312,
+    "filesystem": "NTFS-3G/FUSE",
+    "usb_bridge": "Innostor IS621, USB 3.0 Bulk-Only",
+    "swap": "off"
+  },
+  "identity": {
+    "slim_arc_commit": "d41cda703642c15a3268684a88b4ce677253ad48",
+    "llama_cpp_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+    "generated_prefetch_source_sha256": "a987de70ef95fdaf34025ff84a77c3f2d3095ece887c1270ef74cd07fd22a79c",
+    "generated_prefetch_header_sha256": "9f18b93c46c8973434136730e71c0d1909b63327daa8ec7f42e549b63eda69f2",
+    "llama_bench_sha256": "d9bf4920c263be3f33c72c566204acc1738672c0abfb8b3c777ddef4f1ef6c61",
+    "runner_sha256": "624cf8de711a668d408d5ec40303cdc2fd0491d6913ed8e4d90e57aa3dbec646"
+  },
+  "configuration": {
+    "prompt_tokens": 16,
+    "generation_tokens": 16,
+    "threads": 4,
+    "cache_state": "cold",
+    "expert_prefetch_budget_mib": 32,
+    "weight_prefetch": false,
+    "hot_expert_cache_mib": 512,
+    "hot_expert_lru": true,
+    "hot_expert_lfru": false,
+    "hot_expert_admit_hits": 1,
+    "shared_mlock": true
+  },
+  "screening_result": {
+    "prefill_tps": 0.0929747,
+    "a36_fuse_lru_prefill_median_tps": 0.20415,
+    "relative_prefill_percent": -54.457654,
+    "exit_status": 143,
+    "wall_seconds": 633,
+    "temperature_before_c": 41.7,
+    "temperature_after_c": 47.7,
+    "swap_used_before_bytes": 0,
+    "swap_used_after_bytes": 0,
+    "termination": "intentionally stopped during decode after the prefill regression"
+  },
+  "decision": "reject",
+  "reason": "A 32 MiB bounded expert WILLNEED stream reduced prefill throughput by 54.46 percent relative to the A36 FUSE plus 512 MiB hot-expert LRU median. On this USB Bulk-Only and NTFS-3G/FUSE path, speculative expert reads still compete with demand faults. No decode or wall-time performance claim is made from the intentionally terminated run."
+}
