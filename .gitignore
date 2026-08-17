@@ -258,6 +258,11 @@ data/benchmarks/c4/
 logs/*.log
 logs/*.txt
 reports/*.tmp
+reports/Competition_Report_Finals/figures/generated/ablation_dashboard.png
+reports/Competition_Report_Finals/figures/generated/cross_device_effects.png
+reports/Competition_Report_Finals/figures/generated/implementation_module_map.png
+reports/Competition_Report_Finals/figures/generated/rk3588_3g_main.png
+reports/Competition_Report_Finals/figures/generated/rk3588_dynamic_policy.png
 
 # Secrets
 *.key

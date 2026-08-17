@@ -70,22 +70,16 @@ Mac/Colima 的 8 月 12 日正式矩阵 20/20 成功，所有配置的 cgroup pe
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[font=\small,x=3.4cm,y=1.0cm,every node/.style={align=center}]
-  \node[font=\bfseries] at (0,3.45) {Prefill};
-  \node[font=\bfseries] at (1,3.45) {Decode};
-  \node[anchor=east,font=\bfseries] at (-0.56,2.65) {baseline};
-  \node[anchor=east,font=\bfseries] at (-0.56,1.65) {SLIM-ARC};
-  \node[anchor=east,font=\bfseries] at (-0.56,0.65) {SLIM-ARC+KV};
-  \node[draw,rounded corners,fill=gray!12,minimum width=2.8cm,minimum height=8mm] at (0,2.65) {3.85 t/s\\$1.00\times$};
-  \node[draw,rounded corners,fill=gray!12,minimum width=2.8cm,minimum height=8mm] at (1,2.65) {0.70 t/s\\$1.00\times$};
-  \node[draw,rounded corners,fill=green!24,minimum width=2.8cm,minimum height=8mm] at (0,1.65) {4.40 t/s\\$1.14\times$};
-  \node[draw,rounded corners,fill=green!68,minimum width=2.8cm,minimum height=8mm] at (1,1.65) {2.21 t/s\\$3.16\times$};
-  \node[draw,rounded corners,fill=green!18,minimum width=2.8cm,minimum height=8mm] at (0,0.65) {4.19 t/s\\$1.09\times$};
-  \node[draw,rounded corners,fill=green!62,minimum width=2.8cm,minimum height=8mm] at (1,0.65) {2.12 t/s\\$3.03\times$};
-  \draw[->,very thick,green!55!black] (1.62,2.65) -- node[right,align=left]{强压力下\\Decode 恢复} (1.62,1.65);
-\end{tikzpicture}
-\caption{RK3588 3\,GiB cgroup 的归一化性能温度图。颜色深度表示相对同档 baseline 的增益，单元格同时保留绝对吞吐。}
+\includegraphics[width=\textwidth]{figures/generated/rk3588_3g_main.pdf}
+\caption{RK3588 3\,GiB cgroup 的归一化性能温度图与配对响应图。左图同时编码绝对吞吐和同档增益，右图在对数轴上显示 baseline 到 SLIM-ARC 的 Prefill/Decode 迁移。}
 \label{fig:rk-3g-main}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/generated/rk3588_3g_mechanism.png}
+  \caption{RK3588 3\,GiB 强压力下的页访问机制。静态 RANDOM 将模型扫描拆为页抖动与同步缺页；阶段策略在 Prefill 使用有序扫描，并在 Decode 维持可复用页。图中不承载实验数值，数值以图\ref{fig:rk-3g-main}为准。}
+  \label{fig:rk-3g-mechanism}
 \end{figure}
 
 2.5\,GiB baseline 的单次 Decode 反而高于 3\,GiB baseline，说明 page-cache 初始状态和驻留窗口会放大单次实验波动；该行只在 2.5\,GiB 档内比较，不能据此推导“内存越小越快”。五组均未触发 OOM，内存压力表现为页缓存逐出和性能变化。
@@ -115,26 +109,8 @@ Mac/Colima 的 8 月 12 日正式矩阵 20/20 成功，所有配置的 cgroup pe
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[font=\scriptsize,x=3.25cm,y=0.72cm]
-  \node[font=\small\bfseries] at (0,6.55) {Prefill / reference};
-  \node[font=\small\bfseries] at (1,6.55) {Decode / reference};
-  \foreach \name/\y in {静态 RANDOM/5.7,禁用路径/4.7,Prefill SEQ/3.7,Decode SEQ/2.7,Decode NORMAL/1.7,动态全 SEQ/0.7}
-    \node[anchor=east,font=\bfseries] at (-0.58,\y) {\name};
-  \node[draw,fill=red!62,minimum width=2.8cm,minimum height=6.5mm] at (0,5.7) {0.44 / 0.16};
-  \node[draw,fill=red!58,minimum width=2.8cm,minimum height=6.5mm] at (1,5.7) {0.26 / 0.18};
-  \node[draw,fill=gray!10,minimum width=2.8cm,minimum height=6.5mm] at (0,4.7) {2.74 / 1.00};
-  \node[draw,fill=gray!10,minimum width=2.8cm,minimum height=6.5mm] at (1,4.7) {1.41 / 1.00};
-  \node[draw,fill=green!14,minimum width=2.8cm,minimum height=6.5mm] at (0,3.7) {2.82 / 1.03};
-  \node[draw,fill=red!60,minimum width=2.8cm,minimum height=6.5mm] at (1,3.7) {0.25 / 0.18};
-  \node[draw,fill=green!13,minimum width=2.8cm,minimum height=6.5mm] at (0,2.7) {2.81 / 1.03};
-  \node[draw,fill=orange!16,minimum width=2.8cm,minimum height=6.5mm] at (1,2.7) {1.35 / 0.96};
-  \node[draw,fill=orange!22,minimum width=2.8cm,minimum height=6.5mm] at (0,1.7) {2.57 / 0.94};
-  \node[draw,fill=gray!10,minimum width=2.8cm,minimum height=6.5mm] at (1,1.7) {1.41 / 1.00};
-  \node[draw,fill=green!16,minimum width=2.8cm,minimum height=6.5mm] at (0,0.7) {2.84 / 1.04};
-  \node[draw,fill=gray!10,minimum width=2.8cm,minimum height=6.5mm] at (1,0.7) {1.40 / 0.99};
-  \node[align=center,text=gray!70!black] at (0.5,-0.05) {每格为 token/s / 相对禁用路径；红色表示明显回退，绿色表示恢复};
-\end{tikzpicture}
-\caption{RK3588 动态页建议的策略响应温度图。单独修复 Prefill 不能恢复 Decode，完整阶段策略才接近 reference。}
+\includegraphics[width=\textwidth]{figures/generated/rk3588_dynamic_policy.pdf}
+\caption{RK3588 动态页建议的策略响应温度图和恢复轨迹。单独修复 Prefill 不能恢复 Decode；将阶段策略扩展到 Decode 后，两项吞吐才共同进入 reference 的 $\pm5\%$ 区间。}
 \label{fig:rk-dynamic-heatmap}
 \end{figure}
 
@@ -228,19 +204,26 @@ IQ4\_XS 在初赛显示更小模型文件和较高热缓存吞吐，但 GSM8K 10
 
 Self-draft speculative decoding 将 80B Decode 从 3.01 降至 1.41\,token/s（$-53.2\%$），accept rate 33.3\%，因此不再进入主线。Mac expert RANDOM 将 Decode 从 0.801 降至 0.262、wall 从 55.90 增至 96.42\,s；expert NORMAL 也回退。Pi 的 LFRU 使 wall 增加 1.50\%，二次命中准入使 Prefill 下降约 54\%，NTFS3 虽提高 direct-read 57.28\%，真实 mmap Prefill 却下降 65.70\%，exact expert \texttt{fadvise} 为 $-0.2517\%$。这些结果共同说明，局部 cache、带宽或命中指标不能替代端到端测量。
 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/generated/ablation_dashboard.pdf}
+  \caption{消融实验多指标总览。左：专家预测命中与投机 I/O 的联合代价；中：FlashAttention 与 KV 量化对 ARM Decode 的影响；右：由端到端指标否决的优化。图中只连接同一实验合同内可比较的数据。}
+  \label{fig:ablation-dashboard}
+\end{figure}
+
 \subsection{设备专项与补充实验}
 
-\subsubsection{RK3588 长上下文、压力与内存}
+\paragraph{RK3588 长上下文、压力与内存。}
 
 RK3588 的长上下文动态策略在 \texttt{p512/n128} 下达到 6.09/2.08\,token/s，接近禁用路径的 6.33/2.15。3\,GiB RSS 补测中，baseline VmHWM 4324\,MB，SLIM-ARC 为 3986\,MB，SLIM-ARC + KV eviction 为 3951\,MB；三个 user scope 的 \texttt{memory.current} 都触及 3072\,MB。由于文件页可能计费到外部 session cgroup，进程 RSS 大于 scope current，两者不能直接相减为“未计费内存”。
 
 4B 五轮对话中，baseline Generation 均值为 4.52\,token/s，SLIM-ARC + KV eviction 为 5.20（$+15\%$），Prompt 基本持平；H1 首轮输入含 shell \texttt{echo -e} artifact，因此结果列为探索性。4\,GiB、5\,GiB 和并发压力实验还分别观察到 Decode $+13.3\%$、$+15.7\%$ 和 $+5.8\%$，完整合同见附录。
 
-\subsubsection{Raspberry Pi 5 替换策略与质量边界}
+\paragraph{Raspberry Pi 5 替换策略与质量边界。}
 
 A34 512\,MiB LRU 相对旧 cache 将 hits 提高 6.53\%、evictions 降低 36.31\%；384\,MiB 使 evictions 相对 A34 增加 121.10\%。A37 LFRU 虽将部分 cache counter 改善，却使 nonresident scan 增加 56.33\% 并降低吞吐。A49 top-8 相对 A50 top-10 在单次 \texttt{pp4/tg1} 中 Prefill $+17.56\%$、Decode $+10.53\%$、wall $-3.30\%$，但一题算术质量检查无法区分二者，因而只保留为精度门之前的研究开关。
 
-\subsubsection{HiDevLab aarch64 CPU-only 实验}
+\paragraph{HiDevLab aarch64 CPU-only 实验。}
 
 HiDevLab 环境确认 aarch64、Ascend 910B4 32\,GiB HBM 和驱动可枚举，但系统缺少匹配 CANN toolkit、\texttt{libascendcl.so} 和完整 \texttt{torch\_npu}。因此性能实验使用 OLMoE-1B-7B Q2\_K 的 llama.cpp CPU-only 路径，固定 16 threads、\texttt{pp64/tg16}、3 repetitions 和 warm cache。
 
@@ -248,48 +231,18 @@ baseline 为 100.724597/51.340323\,token/s、wall 3.2546\,s；patched-default �
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[font=\scriptsize,x=2.55cm,y=0.72cm]
-  \foreach \x/\name in {0/Prefill$\uparrow$,1/Decode$\uparrow$,2/Wall$\downarrow$,3/RSS$\downarrow$}
-    \node[font=\bfseries] at (\x,6.6) {\name};
-  \foreach \name/\y in {WSL 8 GiB/5.7,RK 3 GiB/4.7,RK 2.5 GiB/3.7,Mac reclaim cold/2.7,Pi A28 vs A24/1.7,HiDev A24 vs BL/0.7}
-    \node[anchor=east,font=\bfseries] at (-0.58,\y) {\name};
-  \node[draw,fill=green!20,minimum width=2.25cm,minimum height=6mm] at (0,5.7) {$+13.6\%$};
-  \node[draw,fill=green!78,minimum width=2.25cm,minimum height=6mm] at (1,5.7) {$+437.5\%$};
-  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (2,5.7) {--};
-  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (3,5.7) {--};
-  \node[draw,fill=green!20,minimum width=2.25cm,minimum height=6mm] at (0,4.7) {$+14.3\%$};
-  \node[draw,fill=green!68,minimum width=2.25cm,minimum height=6mm] at (1,4.7) {$+215.7\%$};
-  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (2,4.7) {--};
-  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (3,4.7) {--};
-  \node[draw,fill=green!14,minimum width=2.25cm,minimum height=6mm] at (0,3.7) {$+7.3\%$};
-  \node[draw,fill=green!22,minimum width=2.25cm,minimum height=6mm] at (1,3.7) {$+15.7\%$};
-  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (2,3.7) {--};
-  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (3,3.7) {--};
-  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (0,2.7) {--};
-  \node[draw,fill=green!13,minimum width=2.25cm,minimum height=6mm] at (1,2.7) {$+6.3\%$};
-  \node[draw,fill=green!12,minimum width=2.25cm,minimum height=6mm] at (2,2.7) {$+4.4\%$};
-  \node[draw,fill=gray!12,minimum width=2.25cm,minimum height=6mm] at (3,2.7) {$0.0\%$};
-  \node[draw,fill=green!8,minimum width=2.25cm,minimum height=6mm] at (0,1.7) {$+1.5\%$};
-  \node[draw,fill=green!20,minimum width=2.25cm,minimum height=6mm] at (1,1.7) {$+14.2\%$};
-  \node[draw,fill=green!13,minimum width=2.25cm,minimum height=6mm] at (2,1.7) {$+6.6\%$};
-  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (3,1.7) {--};
-  \node[draw,fill=red!10,minimum width=2.25cm,minimum height=6mm] at (0,0.7) {$-0.1\%$};
-  \node[draw,fill=red!18,minimum width=2.25cm,minimum height=6mm] at (1,0.7) {$-6.1\%$};
-  \node[draw,fill=red!14,minimum width=2.25cm,minimum height=6mm] at (2,0.7) {$-3.7\%$};
-  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (3,0.7) {--};
-  \node[align=center,text=gray!70!black] at (1.5,-0.05) {正值表示更优；仅在同设备、同模型、同资源和同缓存合同内计算；-- 表示没有可比指标};
-\end{tikzpicture}
-\caption{跨设备同合同效应矩阵。颜色编码有利方向的相对变化，既显示强压力场景的收益，也显示内存充足小模型上的回退。}
+\includegraphics[width=\textwidth]{figures/generated/cross_device_effects.pdf}
+\caption{跨设备同合同效应矩阵与 Decode 效应森林图。左图在各设备内部合同中编码有利方向变化，右图使用对称对数轴呈现效应量级；空白表示该合同没有可比指标，不作跨设备绝对吞吐比较。}
 \label{fig:cross-device-effect-matrix}
 \end{figure}
 
-\subsubsection{端侧 Agent Harness 功能实验}
+\paragraph{端侧 Agent Harness 功能实验。}
 
 确定性本地 endpoint 首轮返回 \texttt{uname -m} 工具请求，Harness 在受限工作目录执行并回填观测，第二轮返回最终答案。首轮估算速度 1.999\,token/s，触发 \texttt{max\_tokens} 从 192 降至 124；若持续低于阈值，最低可降至 48。工具返回码为 0，输出未截断。图\ref{fig:agent-harness-smoke}展示实际 JSONL 事件。
 
 \begin{figure}[H]
   \centering
-  \includegraphics[width=\textwidth]{figures/agent_harness_smoke.png}
+  \includegraphics[width=0.78\textwidth]{figures/agent_harness_smoke.png}
   \caption{Agent Harness 的模型、受限 Shell 和观测回填闭环。该图验证功能、边界和指标，不代表真实 80B TPS 加速。}
   \label{fig:agent-harness-smoke}
 \end{figure}
@@ -299,3 +252,26 @@ baseline 为 100.724597/51.340323\,token/s、wall 3.2546\,s；patched-default �
 实验支持四项总体结论。第一，mmap、关闭 repack 和页缓存逐出使 48.41\,GB 模型能够在 2--8\,GiB 环境中运行；“可运行”与“全部权重常驻”是不同目标。第二，页建议的收益由阶段和存储决定：RK3588 的动态 SEQUENTIAL 消除了静态 RANDOM 负优化，Pi 则进一步关闭投机预取。第三，专家管理的关键不是单独追求命中率，而是减少无收益 I/O 并为确定复用页保留有限容量；A22 高命中和 popular-16 负结果都支持这一点。第四，组合机制必须重新验证。Mac combined 的回退、KV q4\_0 在 ARM 小模型上的变慢和 LFRU 的负结果说明，局部正确性或单项指标不能推出端到端协同。
 
 SLIM-ARC 最强的正向场景出现在内存压力与同步缺页足够强的设备内合同，例如 RK3588 3\,GiB 和 Pi 4\,GiB 慢存储；在内存充足、模型较小或 warm cache 的 HiDevLab OLMoE 环境中，运行时管理成本可能高于收益。系统因此将策略保留为设备化配置，并把负面结果作为适用范围的一部分。
+
+\begin{figure}[H]
+\centering
+\resizebox{0.90\textwidth}{!}{%
+\begin{tikzpicture}[>=Latex,font=\footnotesize]
+  \fill[gray!3] (0,0) rectangle (12,6.2);
+  \fill[blue!6] (6,0) rectangle (12,3.1);
+  \fill[orange!7] (0,3.1) rectangle (6,6.2);
+  \fill[green!7] (6,3.1) rectangle (12,6.2);
+  \draw[->,thick] (0.4,0.45)--(12.2,0.45) node[right]{内存压力增强};
+  \draw[->,thick] (0.4,0.45)--(0.4,6.45) node[above,align=center]{同步缺页与存储\\往返代价增加};
+  \draw[gray!50,dashed] (6,0.45)--(6,6.2);
+  \draw[gray!50,dashed] (0.4,3.1)--(12,3.1);
+  \node[draw,rounded corners,fill=white,align=left,text width=4.3cm] at (3.1,1.75) {\textbf{内存充足、小模型}\\HiDevLab OLMoE\\默认关闭高开销预测；保留可移植路径};
+  \node[draw,rounded corners,fill=white,align=left,text width=4.3cm] at (8.9,1.75) {\textbf{高压力、较低 I/O 代价}\\Mac/Colima 2 GiB\\有界机制可运行；组合收益需逐项复验};
+  \node[draw,rounded corners,fill=white,align=left,text width=4.3cm] at (3.1,4.65) {\textbf{慢存储、投机代价高}\\Raspberry Pi 5\\shared/hot 常驻；关闭或严格限额投机 I/O};
+  \node[draw,rounded corners,fill=white,align=left,text width=4.3cm] at (8.9,4.65) {\textbf{高压力、同步缺页显著}\\RK3588 3 GiB\\阶段化 SEQUENTIAL；有界预取与 KV 协同};
+  \draw[->,very thick,green!55!black] (5.35,4.65)--(6.65,4.65) node[midway,above]{压力进一步增强};
+  \draw[->,very thick,blue!65!black] (8.9,2.55)--(8.9,3.85) node[midway,right]{I/O 代价增大};
+\end{tikzpicture}}
+\caption{由实验归纳的设备策略适用域。该图不进行跨设备吞吐排名，而是把内存压力与同步缺页代价映射到不同策略：高压力强调阶段化和有界性，慢存储强调确定复用并抑制投机，内存充足时则避免运行时管理开销。}
+\label{fig:policy-regime-map}
+\end{figure}

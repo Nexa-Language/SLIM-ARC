@@ -17,24 +17,8 @@ SLIM-ARC 的目标是在模型文件显著大于物理内存时，利用 MoE 的
 
 \begin{figure}[H]
 \centering
-\resizebox{0.88\textwidth}{!}{%
-\begin{tikzpicture}[node distance=5mm and 6mm,>=Latex,font=\small,
-  layer/.style={draw,rounded corners,minimum width=0.92\textwidth,minimum height=10mm,align=center},
-  mod/.style={draw,rounded corners,fill=white,minimum height=8mm,align=center}]
-  \node[layer,fill=purple!7] (work) {工作负载层：llama-bench / llama-cli / 常驻 Agent Harness};
-  \node[layer,fill=blue!7,below=of work] (observe) {观测层：阶段识别 \quad 计算图层范围 \quad Router 结果 \quad cgroup 压力 \quad fault/I/O 指标};
-  \node[layer,fill=green!8,below=of observe] (control) {控制层：候选生成 \quad 统一预算 \quad 压力准入 \quad generation 结算 \quad 设备策略};
-  \node[layer,fill=orange!9,below=of control] (action) {动作层：权重预取 \quad 专家预取/驻留 \quad 错误页回收 \quad KV 量化/淘汰 \quad FA};
-  \node[layer,fill=gray!12,below=of action] (os) {系统层：mmap / page cache / cgroup v2 / POSIX madvise / 文件系统 / 存储设备};
-  \draw[->] (work) -- (observe);
-  \draw[->] (observe) -- (control);
-  \draw[->] (control) -- (action);
-  \draw[->] (action) -- (os);
-  \draw[->,dashed,bend right=38] (os.west) to node[left,align=center]{fault、I/O、压力\\反馈} (observe.west);
-  \draw[->,dashed,bend left=38] (action.east) to node[right,align=center]{命中、浪费\\结算} (control.east);
-\end{tikzpicture}
-}
-\caption{SLIM-ARC 的分层架构。上层给出负载和事实观测，中层决定候选与预算，下层通过标准操作系统接口执行可回退动作。}
+\includegraphics[width=\textwidth]{figures/generated/system_architecture.png}
+\caption{SLIM-ARC 的系统架构。模型映射、模型所有的运行时、统一调度器和内存感知控制面形成主路径；页错误、压力、Router 事实和复用结果沿反馈路径返回策略层。所有动作通过标准操作系统接口执行，失败只导致性能退化。}
 \label{fig:system-overview}
 \end{figure}
 
@@ -110,18 +94,8 @@ Temporal predictor 成本最低，但对输入变化敏感。Cross-layer Router 
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[node distance=7mm and 7mm,>=Latex,every node/.style={font=\small,align=center},
-  b/.style={draw,rounded corners,minimum height=9mm,text width=0.19\textwidth}]
-  \node[b,fill=blue!8] (pred) {预测集合 $P$\\generation $g$};
-  \node[b,fill=orange!10,right=of pred] (admit) {预算准入\\成功 advice bytes};
-  \node[b,fill=green!9,right=of admit] (truth) {Router 事实 $S$\\一次性结算};
-  \node[b,fill=red!7,below=of admit] (reclaim) {$P\setminus S$\\内部页回收};
-  \node[b,fill=purple!7,below=of truth] (resident) {$P\cap S$\\热度与驻留更新};
-  \draw[->] (pred)--(admit); \draw[->] (admit)--(truth);
-  \draw[->] (truth)--(reclaim); \draw[->] (truth)--(resident);
-  \draw[->,dashed] (reclaim.west) -| node[below,left]{压力/浪费反馈} (pred.south);
-\end{tikzpicture}
-\caption{专家预测、事实结算、错误页回收和驻留更新构成的闭环。}
+\includegraphics[width=\textwidth]{figures/generated/expert_closed_loop.png}
+\caption{专家预测、事实结算、错误页回收和驻留更新构成的闭环。generation token 把预测与原生 Router 事实一一关联；命中页进入复用与驻留更新，错误页只回收完整内部页，失败或缺失的 Router 结果通过取消路径完成一次性记账。}
 \label{fig:expert-loop}
 \end{figure}
 

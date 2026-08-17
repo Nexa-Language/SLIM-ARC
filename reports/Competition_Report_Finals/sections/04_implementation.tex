@@ -30,17 +30,67 @@ SLIM-ARC 基于 llama.cpp 构建，决赛正式 Mac 镜像固定 upstream revisi
   \end{tabular}
 \end{table}
 
+图\ref{fig:implementation-module-map}把表\ref{tab:implementation-modules}中的职责落实到具体源文件和调用关系。它刻意区分三类边：模型拥有的生命周期边、图执行期间的调用边，以及 patcher/实验控制面向上的构建与观测边。
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/generated/implementation_module_map.pdf}
+  \caption{SLIM-ARC 的源码模块、所有权与集成调用图。上方是模型加载和图执行主路径，中间是可独立测试的页范围、回收、驻留和 KV 模块，下方是幂等补丁与实验控制面。}
+  \label{fig:implementation-module-map}
+\end{figure}
+
 \subsection{模型所有权与地址生命周期}
 
 早期实现使用进程全局调度器和 mmap registry。该结构无法证明模型销毁后后台 worker 不再访问映射，也使多模型进程的指标和地址相互污染。当前实现把 runtime 作为 \texttt{llama\_model::impl} 的末级成员。模型映射和张量注册完成后 runtime 才激活；成员顺序保证 runtime 在 mappings 之前析构。
 
 图执行路径不保存裸调度器指针，而是获取 move-only lease。runtime 销毁时依次执行：从可获取 registry 中移除、拒绝新 lease、等待 in-flight lease 归零、通知 worker 停止、join 全部线程、输出该模型的最终指标、清除张量元数据，最后返回模型析构流程。该顺序将“地址仍有效”和“后台任务仍可能运行”绑定在同一个 owner 内。
 
+\begin{figure}[H]
+\centering
+\resizebox{0.96\textwidth}{!}{%
+\begin{tikzpicture}[>=Latex,font=\footnotesize,x=2.45cm,y=0.78cm]
+  \foreach \x/\name in {0/\texttt{llama\_model},1/\texttt{runtime\_owner},2/graph thread,3/prefetch worker,4/mmap pages}
+    \node[font=\scriptsize\bfseries,align=center,text width=2.1cm] at (\x,6.6) {\name};
+  \foreach \x in {0,...,4} \draw[gray!40,dashed] (\x,6.25)--(\x,0.25);
+  \draw[->,blue!70!black,thick] (0,5.9)--node[above]{构造并注册 mapping/tensor}(1,5.9);
+  \draw[->,green!55!black,thick] (2,5.1)--node[above]{acquire lease}(1,5.1);
+  \draw[->,green!55!black,thick] (1,4.5)--node[above]{冻结请求快照}(3,4.5);
+  \draw[->,orange!80!black,thick] (3,3.8)--node[above]{锁外 WILLNEED / DONTNEED}(4,3.8);
+  \draw[->,purple!75!black,thick] (2,3.05)--node[above]{Router 事实 + generation}(1,3.05);
+  \draw[->,red!70!black,thick] (0,2.15)--node[above]{begin destruction}(1,2.15);
+  \node[draw,rounded corners,fill=red!7,align=left,minimum width=3.1cm,font=\scriptsize] at (1.15,1.15) {拒绝新 lease\\等待 in-flight 清零\\stop + join workers\\输出该模型指标};
+  \draw[->,red!70!black,thick] (1,0.35)--node[below]{允许 mappings 析构}(0,0.35);
+\end{tikzpicture}}
+\caption{模型所有权与并发访问的生命周期时序。运行时在 mmap 之后构造、在 mmap 之前析构；所有页面建议都发生在有效 lease 和映射生命周期内。}
+\label{fig:runtime-lifecycle}
+\end{figure}
+
 \subsection{并发调度与一次性结算}
 
 预取 worker 使用有界请求队列。每个请求包含 generation、层号、合并后的页范围和冻结预算。producer 在锁内发布或替换尚未领取的请求，worker 在锁内认领并从队列删除，随后释放锁执行 \texttt{posix\_madvise}。相同 generation 不会被两个 worker 重复领取；队列满时根据设备模式丢弃最旧未领取请求或拒绝新请求，并增加 dropped/stale 指标。
 
 专家状态由独立互斥锁保护。Router ID、专家张量、上一轮候选、热度和 pending generation 都在锁内复制为值快照；candidate selection、page-range planning 和系统调用均在锁外执行。advice 完成后再以 generation 校验发布成功字节。计算成功时 token-aware settle 会删除恰好一条 pending 记录；失败或无 Router 节点时 unconditional cancel 清理剩余 token，避免 64 个失败轮次耗尽 pending 上限。
+
+算法\ref{alg:runtime-settlement}给出这条实现路径的关键顺序。入口位于 \path{slim-arc-prefetch.cpp}：\path{issue_expert_willneed} 负责发出建议，\path{cache_router_experts} 负责事实结算，\path{cancel_expert_prefetch} 处理未完成轮次。纯规划逻辑分别下沉到 \path{slim-arc-page-range.cpp}、\path{slim-arc-expert-reclaim.cpp} 与 \path{slim-arc-expert-residency.cpp}。因此系统调用 seam 可以在单元测试中注入，策略测试不依赖真实 page cache 状态。
+
+\begin{algorithm}[H]
+  \caption{图执行期间的预取、结算与回收实现}
+  \label{alg:runtime-settlement}
+  \begin{algorithmic}[1]
+    \STATE $L \gets \mathrm{runtime.acquire\_lease}()$
+    \STATE $q \gets \mathrm{snapshot}(layer, candidates, budget, pressure)$ \COMMENT{锁内复制值}
+    \STATE $g \gets \mathrm{reserve\_generation}(q)$
+    \STATE $issued \gets \mathrm{advise\_outside\_lock}(q,\mathrm{WILLNEED})$
+    \IF{原生 Router 成功且返回有效专家集合 $S$}
+      \STATE $(hit,waste) \gets \mathrm{settle\_once}(g,S,issued)$
+      \STATE $plan \gets \mathrm{build\_reclaim\_plan}(issued\setminus S)$
+      \STATE $\mathrm{advise\_outside\_lock}(plan,\mathrm{DONTNEED})$
+      \STATE $\mathrm{update\_residency}(S,pressure,waste)$
+    \ELSE
+      \STATE $\mathrm{cancel\_once}(g)$
+    \ENDIF
+  \end{algorithmic}
+\end{algorithm}
 
 \subsection{页范围、预算与错误处理}
 
@@ -73,23 +123,23 @@ SLIM-ARC 基于 llama.cpp 构建，决赛正式 Mac 镜像固定 upstream revisi
 
 \subsection{跨硬件实现与适配过程}
 
-\subsubsection{x86/WSL：功能基线与受限环境}
+\paragraph{x86/WSL：功能基线与受限环境。}
 
 x86/WSL 阶段建立 cgroup v2 隔离、模型量化、mmap、关闭 repack、KV q4\_0、FlashAttention 和初始预取路径。三档环境用于验证模型远大于物理内存时的启动和吞吐。该阶段也暴露了并行实验、缓存状态和工作负载不一致造成的数据波动，后续实验改为串行执行并保留原始日志。
 
-\subsubsection{RK3588：从静态建议到阶段策略}
+\paragraph{RK3588：从静态建议到阶段策略。}
 
 RK3588 为 4$\times$A76+4$\times$A55 的 aarch64 SoC。初次 80B 上机时，模型通过 SSD 和 mmap 在 8\,GB 物理内存上运行，但静态 RANDOM 明显慢于禁用路径。实现随后增加阶段控制器和可配置 Decode MADV：Prefill 改为 SEQUENTIAL 后恢复顺序读取，Decode 在 SEQUENTIAL/NORMAL 之间根据实验选择。后续通过用户级 systemd scope 创建 3--5\,GiB cgroup，并用 \texttt{memory.current} 轮询弥补 5.10 内核缺少 \texttt{memory.peak} 的限制。
 
-\subsubsection{Mac/Colima：可复现的低内存控制面}
+\paragraph{Mac/Colima：可复现的低内存控制面。}
 
 Mac 实验运行在 ARM64 Colima VM 内的 Linux 容器，VM 配置为 8 vCPU/16\,GiB，benchmark 容器单独限制 1--4\,GiB 和 CPU 数，\texttt{memory.swap.max}=0。容器 runner 在执行前后保存 cgroup、GNU time、llama-bench JSON 和 runtime metrics。baseline-first 动态库问题修复后，构建流程把源码 commit、build context hash、patched tree hash、模型 SHA 和 image ID 写入 manifest，避免同名 tag 或错误链接污染 A/B。
 
-\subsubsection{Raspberry Pi 5：慢存储设备策略}
+\paragraph{Raspberry Pi 5：慢存储设备策略。}
 
 Raspberry Pi 5 使用 4 核 A76、4\,GiB 内存以及 USB 存储上的 NTFS-3G/FUSE。该链路的主要问题不是带宽上限，而是同步缺页经 FUSE 和 USB bridge 往返的固定延迟。系统为此实现 shared expert mlock、resident-only hot cache、16\,MiB 总预算、weight/expert prefetch 独立开关、跨 token LRU 和文件级 expert advice。实验否决了 LFRU、二次命中准入、NTFS3 mmap 和提前文件预读，最终保留“确定复用页常驻、投机 I/O 关闭或严格限额”的策略。
 
-\subsubsection{华为 HiDevLab：aarch64 可移植路径}
+\paragraph{华为 HiDevLab：aarch64 可移植路径。}
 
 HiDevLab 独立目录中的环境可以枚举 Ascend 910B4，但缺少完整 CANN/\texttt{torch\_npu} 用户态栈。本项目没有修改系统驱动，也没有占用其他比赛的 NPU 进程。为获得与系统相关的数据，项目在该环境编译 llama.cpp aarch64 CPU-only 路径，并以 OLMoE Q2\_K 执行 baseline、patched-default 和多种页策略 A/B。该实现证明 POSIX 路径可移植，不等同于 NPU kernel 适配。
 
