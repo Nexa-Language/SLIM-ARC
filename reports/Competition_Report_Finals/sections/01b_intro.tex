@@ -12,7 +12,7 @@
   \item 提出一套阶段感知的端侧权重访问控制方法，将 mmap、CPU repack、页建议、层级预取和存储特性纳入同一设计，并通过 RK3588 的静态负优化与动态恢复实验验证阶段划分的必要性。
   \item 设计 Router 反馈驱动的 MoE 专家管理闭环。系统以 generation token 关联预测与事实，对错误专家只回收完全位于其张量内部的页面，并以 cgroup 压力、浪费 EWMA、专家热度和统一预算控制驻留。
   \item 实现模型所有权的运行时、租约化访问、有界工作队列和严格指标契约，使地址生命周期、并发行为、降级路径与每次实验能够被复现和审计。
-  \item 构建覆盖 x86、RK3588、Raspberry Pi 5、Mac/Colima 和华为 aarch64 的实验体系。结果既报告 48.41\,GB 模型在 2\,GiB no-swap 环境中的可运行性，也给出 3\,GiB RK3588、动态页建议、慢盘专家驻留与 I/O 预算的正向结果，以及组合策略、小模型和错误预读的负向边界。
+  \item 构建覆盖 x86、RK3588、Raspberry Pi 5、Mac/Colima 和华为 aarch64 的实验体系。WSL 主实验给出 8\,GiB 同合同 Decode 0.08$\rightarrow$0.43\,token/s 以及固定 32\,GiB 合同下 3.01$\rightarrow$5.16\,token/s 的 Attention 消融；决赛实验进一步报告 48.41\,GB 模型在 2\,GiB no-swap 环境中的可运行性、3\,GiB RK3588、动态页建议、慢盘专家驻留与 I/O 预算的设备内收益。
   \item 实现一个与运行时协同的最小端侧 Agent Harness。它通过常驻服务、上下文裁剪、输出预算和受限 Shell 控制多轮工具负载，但不将功能闭环误写为模型 TPS 加速。
 \end{itemize}
 

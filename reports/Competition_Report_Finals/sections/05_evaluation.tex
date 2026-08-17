@@ -40,6 +40,104 @@ llama-bench 的 Prefill（pp）和 Decode（tg）均以 token/s 表示；wall ti
 
 \subsection{主实验结果}
 
+\subsubsection{x86/WSL：初赛核心性能与优化链}
+
+初赛首先在 Intel i9-13900H、32\,GB DDR5、NVMe SSD 和 Ubuntu 22.04/WSL2 环境中建立 80B 推理基线，并使用 cgroup v2 构造 8、16 和 32\,GiB 三档内存。该平台承担两项核心验证：其一，检验 SLIM-ARC 能否在模型文件显著大于内存上限时改善 Decode；其二，分析权重量化、缓存容量与 FlashAttention 如何改变不同运行区间的瓶颈。决赛实验并非替代这些结果，而是在 Mac、RK3588 和 Raspberry Pi 5 上进一步检验其跨设备边界。
+
+表\ref{tab:wsl-limited}给出 8\,GiB 下两组同合同配对结果。\texttt{pp4/tg1} 合同中，SLIM-ARC 将 Prefill 从 0.22 提高到 0.25\,token/s，将 Decode 从 0.08 提高到 0.43\,token/s，Decode 提升 437.5\%。在较长的 \texttt{pp16/tg4} 合同中，Decode 从 0.08 提高到 0.29\,token/s，提升 262.5\%；与此同时，Prefill 从 0.63 降至 0.28\,token/s。后者说明稀疏 Decode 的收益不能外推到密集 Prefill，阶段识别与分阶段策略是必要设计，而不是实现细节。
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{WSL 8\,GiB 下的同合同 80B 配对结果}
+  \label{tab:wsl-limited}
+  \begin{tabular}{llrrl}
+    \toprule
+    合同 & 配置 & Prefill & Decode & Decode 提升 \\
+    \midrule
+    pp4/tg1 & baseline & 0.22 & 0.08 & reference \\
+    pp4/tg1 & SLIM-ARC & \textbf{0.25} & \textbf{0.43} & \textbf{$+437.5\%$} \\
+    pp16/tg4 & baseline & 0.63 & 0.08 & reference \\
+    pp16/tg4 & SLIM-ARC & 0.28 & \textbf{0.29} & \textbf{$+262.5\%$} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+内存容量与量化格式决定了可被页缓存复用的权重比例。表\ref{tab:wsl-capacity}中，IQ4\_XS 在 16\,GiB 下达到 Decode $2.27\pm0.38$\,token/s，在 32\,GiB 下达到 $3.03\pm0.29$\,token/s；同一 32\,GiB 档的 Q4\_K\_M 为 $2.68\pm0.23$\,token/s。IQ4\_XS 将模型文件由约 45\,GB 收缩到约 40\,GB，使 32\,GiB 环境能够缓存更多权重页。三档结果用于刻画容量和量化边界，不与 8\,GiB 配对实验拼接成单一倍率。
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{WSL 内存容量、量化格式与 80B 吞吐}
+  \label{tab:wsl-capacity}
+  \begin{tabular}{lllll}
+    \toprule
+    内存 & 模型格式 & 线程 & Prefill & Decode \\
+    \midrule
+    16\,GiB & IQ4\_XS & 8 & -- & $2.27\pm0.38$ \\
+    32\,GiB & IQ4\_XS & 8 & $4.44\pm1.53$ & $3.03\pm0.29$ \\
+    32\,GiB & Q4\_K\_M & 8 & -- & $2.68\pm0.23$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+在固定 32\,GiB、8 threads、KV q4\_0 和 warm cache 的 Attention 消融中，未启用自动选择时 Decode 为 3.01\,token/s，\texttt{-fa on} 达到 3.90，\texttt{-fa auto} 达到 5.16\,token/s，相对 3.01 提升 71.4\%。该实验表明，当权重换页压力下降后，Attention I/O 会成为新的主要开销，计算融合能够继续提高热缓存区间的吞吐。
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\scriptsize,>=Latex]
+  \begin{scope}[xshift=0cm]
+    \node[font=\bfseries] at (2.2,4.45) {(a) 8 GiB 同合同 Decode};
+    \draw[->] (0.4,0.55)--(4.35,0.55) node[right]{token/s};
+    \foreach \x/\v in {0.4/0.0,1.2/0.1,2.0/0.2,2.8/0.3,3.6/0.4} {
+      \draw[gray!30] (\x,0.5)--(\x,4.0); \node[below] at (\x,0.5){\v};
+    }
+    \draw[gray!60,line width=1pt] (1.04,3.15)--(3.84,3.15);
+    \fill[gray!65] (1.04,3.15) circle (2.2pt) node[above]{0.08};
+    \fill[blue!70] (3.84,3.15) circle (3pt) node[above]{0.43};
+    \node[left] at (0.4,3.15){pp4/tg1};
+    \draw[gray!60,line width=1pt] (1.04,1.75)--(2.72,1.75);
+    \fill[gray!65] (1.04,1.75) circle (2.2pt) node[above]{0.08};
+    \fill[blue!70] (2.72,1.75) circle (3pt) node[above]{0.29};
+    \node[left] at (0.4,1.75){pp16/tg4};
+  \end{scope}
+  \begin{scope}[xshift=5.0cm]
+    \node[font=\bfseries] at (2.2,4.45) {(b) 容量与量化区间};
+    \draw[->] (0.45,0.55)--(4.35,0.55) node[right]{Decode};
+    \foreach \x/\v in {0.45/0,1.45/1,2.45/2,3.45/3} {
+      \draw[gray!30] (\x,0.5)--(\x,4.0); \node[below] at (\x,0.5){\v};
+    }
+    \draw[orange!80!black,line width=1.4pt] (2.34,3.25)--(3.10,3.25);
+    \fill[orange!75] (2.72,3.25) circle (3pt) node[above]{2.27};
+    \node[left] at (0.45,3.25){16G IQ4};
+    \draw[green!50!black,line width=1.4pt] (2.97,2.25)--(3.55,2.25);
+    \fill[green!55!black] (3.48,2.25) circle (3pt) node[above]{3.03};
+    \node[left] at (0.45,2.25){32G IQ4};
+    \draw[purple!65,line width=1.4pt] (2.90,1.25)--(3.36,1.25);
+    \fill[purple!70] (3.13,1.25) circle (3pt) node[above]{2.68};
+    \node[left] at (0.45,1.25){32G Q4};
+  \end{scope}
+  \begin{scope}[xshift=10cm]
+    \node[font=\bfseries] at (2.0,4.45) {(c) 32 GiB FA 消融};
+    \draw[->] (0.35,0.55)--(4.05,0.55) node[right]{Decode};
+    \foreach \x/\v in {0.35/0,1.05/1,1.75/2,2.45/3,3.15/4,3.85/5} {
+      \draw[gray!30] (\x,0.5)--(\x,4.0); \node[below] at (\x,0.5){\v};
+    }
+    \draw[very thick,blue!65] (2.46,3.25)--(3.97,1.25);
+    \fill[gray!65] (2.46,3.25) circle (2.7pt) node[above]{3.01};
+    \fill[orange!75] (3.08,2.25) circle (2.7pt) node[above]{3.90};
+    \fill[green!55!black] (3.96,1.25) circle (3.2pt) node[above]{5.16};
+    \node[left] at (0.35,3.25){FA off};
+    \node[left] at (0.35,2.25){FA on};
+    \node[left] at (0.35,1.25){FA auto};
+  \end{scope}
+\end{tikzpicture}
+\caption{WSL 初赛主实验的三个证据层次。左：同合同 baseline--SLIM-ARC 配对；中：内存容量与量化格式的运行区间，横线为均值加减标准差；右：固定热缓存合同下的 FlashAttention 消融。三组数据不跨合同合并计算倍率。}
+\label{fig:wsl-primary}
+\end{figure}
+
+WSL 主实验形成了完整的因果链：8\,GiB 配对结果验证页管理在强内存约束下能够显著改善 Decode；16--32\,GiB 结果表明缓存容量和模型文件大小共同决定稳定吞吐；固定 32\,GiB 的 Attention 消融则说明瓶颈会从权重 I/O 转移到算子 I/O。这一观察直接推动了决赛阶段的设备化策略：Mac 用于验证更小物理内存边界，RK3588 用于验证阶段页建议，Raspberry Pi 5 用于验证慢存储下的驻留与预算。
+
 \subsubsection{48.41 GB 模型在 2 GiB no-swap 环境中运行}
 
 Mac/Colima 的 8 月 12 日正式矩阵 20/20 成功，所有配置的 cgroup peak 均达到 2\,GiB，但没有 OOM 和 swap。8 月 17 日终态复核在 cold cache、4 CPU、\texttt{pp64/tg16} 和 A24 配置下成功退出，Prefill 为 3.908455\,token/s，Decode 为 0.709095\,token/s，wall time 58.06\,s，major faults 402,118。运行时记录 816 个专家样本，expert advice/issued/waste 均为 0，证明禁用投机专家预取的配置在最终镜像中生效。

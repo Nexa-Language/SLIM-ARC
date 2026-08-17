@@ -9,7 +9,7 @@
 
 \subsection{主要实验结论}
 
-实验首先证明 48.41\,GB 的 Qwen3-Next-80B-A3B 可以在 Mac/Colima 的 2\,GiB、4 CPU、no-swap 环境完成推理。RK3588 的 3\,GiB cgroup 主实验中，SLIM-ARC 将 Decode 从 0.70 提升至 2.21\,token/s；阶段消融又将静态 RANDOM 的 0.44/0.26 恢复到 2.84/1.40\,token/s，表明动态页建议是跨硬件部署的必要条件。Raspberry Pi 5 上，shared/hot 专家驻留相对 A24 将 Decode 提高 14.16\%、wall 降低 6.58\%，16\,MiB 预算进一步将投机 weight I/O 降低 98.44\%。这些结果分别对应强内存压力、阶段访问差异和慢存储复用三个问题。
+初赛 WSL 主实验首先证明了系统优化链的有效性：8\,GiB 同合同下 Decode 从 0.08 提高到 0.43\,token/s，固定 32\,GiB warm-cache 合同下 FlashAttention auto 将 Decode 从 3.01 提高到 5.16\,token/s。决赛实验随后把验证扩展到更严格和更多样的设备：48.41\,GB 模型在 Mac/Colima 的 2\,GiB、4 CPU、no-swap 环境完成推理；RK3588 的 3\,GiB cgroup 主实验将 Decode 从 0.70 提升至 2.21\,token/s，阶段消融又将静态 RANDOM 的 0.44/0.26 恢复到 2.84/1.40\,token/s；Raspberry Pi 5 上 shared/hot 专家驻留相对 A24 将 Decode 提高 14.16\%、wall 降低 6.58\%，16\,MiB 预算进一步将投机 weight I/O 降低 98.44\%。这些结果分别对应初赛性能基线、极限可运行性、强内存压力、阶段访问差异和慢存储复用五类问题。
 
 负面结果同样确定了系统边界。Mac 正式矩阵中的 combined cold wall 回退 19.95\%，HiDevLab OLMoE A24 仍比原生 baseline 慢 6.15\%，RK3588/Pi 的 expert RANDOM、popular-16、LFRU、NTFS3 mmap 和提前文件预读均未产生端到端收益。它们说明命中率、缓存计数、direct-read 带宽或机制正确性都不能替代匹配合同的 wall 与吞吐测量。
 
