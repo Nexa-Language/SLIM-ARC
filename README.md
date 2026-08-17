@@ -29,7 +29,7 @@ SLIM-ARC 是中山大学参加 2026 全国大学生计算机系统能力大赛�
 | Raspberry Pi 5，4 GiB，USB/FUSE，no-swap | Qwen3-Next-80B-A3B Q4_K_M | shared/hot 驻留使 Decode 提升 14.16%，wall time 缩短 6.58% |
 | Raspberry Pi 5，16 MiB 预取预算 | 同上 | 投机 weight I/O 降低 98.44%，吞吐近似不变 |
 
-详细实验合同、系统设计和数据见 [决赛技术报告](reports/Competition_Report_Official/main.pdf)。
+详细实验合同、系统设计和数据见 [决赛技术报告](reports/Competition_Report_Finals/main.pdf)。
 
 ## 系统设计
 
@@ -65,7 +65,7 @@ scripts/apply-slim-arc.py     可重复应用的 llama.cpp 集成脚本
 scripts/macos/                Mac/Colima 受限内存实验工具
 tests/                        C++ 与 Python 测试
 config/                       运行时和实验配置
-reports/Competition_Report_Official/  决赛技术报告
+reports/Competition_Report_Finals/    决赛技术报告（完整长版）
 ```
 
 ## 项目信息
