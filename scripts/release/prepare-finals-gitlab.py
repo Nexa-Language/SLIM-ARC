@@ -33,7 +33,7 @@ ALLOWED_ROOT_FILES = {".gitattributes", "CHANGELOG.md", "CMakeLists.txt", "LICEN
 TEXT_SUFFIXES = {".c", ".cc", ".cpp", ".csv", ".h", ".hpp", ".json", ".jsonl", ".md", ".py", ".sh", ".toml", ".txt", ".yaml", ".yml"}
 SOURCE_SUFFIXES = TEXT_SUFFIXES | {".css", ".html", ".js"}
 IMAGE_SUFFIXES = {".jpeg", ".jpg", ".png", ".svg"}
-REPORT_DIRS = {"Competition_Report_Official"}
+REPORT_DIRS = {"Competition_Report_Finals"}
 FINAL_PPTX: set[str] = set()
 FINAL_PDF: set[str] = set()
 FINAL_DOCS: set[str] = set()
@@ -147,7 +147,7 @@ def _public_exclusion(relative: PurePosixPath) -> bool:
         return True
     if parts[0] == "tests" and ("agent" in parts or relative.name.lower() == "test_prepare_finals_gitlab.py"):
         return True
-    if parts[0] == "reports" and len(parts) >= 2 and parts[1] != "competition_report_official":
+    if parts[0] == "reports" and len(parts) >= 2 and parts[1] != "competition_report_finals":
         return True
     return False
 
@@ -311,7 +311,7 @@ PUBLIC_CONTENT_DENY = re.compile(
 
 
 def _scan_public_content(path: Path, relative: PurePosixPath) -> None:
-    public_document = relative.as_posix() == "README.md" or relative.parts[:2] == ("reports", "Competition_Report_Official")
+    public_document = relative.as_posix() == "README.md" or relative.parts[:2] == ("reports", "Competition_Report_Finals")
     if not public_document or relative.suffix.lower() in IMAGE_SUFFIXES | {".pdf"}:
         return
     for fragment in _content_fragments(path):
