@@ -1,15 +1,97 @@
-\section{背景、动机与边界}
+\section{背景知识、相关工作与研究动机}
+\label{sec:background}
 
-\subsection{MoE 稀疏性不是自动的内存安全}
+\subsection{背景知识}
 
-MoE Router 每步只选择少量专家\cite{shazeer2017moe,fedus2022switch}，但模型文件的映射粒度、操作系统页缓存和预取粒度未必与该选择一致。因而，``只激活少量专家'' 只能说明存在降低无效 I/O 的机会，不能推出任何固定内存占用或加速比例。SLIM-ARC 通过标准的页建议接口表达候选动作；该接口本身不改变权重、路由输出或采样语义。
+\subsubsection{端侧 LLM 推理的内存组成}
 
-\subsection{相关工作的设计启发}
+端侧 LLM 推理的内存需求由模型权重、KV cache、计算临时量和操作系统页缓存共同构成。模型权重在生成过程中反复读取，KV cache 随上下文长度增长，临时张量则随算子实现和线程配置变化。对于 48.41\,GB 的 Qwen3-Next-80B-A3B Q4\_K\_M，当物理内存限制为 2--8\,GiB 时，不可能让全部权重同时常驻；系统只能依靠文件映射、demand paging 和页缓存不断搬运工作集。Linux cgroup v2 提供 \texttt{memory.max}、\texttt{memory.current} 与 \texttt{memory.peak} 等边界和观测量，可用于构造可复现的物理内存约束\cite{cgroupsv2}。
 
-FlexInfer 以异步预取、内存锁定和灵活张量保留拓展端侧推理的内存设计空间\cite{flexinfer2025}。PowerInfer-2 说明端侧设备上的高效模型执行需要系统级资源管理\cite{powerinfer2_2024}。MoE-Prism 进一步将专家的系统弹性与模型结构协同讨论\cite{moeprism2025}。EcoSpec 从 MoE 投机解码角度指出，新增专家会产生离散的边际加载成本，并据此选择草稿长度\cite{ecospec2026}；KTransformers 则展示了异构执行、热冷专家放置和异步流水线的价值\cite{ktransformers2025}。
+llama.cpp 采用 GGUF 权重与 mmap 加载路径，使模型文件无需整体复制到匿名内存\cite{llamacpp2024}。mmap 只保留虚拟地址映射，首次访问仍可能触发 major page fault 并从存储读取。\texttt{posix\_madvise} 和 \texttt{madvise} 允许运行时向内核表达 SEQUENTIAL、RANDOM、NORMAL、WILLNEED 或 DONTNEED 等访问建议\cite{posix_madvise}。这些接口是 best-effort 提示：它们可以改变 readahead 和页缓存行为，却不保证数据何时到达，也不改变模型计算结果。
 
-SLIM-ARC 不实现 EcoSpec 的 draft model，也不复现 KTransformers 的 AMX、NUMA 或 GPU/NPU 算子路径。我们只吸收其中可移植的系统原则：专家预测必须同时考虑收益和新增 I/O 成本；在慢盘或极低内存下，如果额外专家预取的边际收益不足，就精确关闭专家 \texttt{WILLNEED}，保留 demand paging、Router 观测和其他运行时路径。该原则对应树莓派 A24--A33 的投机预取开关与统一预算，而不是新增一个未经验证的性能模块。本项目也不复现或比较这些论文的数值；相关工作只支持设计动机，性能结论仍来自第\ref{sec:protocol}节的本项目证据。
+\subsubsection{MoE Router 与专家访问}
 
-\subsection{决赛证据口径}
+MoE 层包含 Router、若干 routed experts 和可能存在的 shared expert。Router 根据 token 表征计算专家分数，并选取 top-$k$ 专家执行\cite{shazeer2017moe,fedus2022switch}。Qwen3-Next-80B-A3B 包含数百个 routed experts，而每个 token 只激活其中少量专家\cite{qwen3next2024}。这使专家权重具有稀疏工作集，但稀疏性只在 Router 结果产生后才成为事实。在结果到达前进行预取必须依赖历史、跨层或在线转移预测，错误预测会带来额外 I/O 和页缓存占用。
 
-初赛报告中来自不同设备、内存档位、缓存状态、工作负载或未完成镜像链接验证的行，均不能与本阶段的受限 Mac 运行相除或合并。已经被审计否定的历史性能叙述不出现在本报告中。决赛报告将把机制正确性、设计动机和最终性能证据分开：只有最后一类能产生吞吐、内存峰值或提升比例的结论。
+专家张量的布局进一步限制了回收粒度。一个专家切片可能不是页大小的整数倍，首尾页面也可能与相邻专家共享。对整个切片直接调用 DONTNEED 可能覆盖仍会被访问的边界页。因此，安全回收必须验证张量可整除性、专家 ID、地址加法和页面边界，只操作完全位于候选专家内部的页面。
+
+\subsubsection{Prefill、Decode 与长上下文}
+
+Prefill 一次处理多个输入 token，通常按层扫描较大的权重和 Attention 工作集；Decode 每步只产生一个或少量 token，权重访问被重复执行，MoE 专家选择更稀疏。两阶段的计算强度、缺页密度和可用于隐藏 I/O 的时间窗口不同。初赛 Qwen3-4B 的 Phase 2c 实验已出现 Prefill 改善而 Decode 回退 15.2--21.6\% 的分化，说明单一访问策略不能同时优化两个阶段。
+
+KV cache 是另一条独立增长路径。PagedAttention 通过分页组织 KV 内存\cite{pagedattention2023}，KVQuant 与 KIVI 研究低比特 KV 表示\cite{kvquant2024,kivi2024}，StreamingLLM 通过 attention sink 与最近窗口支持稳定的流式推理\cite{streamingllm2024}。这些方法与权重换页互补：前者降低上下文相关内存，后者控制远大于物理内存的模型权重访问。
+
+\subsection{相关工作}
+
+\subsubsection{权重卸载与内存层次管理}
+
+FlexInfer 将端侧推理表述为张量保留、卸载和异步预取问题，通过灵活的内存管理在设备内存不足时维持执行\cite{flexinfer2025}。PowerInfer 与 PowerInfer-2 利用神经元激活稀疏性、热冷分布和细粒度缓存，将部分权重放置到 CPU、GPU 或闪存并重叠数据移动\cite{powerinfer2024,powerinfer2_2024}。这些系统表明，预取窗口和保留集合必须受内存预算约束。SLIM-ARC 继承这一原则，但目标环境以 CPU-only llama.cpp、POSIX mmap 和低成本边缘存储为主，运行时动作必须能够在没有 GPU kernel 或专用 NVMe 通路时退化。
+
+\subsubsection{MoE 专家预测、缓存与放置}
+
+MoE-Prism 从模型与系统协同角度讨论可驻留专家集合与内存预算之间的关系\cite{moeprism2025}；ProMoE 使用主动缓存降低专家访问成本\cite{promoe2025}；KTransformers 将热冷专家放置到 CPU/GPU 并构建异步流水线\cite{ktransformers2025}。EcoSpec 从投机解码出发，将新专家的离散加载成本纳入草稿长度决策\cite{ecospec2026}。这些工作共同说明，专家数量不是唯一成本，新增专家是否已驻留、是否触发 I/O 以及能否与计算重叠同样重要。
+
+SLIM-ARC 不依赖训练新的 Router，也不修改原始专家选择。系统使用原生 Router 结果作为事实，用历史、跨层和在线转移信号产生可撤回建议。与主要关注“应预取哪些专家”的工作相比，本文同时处理预测错误后的页级回收、压力下的驻留收缩和模型析构期间的地址安全。
+
+\subsubsection{KV 管理与计算优化}
+
+FlashAttention 通过 I/O-aware tiling 减少 Attention 对高层存储的访问\cite{flashattention2022}；StreamingLLM、H2O、SnapKV 和 InfLLM 分别从 attention sink、heavy hitter、提示相关选择和外部上下文记忆控制长序列 KV 工作集\cite{streamingllm2024,h2o2023,snapkv2024,infllm2024}。SLIM-ARC 的 KV q4\_0、StreamingLLM eviction 和 FlashAttention 路径沿用这些成熟方向，并将它们放入统一资源视图。本文的主要创新仍位于权重与专家页管理；KV 与计算优化用于构成完整可演示系统，而非替代核心贡献。
+
+\subsubsection{量化与端侧模型压缩}
+
+GPTQ、AWQ 和 SmoothQuant 从权重或激活分布出发降低模型精度位宽\cite{gptq2023,awq2024,smoothquant2023}。低比特量化直接减少模型文件与 I/O 字节，但不同量化格式在 CPU kernel、精度和解码速度之间存在权衡。SLIM-ARC 以 Q4\_K\_M 作为决赛主模型，将 IQ4\_XS 作为历史探索；后者在小样本 GSM8K 中出现明显精度风险，因而未成为默认方案。量化减少“每次搬多少”，运行时则控制“何时搬、搬哪些、保留多久”。
+
+\subsection{研究动机}
+
+上述背景与相关工作揭示了四类尚需在端侧 CPU-only 系统中共同解决的问题。
+
+第一，\textbf{固定页建议无法适配阶段和设备}。Prefill 的顺序扫描与 Decode 的稀疏复用需要不同 readahead；NVMe、虚拟磁盘和 FUSE/USB 对随机缺页的代价也不同。RK3588 上静态 RANDOM 的 4--6 倍负优化说明，将某一设备上的最佳建议复制到另一设备会破坏访问合并。
+
+第二，\textbf{专家预测必须能够被纠正}。仅提高预测命中率不足以保证端到端收益。错误专家会竞争页缓存和存储队列，即便预测本身正确，过晚或过大的预取也可能没有覆盖 I/O 延迟。系统需要把预测、成功建议字节、实际 Router 结果和回收动作关联到同一轮次。
+
+第三，\textbf{内存与 I/O 预算必须统一且可退化}。权重预取、专家预取、专家驻留和 KV cache 共享同一物理内存与存储链路。如果各模块独立扩大窗口，局部指标改善可能转化为整体回退。压力读数缺失、算术溢出或建议失败时，运行时还必须退回原始推理路径。
+
+第四，\textbf{后台优化必须服从模型生命周期}。预取 worker、Router hook 与模型映射并发访问同一地址。进程全局裸指针或无界队列会在模型卸载、图执行失败和重复通知下产生悬空地址或状态泄漏。性能机制只有在地址所有权和结算语义明确后才具有可复现性。
+
+图\ref{fig:motivation-map}把这些问题映射到 SLIM-ARC 的设计响应和实验验证。该映射也是后续章节的组织依据：第\ref{sec:design}节回答“应当如何设计”，第\ref{sec:implementation}节回答“如何落实到 llama.cpp 与端侧硬件”，第\ref{sec:evaluation}节回答“哪些机制有效、在哪些条件下有效”。
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=5mm and 7mm, >=Latex,
+  box/.style={draw,rounded corners,align=left,font=\small,text width=0.27\textwidth,minimum height=12mm},
+  p/.style={box,fill=red!6}, d/.style={box,fill=blue!7}, e/.style={box,fill=green!7}]
+  \node[p] (p1) {P1：阶段与设备改变页访问代价};
+  \node[p,below=of p1] (p2) {P2：Router 预测错误消耗 I/O 与页缓存};
+  \node[p,below=of p2] (p3) {P3：权重、专家与 KV 竞争统一资源};
+  \node[p,below=of p3] (p4) {P4：后台任务与映射地址生命周期耦合};
+  \node[d,right=of p1] (d1) {D1：阶段感知页建议与设备策略};
+  \node[d,below=of d1] (d2) {D2：预测、观测、回收与驻留闭环};
+  \node[d,below=of d2] (d3) {D3：压力感知的统一预算与准入};
+  \node[d,below=of d3] (d4) {D4：模型所有权、租约和有界队列};
+  \node[e,right=of d1] (e1) {E1：RK3588 动态 MADV；Mac/Pi 对照};
+  \node[e,below=of e1] (e2) {E2：Mac 预取消融；Pi 专家驻留};
+  \node[e,below=of e2] (e3) {E3：3/2\,GiB cgroup、预算与 I/O};
+  \node[e,below=of e3] (e4) {E4：并发单测、指标与终态运行};
+  \foreach \i in {1,2,3,4} {\draw[->] (p\i) -- (d\i); \draw[->] (d\i) -- (e\i);}
+\end{tikzpicture}
+\caption{研究问题、系统设计和实验验证之间的对应关系。}
+\label{fig:motivation-map}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{研究动机到设计模块的对应关系}
+  \label{tab:problem-design-map}
+  \begin{tabular}{p{0.20\textwidth}p{0.31\textwidth}p{0.39\textwidth}}
+    \toprule
+    研究问题 & 设计模块 & 主要验证 \\
+    \midrule
+    阶段与设备差异 & 阶段控制器、动态 MADV、设备策略 & RK3588 静态/动态对照；Mac/Pi weight prefetch 反向结果 \\
+    预测错误与 I/O 浪费 & Router token、错误页回收、专家驻留 & Mac A18--A24；Pi A26--A34；回收与指标单测 \\
+    资源竞争 & 统一预算、压力准入、KV/计算协同 & RK3588 3\,GiB；Mac 2\,GiB；Pi 16\,MiB 预算 \\
+    生命周期与并发 & model-owned runtime、租约、有界队列 & C++/sanitizer 测试、patched 指标、终态运行 \\
+    上层多轮负载 & 常驻 Agent Harness、上下文与输出预算 & 受限 Shell 功能闭环与 JSONL 可观测性 \\
+    \bottomrule
+  \end{tabular}
+\end{table}

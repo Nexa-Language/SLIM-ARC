@@ -24,7 +24,7 @@
 \usepackage{inconsolata}
 \usepackage{cite}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,positioning}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
 
 \setCJKmainfont{Songti SC}
 \setCJKsansfont{Songti SC}
@@ -34,8 +34,8 @@
 \setlength{\parindent}{2em}
 \setlist[itemize]{itemsep=2pt,topsep=4pt,parsep=1pt,leftmargin=3em}
 \newcommand{\projname}{OS挑战赛 Proj59（决赛）}
-\newcommand{\reporttitlelineA}{SLIM-ARC：面向端侧 Agent 的}
-\newcommand{\reporttitlelineB}{低内存 MoE 推理运行时与可复现实验}
+\newcommand{\reporttitlelineA}{SLIM-ARC：面向内存受限端侧系统的}
+\newcommand{\reporttitlelineB}{MoE 推理运行时设计与跨设备评测}
 \newcommand{\teamname}{依托Agent答辩OS}
 \newcommand{\members}{欧阳易芃 \quad 马福泉 \quad 刘昊}
 \newcommand{\advisers}{赵帅 \quad 张献伟}
@@ -108,8 +108,8 @@
 \input{sections/03_core_design}
 \input{sections/04_implementation}
 \input{sections/05_evaluation}
-\input{sections/05b_agent_harness}
 \input{sections/06_conclusion}
+\appendix
 \input{sections/07_appendix}
 \newpage
 \bibliographystyle{IEEEtran}

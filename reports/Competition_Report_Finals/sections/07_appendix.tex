@@ -1,82 +1,347 @@
-\newpage
-\section{附录：可追溯性清单}
+\section{完整实验数据与复现信息}
+\label{sec:appendix-results}
 
-\subsection{初赛到决赛的里程碑}
+\subsection{证据等级与比较规则}
 
-旧稿按六天计划罗列 Phase 0--5，且包含“留待决赛”等已经过期的状态。本版不再保留该开发计划，而以已经发生并可定位到提交或实验目录的里程碑替代，如表\ref{tab:finals-milestones}所示。
+为同时保存研发过程和可用于结论的结果，本附录将实验划分为四类。A 类具有明确合同、重复或终态复核以及完整证据链；B 类来自真实运行，但样本较少或只验证单一机制；C 类存在链接错误、控制变量错误、跨缓存拼接或已被后续实验推翻，仅用于研发追溯；D 类证明构建、运行或硬件枚举，不代表目标加速路径。
+
+所有 Prefill/Decode 均以 token/s 表示。提升率只在同设备、同模型、同缓存状态、同资源限制和同 workload 内计算。cold 与 warm、Q4\_K\_M 与 IQ4\_XS、CPU-only 与 NPU、cgroup peak 与进程 RSS 均不直接相除。表中未给出方差的单次结果只用于趋势或机制解释。
+
+\subsection{模型与设备合同}
 
 \begin{table}[H]
   \centering
-  \small
-  \caption{初赛到决赛的可验证里程碑}
-  \label{tab:finals-milestones}
-  \begin{tabular}{p{0.16\textwidth}p{0.30\textwidth}p{0.46\textwidth}}
+  \scriptsize
+  \caption{实验模型}
+  \label{tab:appendix-models}
+  \begin{tabular}{p{0.25\textwidth}p{0.16\textwidth}p{0.23\textwidth}p{0.28\textwidth}}
     \toprule
-    时间 & 阶段结果 & 决赛口径 \\
+    模型 & 类型 & 量化/大小 & 用途 \\
     \midrule
-    6/21--6/26 & 完成初赛基线、mmap/MADV、量化、预取与初步消融 & 作为技术起点保留；跨缓存、跨设备或审计失效的倍数不沿用 \\
-    8/5--8/10 & 在 RK3588 上跑通 80B，并定位静态 RANDOM 的严重负优化 & 实现阶段感知建议；动态策略在匹配工作负载下追平禁用路径 \\
-    8/11--8/12 & 完成 Mac 2\,GiB/no-swap 身份绑定矩阵 & 20 次成功运行由同一 JSON 导入；回收/驻留 opt-in，组合拒绝 \\
-    8/13--8/17 & 转向真实边缘设备与慢存储链路 & 树莓派形成 shared/hot 常驻、16\,MiB 预算、零投机预取与 512\,MiB LRU 的设备策略；top-8 保留质量门 \\
-    8/17 & 完成 Ascend 探测及 HiDevLab OLMoE A/B & 旧环境仅做硬件枚举；新独立环境跑通 aarch64 CPU-only baseline/SLIM-ARC，对小模型负面边界如实报告，不声称 NPU 加速 \\
+    Qwen3-4B & Dense & Q4\_K\_M，约 2.4\,GB & 小模型、KV/FA、Pi/RK 构建基线 \\
+    OLMoE-1B-7B & MoE，64 选 8 & Q4\_K\_M 约 4.2\,GB；Q2\_K 2.56\,GB & Router 链路与 HiDevLab A/B \\
+    Qwen3-Next-80B-A3B & MoE，512 experts & Q4\_K\_M，48,410,988,384\,B & 决赛主模型 \\
+    Qwen3-Next-80B-A3B & MoE & IQ4\_XS，约 40\,GB & 初赛量化探索，非默认 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\subsection{决赛阶段的主要问题与处理}
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \caption{设备与主要瓶颈}
+  \label{tab:appendix-devices}
+  \begin{tabular}{p{0.20\textwidth}p{0.23\textwidth}p{0.28\textwidth}p{0.20\textwidth}}
+    \toprule
+    设备 & 内存/隔离 & 存储 & 主要瓶颈 \\
+    \midrule
+    WSL/x86 & 8--32\,GiB cgroup & NVMe & 冷启动 I/O、缓存波动 \\
+    RK3588 & 7.8\,GB；2.5--5\,GiB scope & SSD 约 2.1\,GB/s & ARM 算力、内存带宽、fault \\
+    Mac/Colima & 1--4\,GiB、swap 0 & 虚拟磁盘 & page fault、CPU 饱和 \\
+    Pi 5 & 4\,GiB、运行期 no-swap & USB NTFS/FUSE & FUSE 往返与同步缺页 \\
+    HiDevLab & aarch64；32\,GiB HBM 可枚举 & CPU-only 实验 & 小模型接近全驻留 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-\begin{longtable}{p{0.28\textwidth}p{0.64\textwidth}}
+\subsection{初赛 WSL/x86 数据}
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \caption{80B WSL 历史核心结果}
+  \label{tab:appendix-wsl-core}
+  \begin{tabular}{p{0.18\textwidth}p{0.19\textwidth}rrp{0.27\textwidth}}
+    \toprule
+    合同 & 配置 & Prefill & Decode & 解释 \\
+    \midrule
+    8\,GiB，pp4/tg1 & baseline & 0.22 & 0.08 & B 类 reference \\
+    8\,GiB，pp4/tg1 & SLIM-ARC & 0.25 & 0.43 & Decode $+437.5\%$，仅限该合同 \\
+    8\,GiB，pp16/tg4 & baseline & 0.63 & 0.08 & B 类 reference \\
+    8\,GiB，pp16/tg4 & SLIM-ARC & 0.28 & 0.29 & Prefill $-56\%$，Decode $+262.5\%$ \\
+    16\,GiB，pp4/tg1 & SLIM-ARC & 0.17 & 0.38 & 无同合同 baseline \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+历史实验中的 0.08 和 5.16\,token/s 分别来自不同内存、缓存、量化和 FlashAttention 合同，不能组合计算统一端到端倍率；表\ref{tab:appendix-wsl-core}和表\ref{tab:appendix-preliminary-extra}因此分别保留各合同的原始结果。
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \caption{初赛量化、附属实验和精度检查}
+  \label{tab:appendix-preliminary-extra}
+  \begin{tabular}{p{0.25\textwidth}p{0.20\textwidth}p{0.46\textwidth}}
+    \toprule
+    项目 & 结果 & 解释 \\
+    \midrule
+    IQ4\_XS，16\,GiB/8核 & Decode $2.27\pm0.38$ & tg64，B 类 \\
+    IQ4\_XS，32\,GiB/8核 & Prefill $4.44\pm1.53$，Decode $3.03\pm0.29$ & B 类 \\
+    IQ4\_XS + FA auto，32\,GiB warm & 12.99/5.16 & 不与 cold baseline 相除 \\
+    Q4\_K\_M，16\,GiB & Prefill $1.96\pm0.82$ & pp128，tg 超时 \\
+    Q4\_K\_M，32\,GiB & Decode $2.68\pm0.23$ & tg48 \\
+    Qwen3-4B，2\,GiB+1核 & Decode $2.58\pm0.17$ & 小模型生存 \\
+    OLMoE，2\,GiB+1核 & Decode $8.92\pm0.94$ & 小 MoE 生存 \\
+    GSM8K 4B Q4\_K\_M & 15/20 & 小样本检查 \\
+    GSM8K 80B Q4\_K\_M + KV q4\_0 & 5/10 & 小样本检查 \\
+    GSM8K 80B IQ4\_XS + KV q4\_0 & 0/10 & 精度风险 \\
+    Self-draft speculative decoding & 3.01$\rightarrow$1.41，$-53.2\%$ & 拒绝 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{RK3588 完整实验数据}
+
+\subsubsection{小模型与首次 80B 上机}
+
+\begin{longtable}{p{0.25\textwidth}p{0.22\textwidth}rrp{0.18\textwidth}}
+  \caption{RK3588 小模型与早期 80B 数据}\label{tab:appendix-rk-early}\\
   \toprule
-  \textbf{问题} & \textbf{证据与处理} \\
+  模型/合同 & 配置 & Prefill & Decode & 备注 \\
+  \midrule
+  \endfirsthead
+  \toprule 模型/合同 & 配置 & Prefill & Decode & 备注 \\
   \midrule
   \endhead
-  固定页建议不能跨硬件复用
-    & RK3588 上静态 RANDOM 将 \texttt{p32/n16/t4} 降到 0.44/0.26\,t/s；改为阶段感知 SEQUENTIAL/设备相关 Decode 策略后达到 2.84/1.40\,t/s。 \\
-  预取状态与 Router 结果可能错配
-    & 使用非复用 generation token；成功、空结果、缺节点和计算失败都必须结算或取消，避免记录泄漏与错误归因。 \\
-  模型卸载与后台线程共享地址
-    & 将运行时归属于模型，图执行持有租约；销毁时拒绝新租约、等待在途租约并 join worker，再释放映射。 \\
-  Mac patched 变体曾错误链接 baseline 库
-    & 旧 patched 性能行全部作废；正式矩阵在每次运行中绑定镜像、源码树、variant linkage、模型和 cgroup 证据。 \\
-  慢 FUSE/USB 存储提前读无收益
-    & 树莓派 A45/A46 显示精确 expert \texttt{fadvise} 为 $-0.251714\%$；默认关闭，后续优先低比特专家、静态裁剪或缓存替换策略。 \\
-  慢盘投机 I/O 大但吞吐无收益
-    & A29 的 16\,MiB 预算将 issued/in-flight weight bytes 降低 98.44\% 且吞吐近似不变；A32/A33 进一步证明完全关闭 weight/expert speculative advice 后 wall 同为 505\,s。 \\
-  热专家 cache 需要匹配 recurrent 访问
-    & 512\,MiB LRU 将 evictions 降低 36.31\% 并保持吞吐；LFRU 增加 nonresident scan 56.33\%，两次命中准入使 prefill 下降约 54\%，均被拒绝。 \\
+  Qwen3-4B p64/n32/t4 & F16 KV, FA auto & $8.57\pm0.01$ & $6.90\pm0.13$ & 小模型参考 \\
+  Qwen3-4B p64/n32/t4 & KV q4\_0 & $8.31\pm0.10$ & $5.05\pm0.29$ & 短上下文变慢 \\
+  Qwen3-4B p64/n32/t4 & FA off & $7.63\pm0.04$ & $3.49\pm0.69$ & FA 有效 \\
+  OLMoE & 默认 & 4.3 & 10.7 & RSS 约 4.2\,GB \\
+  80B p32/n16/t4 & 静态全开 & 0.39 & 0.23 & 负优化 \\
+  80B p32/n16/t4 & SLIM\_ARC\_DISABLE & 2.02 & 0.89 & reference \\
+  80B p32/n16/t4 & NO\_MADV\_RANDOM & 1.41 & 0.65 & 定位 RANDOM \\
+  80B p32/n16/t4 & NO\_PREFETCH & 0.37 & 0.24 & 预取影响小 \\
+  80B p32/n16/t8 & 静态全开 & 0.89 & 0.48 & 线程扩展 \\
+  80B p32/n16/t2 & 静态全开 & 0.23 & 0.17 & 线程不足 \\
   \bottomrule
 \end{longtable}
 
-\subsection{提交材料与代码入口}
+80B llama-cli 冒烟中，静态全开/禁用/NO\_MADV 的 Prompt/Generation 分别约 0.5/0.5、1.7/1.9 和 1.4/1.8，RSS 约 6.29/6.26/6.50\,GiB。LD\_PRELOAD 拦截确认静态路径对 45.1\,GiB 映射调用 RANDOM 和 WILLNEED。
 
-材料入口如下；初赛报告目录保持独立，不被本次修订覆盖。
+\subsubsection{动态 MADV、长上下文与专家机制}
 
-\begin{itemize}
-  \item 核心运行时：\path{patches/llama-upstream/slim-arc-*}；
-  \item 幂等集成脚本：\path{scripts/apply-slim-arc.py}；
-  \item Mac 控制器与证据工具：\path{scripts/macos/}；
-  \item 端侧记录：\path{docs/rk3588_test_notes/} 与 \path{docs/pi5_4GB_test_notes/}；
-  \item Ascend 探测与 OLMoE A/B：\path{docs/ascend_test_notes/2026-08-17/}；
-  \item 决赛报告：\path{reports/Competition_Report_Finals/}。
-\end{itemize}
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \caption{RK3588 长上下文与动态策略}
+  \label{tab:appendix-rk-long}
+  \begin{tabular}{p{0.25\textwidth}p{0.26\textwidth}rrp{0.19\textwidth}}
+    \toprule
+    Workload & 配置 & Prefill & Decode & 结论 \\
+    \midrule
+    p512/n64/t4 & 静态全开 & 2.43 & 0.43 & 负优化 \\
+    p512/n64/t4 & DISABLE & 6.35 & 1.96 & reference \\
+    p512/n128/t4 & 静态全开 & 2.41 & 0.53 & 负优化 \\
+    p512/n128/t4 & DISABLE & 6.35 & 2.13 & reference \\
+    context 8192/n128 & 静态全开 & 2.44 & 0.53 & 可运行 \\
+    context 8192/n128 & DISABLE & 6.34 & 2.15 & reference \\
+    context 16384/n128 & 静态全开 & 2.36 & 0.53 & 可运行 \\
+    context 16384/n128 & DISABLE & 5.54 & 1.64 & reference \\
+    p512/n128/t4 & 动态全开 & 6.09 & 2.08 & 接近 DISABLE \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-\subsection{实验可追溯性}
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \caption{RK3588 专家预测与预算消融}
+  \label{tab:appendix-rk-expert}
+  \begin{tabular}{p{0.25\textwidth}rrrp{0.24\textwidth}}
+    \toprule
+    配置 & Issued(MB) & Hit rate & Decode & 结论 \\
+    \midrule
+    baseline & 27,836.7 & 31.05\% & 1.9 & reference \\
+    confidence & 12,123.6 & 55.35\% & 1.9 & I/O $-56\%$，速度无损 \\
+    budget & 25,848.9 & 28.78\% & 1.9 & 截断突发 \\
+    confidence + budget & 12,073.5 & 54.00\% & 2.1 & 探索性正结果 \\
+    popular-16 & 72,634.4 & 19.31\% & 2.0 & I/O $+161\%$，拒绝 \\
+    expert ON & -- & -- & 1.41 & p32/n16/t4 \\
+    expert OFF & -- & -- & 1.44 & 预取无收益 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-\begin{longtable}{p{0.30\textwidth}p{0.62\textwidth}}
-\toprule
-\textbf{对象} & \textbf{决赛要求} \\
-\midrule
-\endhead
-源码与镜像 & 固定 commit、patched source hash、llama.cpp \texttt{360e134}、镜像 ID 和 variant linkage。 \\
-模型 & 固定文件名、大小和 SHA-256；挂载为只读。 \\
-资源边界 & 2\,GiB、4 vCPU、no-swap 的 cgroup 文件记录；无有限值的行不接受。 \\
-工作负载 & \texttt{pp64}/\texttt{tg16}、prompt、seed、context 与 cold/warm 标签保持可比较。 \\
-结果行 & outcome、wall time、吞吐、cgroup peak、fault/I/O 和每个 patched 行的唯一运行时指标。 \\
-负面结果 & OOM、timeout、error 及未通过 promotion gate 的配置保留在 JSON 和总结中。 \\
-报告导入 & 只从机器生成的 \texttt{finals-results.json} 及其 raw manifests 写入最终表格或图；不得手工转录。 \\
-\bottomrule
+Temporal predictor 为 34.9\%，spatial predictor 为 4.5\%，随机参考约 2\%。修复后 48 层注册 144 个专家张量，912 次 Router cache、846 次 cached expert 获取和 846 次 WILLNEED，证明专家调用链真实触发。
+
+\subsubsection{3 GiB、超长 Prompt、多轮对话与 RSS}
+
+\begin{longtable}{p{0.08\textwidth}p{0.30\textwidth}p{0.12\textwidth}rrp{0.20\textwidth}}
+  \caption{RK3588 F/G/H/R 系列}\label{tab:appendix-rk-fgh}\\
+  \toprule
+  编号 & 配置 & MemMax & Prefill & Decode & 结果 \\
+  \midrule
+  \endfirsthead
+  \toprule 编号 & 配置 & MemMax & Prefill & Decode & 结果 \\
+  \midrule
+  \endhead
+  F1 & baseline pp128/tg64 & 3\,GiB & 3.85 & 0.70 & reference \\
+  F2 & SLIM-ARC & 3\,GiB & 4.40 & 2.21 & tg $+216\%$ \\
+  F3 & SLIM-ARC + KV eviction & 3\,GiB & 4.19 & 2.12 & tg $+203\%$ \\
+  F4 & baseline & 2.5\,GiB & 3.97 & 1.91 & 单次波动 \\
+  F5 & SLIM-ARC + KV eviction & 2.5\,GiB & 4.26 & 2.21 & tg $+16\%$ \\
+  G1/G2 & 4096 Prompt BL/SA+KV & 4\,GiB & -- & -- & 600\,s Prefill timeout，无 OOM \\
+  G3/G4 & 8192 Prompt BL/SA+KV & 4\,GiB & -- & -- & 600\,s Prefill timeout，无 OOM \\
+  H1 & 4B 五轮 baseline & 3\,GiB & 7.88 avg & 4.52 avg & 输入有 \texttt{-e} artifact \\
+  H2 & 4B 五轮 SA+KV & 3\,GiB & 7.86 avg & 5.20 avg & Generation $+15\%$ \\
+  R3 & 3\,GiB baseline RSS & 3\,GiB & 4.29 & 1.26 & VmHWM 4324\,MB \\
+  R4 & 3\,GiB SLIM-ARC RSS & 3\,GiB & 4.57 & 1.31 & VmHWM 3986\,MB \\
+  R5 & 3\,GiB SA+KV RSS & 3\,GiB & 4.57 & 1.33 & VmHWM 3951\,MB \\
+  \bottomrule
 \end{longtable}
 
-\subsection{报告构建保护}
+R 系列使用 8 threads，与 F 系列 4 threads 不直接比较。三个 3\,GiB R 场景的 cgroup \texttt{memory.current} 均触及 3072\,MB；5.10 内核缺少 \texttt{memory.peak}，使用 0.5\,s 轮询峰值。
 
-当固定路径的正式 JSON 不存在、无效、不是恰好两轮完整 20 次成功运行，或生成的 TeX 与当前 JSON hash 不一致时，构建驱动将以明确错误退出，不留下可能被误交付的 ``final'' PDF。该错误是发布门，而不是 TeX 环境错误。本次输入已到位并通过该门禁；维护者在结果文件变化后仍必须按 \texttt{RESULTS\_IMPORT.md} 重新运行构建驱动，并对新 PDF 逐页检查。
+\subsection{Mac/Colima 完整数据}
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \caption{Mac 8 月 12 日正式矩阵中位数}
+  \label{tab:appendix-mac-finals}
+  \begin{tabular}{llrrrp{0.20\textwidth}}
+    \toprule
+    配置 & Cache & Wall(s) & Decode & Major faults & 决策 \\
+    \midrule
+    baseline & cold & 69.530 & 0.600242 & 250,177.5 & reference \\
+    control & cold & 66.300 & 0.688606 & 406,601.5 & reference \\
+    reclaim & cold & 63.390 & 0.732030 & 403,548 & opt-in，调用 0 \\
+    residency & cold & 66.160 & 0.692031 & 403,203 & opt-in \\
+    combined & cold & 79.525 & 0.667540 & 399,309 & rejected \\
+    baseline & warm & 53.535 & 1.231783 & 143,727.5 & reference \\
+    control & warm & 60.300 & 0.820575 & 331,466.5 & reference \\
+    reclaim & warm & 58.080 & 0.844204 & 347,946 & opt-in \\
+    residency & warm & 63.190 & 0.712126 & 350,215.5 & opt-in \\
+    combined & warm & 63.265 & 0.759589 & 344,376.5 & overall rejected \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+8 月 11 日生存扫描确认 2/3/4/6/8/12\,GiB 均两次成功，最低观察与最低稳定档位均为 2\,GiB；CPU 曲线为 2c 75.06\,s、4c 68.56\,s、6c 66.28\,s、8c 66.72\,s。该镜像的 patched 行曾错误加载 baseline 库，因此只保留真实 baseline、cgroup/no-swap 和 CPU 曲线。
+
+\begin{longtable}{p{0.09\textwidth}p{0.31\textwidth}p{0.42\textwidth}p{0.12\textwidth}}
+  \caption{Mac A1--A33 优化筛选}\label{tab:appendix-mac-screen}\\
+  \toprule 编号 & 优化 & 关键数据 & 决策 \\
+  \midrule
+  \endfirsthead
+  \toprule 编号 & 优化 & 关键数据 & 决策 \\
+  \midrule
+  \endhead
+  A1 & latest-wins + pressure & 2\,GiB cold 3.951/0.800，57.16\,s；1\,GiB 成功 & 保留 \\
+  A4 & Prefill 8/Decode 6 threads & Decode $+20.23\%$，wall $-5.91\%$ & 候选 \\
+  A5 & expert RANDOM & Decode 0.801$\rightarrow$0.262，wall 55.90$\rightarrow$96.42 & 拒绝 \\
+  A6 & expert NORMAL & Decode 0.801$\rightarrow$0.657，wall 55.90$\rightarrow$61.08 & 拒绝 \\
+  A7/A12 & worker poll & 50 优于 25/75/100 & 选 50 \\
+  A8 & shared expert residency & Decode $+3.07\%$，wall $-5.40\%$ & opt-in \\
+  A9 & MLOCK\_ONFAULT & Decode $-3.39\%$ & 拒绝 \\
+  A10 & Decode threads 5/6/7 & 6 threads 0.834、55.31\,s & 选 6 \\
+  A11 & readahead 128/192/256 KiB & 256 KiB Prefill 4.732、51.77\,s & Pareto \\
+  A13/A14 & small always-used tensors & 短 $+0.11\%$；长 $-0.72\%$ & 不推广 \\
+  A15 & shared expert sustained & Decode 0.937$\rightarrow$1.025，wall 101.87$\rightarrow$96.36 & 保留 \\
+  A16 & 256 KiB sustained readahead & pp $+13.39\%$、tg $+2.10\%$、wall $-6.39\%$ & 候选 \\
+  A17 & graph 后 hot cache & Decode $-2.07\%$ & 拒绝时机 \\
+  A18 & inline Router + hot512 & tg $+10.35\%$、wall $-7.77\%$ & 保留 \\
+  A20 & layer-local 32 MiB & tg $+1.03\%$、fault $-4.09\%$、I/O $-5.10\%$ & opt-in \\
+  A22 & cross-layer Router Top2 & tg $+9.96\%$、wall $-7.77\%$、hit 88.56\% & 原型 \\
+  A23 & online transition Top4 & 三轮波动，无稳定优势 & opt-in \\
+  A24 & no expert prefetch & pp $+10.66\%$、tg $+22.45\%$、wall $-15.72\%$ & 候选 \\
+  A25 & no entire prefetch runtime & tg $-16.91\%$、wall $+18.09\%$ & 拒绝 \\
+  A32/A33 & weight prefetch on/off & on 1.083/92.19\,s；off 1.022/96.14\,s & Mac 保留 on \\
+  \bottomrule
+\end{longtable}
+
+8 月 17 日终态复核为 Prefill 3.908455、Decode 0.709095、wall 58.06\,s、peak 2\,GiB、Maximum RSS 2,084,740\,KiB、major faults 402,118、expert samples 816、expert advice/issued/waste 0/0/0。
+
+\subsection{Raspberry Pi 5 完整数据}
+
+\begin{longtable}{p{0.09\textwidth}p{0.28\textwidth}rrrp{0.18\textwidth}}
+  \caption{Pi 5 的 80B 慢存储序列}\label{tab:appendix-pi-all}\\
+  \toprule 编号 & 改动 & Prefill & Decode & Wall(s) & 决策 \\
+  \midrule
+  \endfirsthead
+  \toprule 编号 & 改动 & Prefill & Decode & Wall(s) & 决策 \\
+  \midrule
+  \endhead
+  A23 & online transition Top4 & 0.200179 & 0.055052 & 550 & 原型 \\
+  A24 & no expert prefetch & 0.201104 & 0.055614 & 547 & 慢盘参考 \\
+  A26 & resident hot512 & 0.200578 & 0.060726 & 522.5 & 保留 \\
+  A28 & shared + hot512 & 0.204023 & 0.063486 & 511 & 强基线 \\
+  A29 & 16\,MiB budget & 0.204283 & 0.063585 & 510.5 & I/O $-98.44\%$ \\
+  A32 & no weight prefetch & 0.203642 & 0.065246 & 505 & Pi 候选 \\
+  A33 & weight prefetch control & 0.203043 & 0.065006 & 505 & 无收益 \\
+  A34 & 512\,MiB LRU & 0.203585 & 0.065856 & 503 & 保留 \\
+  A35 & 384\,MiB LRU & 0.202685 & 0.064198 & 510 & 拒绝 \\
+  A36 & 512\,MiB LRU 复测 & 0.204150 & 0.066158 & 500 & reference \\
+  A37 & LFRU & 0.200884 & 0.064845 & 507.5 & 拒绝 \\
+  A38--40 & 二次命中准入 & 约 0.094 & -- & 早停 & Prefill 约 $-54\%$ \\
+  A41 & NTFS/FUSE & 0.204150 & -- & -- & 保留 \\
+  A42 & NTFS3 read-only & 0.070032 & -- & -- & 拒绝 \\
+  A43/A44 & prefetch32/hot768 & 约 0.093 & -- & 早停 & 控制变量错误，C 类 \\
+  A45 & exact file advice on & 0.093601 & -- & 早停 & $-0.2517\%$ \\
+  A46 & file advice off & 0.093837 & -- & 早停 & reference \\
+  A47 & 旧源码复现 & 0.094405 & -- & 早停 & 同一慢簇 \\
+  A49 & routed top-8 & 0.054285 & 0.029354 & 528 & 研究开关 \\
+  A50 & routed top-10 & 0.046178 & 0.026556 & 546 & reference \\
+  \bottomrule
+\end{longtable}
+
+Pi 的 Qwen3-4B 早期修复后 \texttt{pp64/tg32} 为 $10.16\pm0.23/3.48\pm0.13$，Peak RSS 约 2.42\,GiB；该 Dense 模型不触发 MoE 专家路径，主要验证构建、mmap、KV 和 FA。
+
+\subsection{HiDevLab 与 Ascend 数据}
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \caption{HiDevLab OLMoE Q2\_K 的 aarch64 CPU-only A/B}
+  \label{tab:appendix-ascend-all}
+  \begin{tabular}{lrrrr}
+    \toprule
+    配置 & Prefill & Decode & Wall(s) & Max RSS(KiB) \\
+    \midrule
+    baseline & 100.724597 & 51.340323 & 3.254600 & 2,575,956 \\
+    patched-default & 101.175889 & 45.254024 & 3.415535 & 2,577,888 \\
+    patched-A24 & 100.602680 & 48.184150 & 3.373611 & 2,577,380 \\
+    patched-no-prefetch & 99.618235 & 45.803109 & 3.457525 & 2,577,572 \\
+    patched-dynamic-normal & 100.326690 & 47.396683 & 3.443797 & 2,577,576 \\
+    patched-dynamic-random & 100.237988 & 44.155583 & 3.535042 & 2,577,052 \\
+    patched-sequential-prefetch & 99.443328 & 47.358331 & 3.484104 & 2,578,344 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+硬件探测为 aarch64、Ascend 910B4、32\,GiB HBM、Health OK、\texttt{npu-smi 25.2.0}、\texttt{ascendhal 7.35.23}。由于缺少完整 CANN/ACL/\texttt{torch\_npu}，表\ref{tab:appendix-ascend-all}不使用 NPU。
+
+\subsection{跨设备优化决策}
+
+\begin{longtable}{p{0.22\textwidth}p{0.13\textwidth}p{0.14\textwidth}p{0.14\textwidth}p{0.14\textwidth}p{0.13\textwidth}}
+  \caption{优化在不同设备上的结果}\label{tab:appendix-decision-ledger}\\
+  \toprule 优化 & WSL & RK3588 & Mac & Pi 5 & 总体决策 \\
+  \midrule
+  \endfirsthead
+  \toprule 优化 & WSL & RK3588 & Mac & Pi 5 & 总体决策 \\
+  \midrule
+  \endhead
+  关闭 CPU repack & 必需 & 必需 & 构建基线 & 必需 & 保留 \\
+  mmap/demand paging & 核心 & 80B 基础 & 2\,GiB 基础 & 80B/4GB 基础 & 保留 \\
+  静态 RANDOM & 早期正向 & 4--6倍负优化 & 可严重回退 & 慢盘不适合 & 拒绝默认 \\
+  动态阶段建议 & 方向正确 & 恢复 2.84/1.40 & 保留 & 按慢盘收缩 & 设备化 \\
+  盲目 expert prefetch & 命中不稳 & confidence 减 I/O & A24 关闭更快 & 关闭 & 不默认 \\
+  Router predictor & 研究 & temporal 34.9\% & A22 hit 88.56\% & 高命中未提速 & 研究 \\
+  Shared/hot residency & 未系统测 & 可选 & A18 正向 & A28/A34 正向 & 按设备保留 \\
+  Wrong-page reclaim & 未测 & 机制路径 & 正式矩阵调用 0 & 回收但 wall 中性 & opt-in \\
+  Weight prefetch & 混合 & 设备相关 & on 更快 & off 持平少 I/O & 设备化 \\
+  KV q4\_0 & 8\,GiB 有价值 & 小模型变慢 & 非主瓶颈 & 短上下文小 & 按压力启用 \\
+  KV eviction & 长上下文 & 8192/16384 可运行 & 非主项 & 短上下文不触发 & 长上下文 opt-in \\
+  FlashAttention & 热缓存收益 & 4B 明显 & 后端决定 & 4B 可用 & 兼容时保留 \\
+  IQ4\_XS & 速度/体积收益 & 未作主线 & 非固定模型 & 未用 & 精度风险 \\
+  Speculative decoding & $-53.2\%$ & 未继续 & 未继续 & 未继续 & 拒绝 \\
+  \bottomrule
+\end{longtable}
+
+\subsection{代码、数据与复现入口}
+
+核心运行时位于 \path{patches/llama-upstream/slim-arc-*}，幂等集成脚本为 \path{scripts/apply-slim-arc.py}。Mac 控制器和结构化证据工具位于 \path{scripts/macos/}；Agent Harness 位于 \path{scripts/agent/}。实验数据入口为 \path{docs/results/README.md}，其下进一步链接 \path{docs/macos_test_notes/}、\path{docs/rk3588_test_notes/}、\path{docs/pi5_4GB_test_notes/} 和 \path{docs/ascend_test_notes/}。初赛报告保存在 \path{reports/Competition_Report/}，本报告位于 \path{reports/Competition_Report_Finals/}。
+
+\subsection{赛事声明与成员分工}
+
+项目由欧阳易芃、马福泉和刘昊共同完成。主要工作包括系统架构与运行时实现、cgroup 与 benchmark 工具、跨设备部署、实验执行、数据分析、报告与演示材料。指导教师为赵帅和张献伟。开发过程中使用大语言模型辅助代码检索、文档整理和图表草拟；所有进入报告的实验数值均来自仓库中的原始日志或结构化结果，性能结论由队员复核。第三方代码、论文和系统接口均在正文与参考文献中注明。

@@ -78,6 +78,17 @@ RK3588 的 80B 实验是这项改动的直接原因。静态 `MADV_RANDOM` 在�
 
 这个设备最能说明为什么要做阶段感知策略。静态 RANDOM 会把大块顺序读拆成同步小缺页，弱核、DMA/SMMU 和中断路径的固定开销被放大。动态策略恢复 Prefill，并让 Decode 接近禁用路径。相关原始记录在 `docs/rk3588_test_notes/`。
 
+队友随后补齐的 F/G/H/R 系列把结论扩展到了严格内存限制、长 Prompt、多轮对话和 RSS：
+
+- F1/F2 在 3GiB、4 threads、`pp128/tg64`、swap 0 下对比：baseline 为 3.85/0.70 t/s，SLIM-ARC 为 4.40/2.21 t/s，Decode 提高 216%（3.16 倍），Prefill 提高约 14%。
+- F3 加入 KV eviction 后为 4.19/2.12 t/s。短工作负载下它没有超过 SLIM-ARC，说明主要收益来自权重页策略，而不是 KV 驱逐。
+- F4/F5 在 2.5GiB 下分别为 3.97/1.91 和 4.26/2.21 t/s。baseline 单次值高于 3GiB baseline，说明缓存初态会放大波动，所以只能在 2.5GiB 档内比较，不能宣传“内存越小越快”。
+- G1--G4 的 4096/8192 Prompt 在 4GiB 下都在 600s Prefill 超时，但没有 OOM。这证明长 Prompt 的主要问题是权重换页和扫描时间，不是模型无法装入虚拟地址空间。
+- H1/H2 的 4B 五轮对话中，Generation 均值从 4.52 提高到 5.20 t/s（约 15%），Prompt 基本持平；H1 有 `echo -e` 输入 artifact，因此只作为探索性结果。
+- R3/R4/R5 使用 8 threads 做 RSS 补测，baseline、SLIM-ARC、SLIM-ARC+KV 的 VmHWM 分别为 4324、3986、3951MB。三者的 user scope `memory.current` 都触及 3072MB；由于进程 RSS 与 cgroup 文件页计费边界不同，这两类内存数不能直接相减。
+
+这批数据已经整理到决赛报告正文、完整附录和 `docs/results/README.md`，不会再只剩 PPT 截图里的“0.70 到 2.21”。
+
 ### 树莓派 5：慢盘上“少读”比“早读”重要
 
 树莓派阶段做了 resident cache、shared expert mlock、统一预算、替换策略、文件系统预读和 top-k 质量实验。当前比较有价值的结果是：
@@ -124,7 +135,9 @@ Agent Harness 是低优先级扩展，不是决赛主贡献。报告把它放在
 ## 代码和材料上的收尾
 
 - 决赛报告独立放在 `reports/Competition_Report_Finals/`，初赛 `reports/Competition_Report/` 保留。
-- 队友更新的三张图已替换进初赛报告对应 figure；PPT 由队友继续维护，本轮不改 PPT。
+- 决赛报告已经按标准论文逻辑重组为引言、背景与相关工作、系统设计、系统实现、实验评估、总结和附录；Design 与 Implementation 分开，实验先主结果、再消融和设备专项。
+- 队友更新的三张图已替换进决赛报告对应 figure；PPT 由队友继续维护，本轮不改 PPT。
+- 评测图不再使用简单柱状图：Mac 使用两轮原始值、极差和中位数区间图，RK3588 使用策略响应温度图，Pi 使用多目标 Pareto 图，并补充跨设备同合同效应矩阵。
 - Mac、RK3588、树莓派和 HiDevLab 的结论都绑定到各自证据目录，不能跨设备相除。
 - GitLab 发布历史已经按官方仓库需求清理；GitHub 仍是完整开发历史的恢复源。任何 `AGENTS.md`、`.agents`、`.codex`、`.omo` 和内部计划都不应进入对外仓库。
 

@@ -51,3 +51,115 @@ patched-combined & warm & 2.000 & 63.265 & 0.760 & 0 \\
 \end{table}
 \noindent\scriptsize\texttt{finals-results.json SHA-256: 843b54ada66bfea0d52ec55efcbf8f91b592d588cbffb0204efc40400196c655}\normalsize
 }
+
+\newcommand{\FinalsMacIntervalFigure}{%
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\scriptsize,x=1cm,y=1cm]
+\node[font=\small\bfseries] at (3.00,5.45) {Wall time：两轮极差与中位数};
+\node[font=\small\bfseries] at (10.90,5.45) {Decode：两轮极差与中位数};
+\draw[->,gray!65] (0.50,0.20)--(5.80,0.20);
+\draw[->,gray!65] (8.40,0.20)--(13.70,0.20);
+\draw[gray!18] (0.500,0.20)--(0.500,5.00) node[below,black] {50};
+\draw[gray!18] (1.611,0.20)--(1.611,5.00) node[below,black] {60};
+\draw[gray!18] (2.722,0.20)--(2.722,5.00) node[below,black] {70};
+\draw[gray!18] (3.833,0.20)--(3.833,5.00) node[below,black] {80};
+\draw[gray!18] (4.944,0.20)--(4.944,5.00) node[below,black] {90};
+\draw[gray!18] (8.400,0.20)--(8.400,5.00) node[below,black] {0.5};
+\draw[gray!18] (9.650,0.20)--(9.650,5.00) node[below,black] {0.7};
+\draw[gray!18] (10.900,0.20)--(10.900,5.00) node[below,black] {0.9};
+\draw[gray!18] (12.150,0.20)--(12.150,5.00) node[below,black] {1.1};
+\draw[gray!18] (13.400,0.20)--(13.400,5.00) node[below,black] {1.3};
+\node[anchor=east] at (0.35,4.650) {baseline};
+\draw[RoyalBlue,line width=1.2pt] (2.593,4.780)--(2.747,4.780);
+\fill[RoyalBlue] (2.593,4.780) circle (1.5pt);
+\fill[RoyalBlue] (2.747,4.780) circle (1.5pt);
+\draw[RoyalBlue,line width=1.8pt] (2.670,4.705)--(2.670,4.855);
+\draw[RoyalBlue,line width=1.2pt] (8.933,4.780)--(9.120,4.780);
+\fill[RoyalBlue] (8.933,4.780) circle (1.5pt);
+\fill[RoyalBlue] (9.120,4.780) circle (1.5pt);
+\draw[RoyalBlue,line width=1.8pt] (9.027,4.705)--(9.027,4.855);
+\draw[BurntOrange,line width=1.2pt] (0.839,4.520)--(0.947,4.520);
+\fill[BurntOrange] (0.839,4.520) circle (1.5pt);
+\fill[BurntOrange] (0.947,4.520) circle (1.5pt);
+\draw[BurntOrange,line width=1.8pt] (0.893,4.445)--(0.893,4.595);
+\draw[BurntOrange,line width=1.2pt] (12.752,4.520)--(13.195,4.520);
+\fill[BurntOrange] (12.752,4.520) circle (1.5pt);
+\fill[BurntOrange] (13.195,4.520) circle (1.5pt);
+\draw[BurntOrange,line width=1.8pt] (12.974,4.445)--(12.974,4.595);
+\node[anchor=east] at (0.35,3.730) {control};
+\draw[RoyalBlue,line width=1.2pt] (2.258,3.860)--(2.364,3.860);
+\fill[RoyalBlue] (2.258,3.860) circle (1.5pt);
+\fill[RoyalBlue] (2.364,3.860) circle (1.5pt);
+\draw[RoyalBlue,line width=1.8pt] (2.311,3.785)--(2.311,3.935);
+\draw[RoyalBlue,line width=1.2pt] (9.410,3.860)--(9.748,3.860);
+\fill[RoyalBlue] (9.410,3.860) circle (1.5pt);
+\fill[RoyalBlue] (9.748,3.860) circle (1.5pt);
+\draw[RoyalBlue,line width=1.8pt] (9.579,3.785)--(9.579,3.935);
+\draw[BurntOrange,line width=1.2pt] (1.119,3.600)--(2.170,3.600);
+\fill[BurntOrange] (1.119,3.600) circle (1.5pt);
+\fill[BurntOrange] (2.170,3.600) circle (1.5pt);
+\draw[BurntOrange,line width=1.8pt] (1.644,3.525)--(1.644,3.675);
+\draw[BurntOrange,line width=1.2pt] (9.537,3.600)--(11.270,3.600);
+\fill[BurntOrange] (9.537,3.600) circle (1.5pt);
+\fill[BurntOrange] (11.270,3.600) circle (1.5pt);
+\draw[BurntOrange,line width=1.8pt] (10.404,3.525)--(10.404,3.675);
+\node[anchor=east] at (0.35,2.810) {reclaim};
+\draw[RoyalBlue,line width=1.2pt] (1.738,2.940)--(2.238,2.940);
+\fill[RoyalBlue] (1.738,2.940) circle (1.5pt);
+\fill[RoyalBlue] (2.238,2.940) circle (1.5pt);
+\draw[RoyalBlue,line width=1.8pt] (1.988,2.865)--(1.988,3.015);
+\draw[RoyalBlue,line width=1.2pt] (9.727,2.940)--(9.974,2.940);
+\fill[RoyalBlue] (9.727,2.940) circle (1.5pt);
+\fill[RoyalBlue] (9.974,2.940) circle (1.5pt);
+\draw[RoyalBlue,line width=1.8pt] (9.850,2.865)--(9.850,3.015);
+\draw[BurntOrange,line width=1.2pt] (1.350,2.680)--(1.446,2.680);
+\fill[BurntOrange] (1.350,2.680) circle (1.5pt);
+\fill[BurntOrange] (1.446,2.680) circle (1.5pt);
+\draw[BurntOrange,line width=1.8pt] (1.398,2.605)--(1.398,2.755);
+\draw[BurntOrange,line width=1.2pt] (10.522,2.680)--(10.581,2.680);
+\fill[BurntOrange] (10.522,2.680) circle (1.5pt);
+\fill[BurntOrange] (10.581,2.680) circle (1.5pt);
+\draw[BurntOrange,line width=1.8pt] (10.551,2.605)--(10.551,2.755);
+\node[anchor=east] at (0.35,1.890) {residency};
+\draw[RoyalBlue,line width=1.2pt] (2.212,2.020)--(2.379,2.020);
+\fill[RoyalBlue] (2.212,2.020) circle (1.5pt);
+\fill[RoyalBlue] (2.379,2.020) circle (1.5pt);
+\draw[RoyalBlue,line width=1.8pt] (2.296,1.945)--(2.296,2.095);
+\draw[RoyalBlue,line width=1.2pt] (9.574,2.020)--(9.626,2.020);
+\fill[RoyalBlue] (9.574,2.020) circle (1.5pt);
+\fill[RoyalBlue] (9.626,2.020) circle (1.5pt);
+\draw[RoyalBlue,line width=1.8pt] (9.600,1.945)--(9.600,2.095);
+\draw[BurntOrange,line width=1.2pt] (1.686,1.760)--(2.246,1.760);
+\fill[BurntOrange] (1.686,1.760) circle (1.5pt);
+\fill[BurntOrange] (2.246,1.760) circle (1.5pt);
+\draw[BurntOrange,line width=1.8pt] (1.966,1.685)--(1.966,1.835);
+\draw[BurntOrange,line width=1.2pt] (9.342,1.760)--(10.110,1.760);
+\fill[BurntOrange] (9.342,1.760) circle (1.5pt);
+\fill[BurntOrange] (10.110,1.760) circle (1.5pt);
+\draw[BurntOrange,line width=1.8pt] (9.726,1.685)--(9.726,1.835);
+\node[anchor=east] at (0.35,0.970) {combined};
+\draw[RoyalBlue,line width=1.2pt] (2.368,1.100)--(5.193,1.100);
+\fill[RoyalBlue] (2.368,1.100) circle (1.5pt);
+\fill[RoyalBlue] (5.193,1.100) circle (1.5pt);
+\draw[RoyalBlue,line width=1.8pt] (3.781,1.025)--(3.781,1.175);
+\draw[RoyalBlue,line width=1.2pt] (9.417,1.100)--(9.477,1.100);
+\fill[RoyalBlue] (9.417,1.100) circle (1.5pt);
+\fill[RoyalBlue] (9.477,1.100) circle (1.5pt);
+\draw[RoyalBlue,line width=1.8pt] (9.447,1.025)--(9.447,1.175);
+\draw[BurntOrange,line width=1.2pt] (1.320,0.840)--(2.628,0.840);
+\fill[BurntOrange] (1.320,0.840) circle (1.5pt);
+\fill[BurntOrange] (2.628,0.840) circle (1.5pt);
+\draw[BurntOrange,line width=1.8pt] (1.974,0.765)--(1.974,0.915);
+\draw[BurntOrange,line width=1.2pt] (9.362,0.840)--(10.682,0.840);
+\fill[BurntOrange] (9.362,0.840) circle (1.5pt);
+\fill[BurntOrange] (10.682,0.840) circle (1.5pt);
+\draw[BurntOrange,line width=1.8pt] (10.022,0.765)--(10.022,0.915);
+\draw[RoyalBlue,line width=1.2pt] (5.95,5.03)--(6.35,5.03) node[right,black]{cold};
+\draw[BurntOrange,line width=1.2pt] (7.05,5.03)--(7.45,5.03) node[right,black]{warm};
+\node[align=center,text=gray!70!black] at (7.05,-0.35) {端点为两轮原始值，竖线为中位数；$n=2$，不解释为置信区间};
+\end{tikzpicture}
+\caption{Mac 2\,GiB 正式矩阵的两轮区间图。cold 与 warm 分开显示，组合策略的 wall 波动和 warm 配置的离散性清晰可见。}
+\label{fig:finals-mac-interval}
+\end{figure}
+}

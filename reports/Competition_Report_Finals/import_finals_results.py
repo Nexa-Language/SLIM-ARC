@@ -122,6 +122,75 @@ def _tex_decision(value: object) -> str:
     return _text(value, "generated decision").replace("_", "\\_")
 
 
+def _mac_interval_figure(result: Mapping[str, object]) -> list[str]:
+    """Render a two-round range-and-median figure from validated run records."""
+
+    raw_runs = result["runs"]
+    if not isinstance(raw_runs, list):
+        raise ValueError("runs must be a list")
+    runs = [_object(run, "run") for run in raw_runs]
+    labels = {
+        "baseline": "baseline",
+        "patched-control": "control",
+        "patched-reclaim": "reclaim",
+        "patched-residency": "residency",
+        "patched-combined": "combined",
+    }
+    lines = [
+        "\\newcommand{\\FinalsMacIntervalFigure}{%",
+        "\\begin{figure}[H]",
+        "\\centering",
+        "\\begin{tikzpicture}[font=\\scriptsize,x=1cm,y=1cm]",
+        "\\node[font=\\small\\bfseries] at (3.00,5.45) {Wall time：两轮极差与中位数};",
+        "\\node[font=\\small\\bfseries] at (10.90,5.45) {Decode：两轮极差与中位数};",
+        "\\draw[->,gray!65] (0.50,0.20)--(5.80,0.20);",
+        "\\draw[->,gray!65] (8.40,0.20)--(13.70,0.20);",
+    ]
+    for tick in (50, 60, 70, 80, 90):
+        x = 0.50 + (tick - 50.0) / 9.0
+        lines.append(f"\\draw[gray!18] ({x:.3f},0.20)--({x:.3f},5.00) node[below,black] {{{tick}}};")
+    for tick in (0.5, 0.7, 0.9, 1.1, 1.3):
+        x = 8.40 + (tick - 0.5) * 6.25
+        lines.append(f"\\draw[gray!18] ({x:.3f},0.20)--({x:.3f},5.00) node[below,black] {{{tick:.1f}}};")
+    for index, configuration in enumerate(CONFIGURATIONS):
+        y = 4.65 - index * 0.92
+        lines.append(f"\\node[anchor=east] at (0.35,{y:.3f}) {{{labels[configuration]}}};")
+        for cache, color, offset in (("cold", "RoyalBlue", 0.13), ("warm", "BurntOrange", -0.13)):
+            selected = [run for run in runs if run["configuration"] == configuration and run["cache_state"] == cache]
+            if len(selected) != 2:
+                raise ValueError("each Mac interval requires exactly two runs")
+            for metric, origin, scale, panel_shift in (
+                ("wall_seconds", 50.0, 1.0 / 9.0, 0.50),
+                ("decode_tps", 0.5, 6.25, 8.40),
+            ):
+                values = sorted(_number(run[metric], f"run.{metric}") for run in selected)
+                low = panel_shift + (values[0] - origin) * scale
+                high = panel_shift + (values[1] - origin) * scale
+                median = (low + high) / 2.0
+                yy = y + offset
+                lines.extend(
+                    [
+                        f"\\draw[{color},line width=1.2pt] ({low:.3f},{yy:.3f})--({high:.3f},{yy:.3f});",
+                        f"\\fill[{color}] ({low:.3f},{yy:.3f}) circle (1.5pt);",
+                        f"\\fill[{color}] ({high:.3f},{yy:.3f}) circle (1.5pt);",
+                        f"\\draw[{color},line width=1.8pt] ({median:.3f},{yy - 0.075:.3f})--({median:.3f},{yy + 0.075:.3f});",
+                    ]
+                )
+    lines.extend(
+        [
+            "\\draw[RoyalBlue,line width=1.2pt] (5.95,5.03)--(6.35,5.03) node[right,black]{cold};",
+            "\\draw[BurntOrange,line width=1.2pt] (7.05,5.03)--(7.45,5.03) node[right,black]{warm};",
+            "\\node[align=center,text=gray!70!black] at (7.05,-0.35) {端点为两轮原始值，竖线为中位数；$n=2$，不解释为置信区间};",
+            "\\end{tikzpicture}",
+            "\\caption{Mac 2\\,GiB 正式矩阵的两轮区间图。cold 与 warm 分开显示，组合策略的 wall 波动和 warm 配置的离散性清晰可见。}",
+            "\\label{fig:finals-mac-interval}",
+            "\\end{figure}",
+            "}",
+        ]
+    )
+    return lines
+
+
 def render_results_tex(result: Mapping[str, object], json_sha256: str) -> str:
     """Render only values derived from a previously validated payload."""
 
@@ -203,6 +272,8 @@ def render_results_tex(result: Mapping[str, object], json_sha256: str) -> str:
             "",
         ]
     )
+    lines.extend(_mac_interval_figure(result))
+    lines.append("")
     return "\n".join(lines)
 
 

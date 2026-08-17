@@ -1,11 +1,26 @@
-\section{结论、局限性与未来工作}
+\section{总结、局限性与未来工作}
+\label{sec:conclusion}
 
-SLIM-ARC 的决赛核心贡献不是某一个固定 \texttt{madvise} 参数，也不是无条件的专家预取，而是\textbf{基于阶段、Router 反馈和内存压力的专家权重页管理闭环}。阶段策略决定是否保留内核预读；专家预测是可撤回、受预算约束的建议；错误预取只对经过边界验证的内部页回收；驻留仅在压力、预测浪费和预算允许时准入；模型所有权与租约定义后台工作和映射地址的共同生命周期。边界条件、重复认领、压力状态、指标解析和打包变体均有自动化验证；正式实验进一步把每个成功运行绑定到源码、patched tree、模型、镜像与 cgroup 证据。
+\subsection{工作总结}
 
-端侧 Agent Harness 进一步把运行时能力接到多轮工具负载：常驻 endpoint 避免每步重载，短上下文和慢输出预算限制编排开销，受限 shell 提供可演示闭环。当前证据已经验证工具循环、预算收缩和指标记录，但尚未完成固定端侧模型上的 Harness 开/关 A/B，因此不把它写成新的加速结论。
+本文提出并实现了面向内存受限端侧系统的 MoE 推理运行时 SLIM-ARC。系统把稀疏 Router 访问转化为一个可观测、可撤回且受预算约束的物理页管理闭环：阶段控制器选择权重页策略，层级与 Router 信号生成候选，统一预算和压力状态决定准入，实际 Router 结果结算命中与浪费，错误专家的完整内部页被安全回收，shared/hot 专家则在设备允许时进入有限驻留集合。mmap、关闭 repack、KV q4\_0、StreamingLLM eviction 和 FlashAttention 与该闭环共同构成完整的端侧推理路径。
 
-其局限性同样明确。页建议是 best-effort，内核、FUSE、USB bridge 和设备缓存会使所谓 cold 状态难以复现；保守的页对齐会损失覆盖率；压力阈值和预测信号可能不适用于所有模型或工作负载；单一 2\,GiB/no-swap、短生成 Mac 矩阵不能推广到其他设备或长上下文；所有配置都触及同一 2\,GiB 峰值，无法证明峰值内存下降；combined cold 回退 \FinalsCombinedColdRegressionPercent\%，说明组合并非天然协同。树莓派上的提前文件读没有收益，而“常驻确定复用路径 + 限制或关闭投机 I/O”有效，说明慢存储优化的第一目标应是减少无效读取字节，而不是仅把同一批 I/O 提前。
+工程实现将运行时归属于模型对象，并以租约连接图执行和析构过程。有界 generation 队列、锁内快照、锁外页建议、严格算术、异常回退和版本化指标使性能机制具有明确的生命周期和归因边界。幂等 patcher、独立 baseline/patched 构建、模型与镜像身份、cgroup 记录和结构化结果共同支持跨平台复现。端侧 Agent Harness 进一步说明，上层多轮工具负载可以通过常驻服务、短上下文、输出预算和受限 Shell 服从同一资源目标。
 
-HiDevLab 的 OLMoE A/B 又给出一个互补边界：在 \texttt{aarch64} CPU-only、2.56\,GB 模型、内存充足和热页缓存下，A24 虽比默认 runtime 的 Decode 高 6.47\%，仍比原生 baseline 低 6.15\%。该负面结果被保留，因为它说明系统的收益来自真实内存/存储压力，而不是 patched 二进制本身；同时也不能把 Ascend 开发环境误写成 CANN/NPU 加速。
+\subsection{主要实验结论}
 
-比赛后的后续工作将沿三个可验证方向推进。第一，按专家连续打包并对 routed experts 采用更低比特，而保护 Router、Norm、Attention 与 shared expert，直接减少每 token 的磁盘读取量；第二，在真实 routing trace 上比较 per-layer LRU、LRU-K/ARC 与 workload-aware replacement，并报告 read bytes/token、cache hit、stall 和质量变化；第三，仅在固定质量集通过后评估自适应 expert top-$k$ 或 PEU pruning。任何方向都必须分别报告 cold、warm 与 mixed cache，且不能把一个设备的最佳页建议静态迁移到另一设备。图\ref{fig:reclaim-loop}仍是设计闭环，性能解释只接受新的受控证据。
+实验首先证明 48.41\,GB 的 Qwen3-Next-80B-A3B 可以在 Mac/Colima 的 2\,GiB、4 CPU、no-swap 环境完成推理。RK3588 的 3\,GiB cgroup 主实验中，SLIM-ARC 将 Decode 从 0.70 提升至 2.21\,token/s；阶段消融又将静态 RANDOM 的 0.44/0.26 恢复到 2.84/1.40\,token/s，表明动态页建议是跨硬件部署的必要条件。Raspberry Pi 5 上，shared/hot 专家驻留相对 A24 将 Decode 提高 14.16\%、wall 降低 6.58\%，16\,MiB 预算进一步将投机 weight I/O 降低 98.44\%。这些结果分别对应强内存压力、阶段访问差异和慢存储复用三个问题。
+
+负面结果同样确定了系统边界。Mac 正式矩阵中的 combined cold wall 回退 19.95\%，HiDevLab OLMoE A24 仍比原生 baseline 慢 6.15\%，RK3588/Pi 的 expert RANDOM、popular-16、LFRU、NTFS3 mmap 和提前文件预读均未产生端到端收益。它们说明命中率、缓存计数、direct-read 带宽或机制正确性都不能替代匹配合同的 wall 与吞吐测量。
+
+\subsection{局限性}
+
+SLIM-ARC 仍存在四方面限制。第一，POSIX 页建议是 best-effort，内核 readahead、cgroup page-cache 计费、FUSE、USB bridge 和设备内部缓存都会改变实际效果；无 root 设备上的 cold cache 只能近似构造。第二，错误专家回收向内对齐完整页面，保守地跳过边界页和不规则布局，安全性优先于覆盖率。第三，pressure、waste 和 popularity 阈值来自确定性工程规则，尚未在更多模型、序列分布和长期 workload 上校准。第四，当前主要路径是 CPU-only llama.cpp；HiDevLab 只验证 aarch64 可移植性，未完成 CANN/NPU kernel、HBM/DDR 分层或 910B 性能评测。
+
+实验范围也限制了结论强度。Mac 正式矩阵只有两轮 cold/warm，所有配置都触及 2\,GiB cgroup 上限，因而无法证明峰值下降；部分 RK3588 和 Pi 优化只有单次或两次运行，只用于设备内趋势与机制选型；GSM8K 和 top-$k$ 质量检查样本不足以给出精度保证。跨设备结果不能合并成单一加速比。
+
+\subsection{未来工作}
+
+后续工作将围绕能够直接减少每 token 读取量的方向展开。第一，对 routed experts 进行连续打包和更低比特量化，同时保护 Router、Norm、Attention 与 shared expert，评估 read bytes/token、吞吐和质量的联合变化。第二，在真实 routing trace 上比较 per-layer LRU、LRU-K、ARC 和 workload-aware replacement，避免仅根据 cache hit 选择策略。第三，在固定质量集和多次 A/B 通过后，再评估自适应 expert top-$k$、PEU pruning 或与 EcoSpec 类成本模型结合的候选选择。第四，在独立 Ascend 环境建立 CANN/\texttt{torch\_npu} 或原生算子路径，区分 CPU 页管理、主机到 HBM 搬运和 NPU 计算的各自瓶颈。第五，以真实端侧模型完成 Agent Harness 开/关实验，测量多轮任务的模型加载次数、上下文 token、TTFT、总 wall time 和工具等待占比。
+
+总体而言，SLIM-ARC 的贡献不是一个固定的 \texttt{madvise} 参数，而是一套把模型稀疏性、操作系统页面、存储行为和设备约束连接起来的运行时方法。其结果表明，极限内存下的端侧 MoE 推理可以运行并获得显著设备内收益，但最佳策略必须由访问阶段、内存压力和存储链路共同决定。

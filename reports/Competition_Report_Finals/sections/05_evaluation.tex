@@ -1,180 +1,301 @@
-\section{受限 Mac 实验协议与结果导入}
-% chktex 24 is a false positive: this section label belongs after the heading.
-\label{sec:protocol} % chktex 24
+\section{实验评估与结果分析}
+\label{sec:evaluation}
 
-\subsection{固定实验矩阵}
+\subsection{实验设置}
+\label{sec:protocol}
 
-正式性能证据取自固定 Mac/Colima 环境：cgroup v2 \texttt{memory.max}=2\,GiB、四个 benchmark vCPU、\texttt{memory.swap.max}=0、\texttt{pp64}、\texttt{tg16}、相同 prompt、seed 和上下文。冻结模型为 Qwen3-Next-80B-A3B-Instruct-Q4\_K\_M.gguf，文件大小为 48,410,988,384 B（约 45.09\,GiB），SHA-256 为 \texttt{d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a}；冻结 llama.cpp revision 为 \texttt{360e134}。实验按 baseline、patched-control、patched-reclaim、patched-residency、patched-combined 执行；\textbf{恰好两轮}，每轮中每个配置各有一次 cold 和一次 warm，共 \FinalsResultsRunCount{} 次运行。全部运行成功，且没有用重试结果覆盖失败行。
+\subsubsection{研究问题}
 
-\subsection{记录与推广门槛}
+实验围绕五个研究问题展开。RQ1 检验远大于物理内存的 MoE 模型能否在 no-swap 条件下完成推理；RQ2 检验阶段感知页建议能否消除静态策略的负优化；RQ3 检验专家预测、驻留、回收和预算的收益来自哪些模块；RQ4 分析存储、内存压力和缓存状态如何改变策略选择；RQ5 验证运行时能否迁移到不同 aarch64 平台，并为端侧 Agent 提供功能闭环。
 
-每个接受行必须绑定本地 commit、完整 patched source hash、模型 SHA-256、镜像 ID 与变体链接、资源限制、缓存标签、wall time、吞吐、cgroup peak、OOM/swap/fault/I/O 计数、运行时指标和原始运行目录。回收仅在降低稳定档位，或将 \texttt{memory.peak} 降低至少 10\% 且 wall regression 不超过 15\%、major faults 与 read bytes 不超过 control 的两倍时，才可能 promoted。驻留需在浪费、storage reads 或 decode throughput 中至少一项改善 10\%，并满足相同稳定档位与 wall regression 约束。combined 还必须优于 control 和至少一个单项最终候选。否则分类为 \texttt{kept\_opt\_in}、\texttt{rejected} 或 \texttt{insufficient\_evidence}。
+\subsubsection{硬件与软件环境}
 
-\subsection{结果状态}
+表\ref{tab:eval-platforms}列出五类实验平台。不同平台的 CPU、文件系统、缓存控制和资源限制不同，实验只在同设备、同模型、同 workload 和相同缓存状态内计算提升率。
 
-两轮矩阵已完成。第\ref{tab:finals-results}表显示，所有配置的聚合峰值都落在 \FinalsPeakMinimumGiB--\FinalsPeakMaximumGiB\,GiB；在该 cgroup 上限已经饱和的实验中，不能声称任何机制降低了峰值内存。cold 条件下 patched-control 相比 baseline 的 wall time 和 decode throughput 均改善，而 warm 条件下方向相反，说明缓存状态足以改变排序，不能把 cold/warm 混合为一个加速比。
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \caption{实验平台}
+  \label{tab:eval-platforms}
+  \begin{tabular}{p{0.17\textwidth}p{0.21\textwidth}p{0.24\textwidth}p{0.28\textwidth}}
+    \toprule
+    平台 & CPU/内存 & 存储与隔离 & 主要实验目的 \\
+    \midrule
+    WSL/x86 & i9-13900H，8--32\,GiB cgroup & NVMe，cgroup v2 & 初赛基线、量化、KV/FA 与历史消融 \\
+    RK3588 & 4$\times$A76+4$\times$A55，7.8\,GB & SSD 约 2.1\,GB/s；2.5--5\,GiB user scope & 动态 MADV、3\,GiB 主实验、长上下文和专家预测 \\
+    Mac/Colima & ARM64 VM 8 vCPU/16\,GiB & 容器限 1--4\,GiB，swap 0 & 2\,GiB 正式矩阵、机制筛选和终态复核 \\
+    Raspberry Pi 5 & 4$\times$A76，4\,GiB & USB NTFS-3G/FUSE，运行期 no-swap & 慢存储驻留、预算、LRU 和文件系统实验 \\
+    HiDevLab & aarch64；910B4 可枚举 & 独立目录，llama.cpp CPU-only & POSIX 路径移植和小 MoE A/B \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-单项机制呈现的是``可保留但不能推广''：reclaim 与 residency 在总体 gate 中均为 \path{kept_opt_in}。这类分类只说明它们没有越过拒绝边界，并不证明机制动作导致了表中波动。相反，combined 的 cold wall time 为 \FinalsCombinedColdWall\,s，相对 control 的 \FinalsControlColdWall\,s 回退 \FinalsCombinedColdRegressionPercent\%；cold gate 和总体决策均拒绝组合策略。这一负结果表明，两项保守策略叠加会增加 fault/admission 路径上的成本，单独看机制正确性不能推出协同收益。
+\subsubsection{模型、工作负载与指标}
 
-JSON 的生成、核验和填表步骤记录于 \texttt{RESULTS\_IMPORT.md}。正式构建驱动每次读取固定路径 JSON，重新生成并逐字节核验 hash 绑定的 \texttt{generated\_finals\_results.tex}，然后才调用 XeLaTeX/BibTeX。第\ref{tab:finals-results}表、第\ref{tab:finals-decisions}表和本节所有数值宏都来自该导入文件。
+主模型为 Qwen3-Next-80B-A3B-Instruct Q4\_K\_M，文件大小 48,410,988,384\,B，决赛固定 SHA-256 为 \texttt{d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a}。Qwen3-4B 用于 Dense 基线、KV 与 FlashAttention；OLMoE-1B-7B 用于小 MoE Router 链路和 HiDevLab A/B。初赛 IQ4\_XS 结果仅用于量化边界。
+
+llama-bench 的 Prefill（pp）和 Decode（tg）均以 token/s 表示；wall time 表示完整 benchmark 时间。内存同时报告 cgroup \texttt{memory.peak/current} 与进程 RSS，两者不互换。I/O 指标包括 major faults、file-system input、weight/expert issued bytes、skipped bytes 和 in-flight peak；专家指标包括 samples、hit、waste、reclaim、residency 和 pressure 状态。cold、warm、mixed cache 分开分析。
+
+正式 Mac 矩阵固定 80B Q4\_K\_M、2\,GiB、4 CPU、swap 0、\texttt{pp64/tg16}，每个配置执行两轮 cold/warm，共 20 次。RK3588 的 3\,GiB 主实验固定 80B、4 threads、\texttt{pp128/tg64}、KV q4\_0、MemorySwapMax 0。Pi 的 80B 主序列固定 4 threads、\texttt{pp16/tg16}、USB/FUSE、运行期 no-swap。其他工作负载在对应表中单独标注。
+
+\subsection{主实验结果}
+
+\subsubsection{48.41 GB 模型在 2 GiB no-swap 环境中运行}
+
+Mac/Colima 的 8 月 12 日正式矩阵 20/20 成功，所有配置的 cgroup peak 均达到 2\,GiB，但没有 OOM 和 swap。8 月 17 日终态复核在 cold cache、4 CPU、\texttt{pp64/tg16} 和 A24 配置下成功退出，Prefill 为 3.908455\,token/s，Decode 为 0.709095\,token/s，wall time 58.06\,s，major faults 402,118。运行时记录 816 个专家样本，expert advice/issued/waste 均为 0，证明禁用投机专家预取的配置在最终镜像中生效。
+
+该实验直接回答 RQ1：mmap 与 page-cache 逐出使模型文件可以远大于 cgroup 上限，no-swap 并不要求全部权重常驻。其代价是大量同步缺页与存储读取，因此 2\,GiB 结果表示可运行性和确定资源边界，不表示模型文件被压缩为 2\,GiB。
+
+\subsubsection{RK3588 3 GiB cgroup 主实验}
+
+表\ref{tab:rk-3g-main}给出队友完成的 F1--F5 实验。3\,GiB 下 baseline Decode 只有 0.70\,token/s；SLIM-ARC 达到 2.21\,token/s，提升 216\%（3.16 倍），Prefill 从 3.85 提高到 4.40\,token/s。增加 KV eviction 后仍达到 4.19/2.12\,token/s，说明短工作负载的主要收益来自权重页策略，而非 KV 驱逐。
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{RK3588 受限内存主实验（80B，4 threads，pp128/tg64，swap 0）}
+  \label{tab:rk-3g-main}
+  \begin{tabular}{llrrl}
+    \toprule
+    MemMax & 配置 & Prefill & Decode & 相对同档 baseline \\
+    \midrule
+    3\,GiB & baseline & 3.85 & 0.70 & reference \\
+    3\,GiB & SLIM-ARC & \textbf{4.40} & \textbf{2.21} & pp $+14\%$，tg $+216\%$ \\
+    3\,GiB & SLIM-ARC + KV eviction & 4.19 & 2.12 & pp $+9\%$，tg $+203\%$ \\
+    2.5\,GiB & baseline & 3.97 & 1.91 & reference \\
+    2.5\,GiB & SLIM-ARC + KV eviction & 4.26 & 2.21 & pp $+7\%$，tg $+16\%$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\small,x=3.4cm,y=1.0cm,every node/.style={align=center}]
+  \node[font=\bfseries] at (0,3.45) {Prefill};
+  \node[font=\bfseries] at (1,3.45) {Decode};
+  \node[anchor=east,font=\bfseries] at (-0.56,2.65) {baseline};
+  \node[anchor=east,font=\bfseries] at (-0.56,1.65) {SLIM-ARC};
+  \node[anchor=east,font=\bfseries] at (-0.56,0.65) {SLIM-ARC+KV};
+  \node[draw,rounded corners,fill=gray!12,minimum width=2.8cm,minimum height=8mm] at (0,2.65) {3.85 t/s\\$1.00\times$};
+  \node[draw,rounded corners,fill=gray!12,minimum width=2.8cm,minimum height=8mm] at (1,2.65) {0.70 t/s\\$1.00\times$};
+  \node[draw,rounded corners,fill=green!24,minimum width=2.8cm,minimum height=8mm] at (0,1.65) {4.40 t/s\\$1.14\times$};
+  \node[draw,rounded corners,fill=green!68,minimum width=2.8cm,minimum height=8mm] at (1,1.65) {2.21 t/s\\$3.16\times$};
+  \node[draw,rounded corners,fill=green!18,minimum width=2.8cm,minimum height=8mm] at (0,0.65) {4.19 t/s\\$1.09\times$};
+  \node[draw,rounded corners,fill=green!62,minimum width=2.8cm,minimum height=8mm] at (1,0.65) {2.12 t/s\\$3.03\times$};
+  \draw[->,very thick,green!55!black] (1.62,2.65) -- node[right,align=left]{强压力下\\Decode 恢复} (1.62,1.65);
+\end{tikzpicture}
+\caption{RK3588 3\,GiB cgroup 的归一化性能温度图。颜色深度表示相对同档 baseline 的增益，单元格同时保留绝对吞吐。}
+\label{fig:rk-3g-main}
+\end{figure}
+
+2.5\,GiB baseline 的单次 Decode 反而高于 3\,GiB baseline，说明 page-cache 初始状态和驻留窗口会放大单次实验波动；该行只在 2.5\,GiB 档内比较，不能据此推导“内存越小越快”。五组均未触发 OOM，内存压力表现为页缓存逐出和性能变化。
+
+\subsubsection{RK3588 动态页建议恢复}
+
+静态 RANDOM 的短工作负载只有 0.44/0.26\,token/s，禁用 SLIM-ARC 为 2.74/1.41。Prefill 改为 SEQUENTIAL 后提高到 2.82\,token/s，但 Decode 保持 RANDOM 时仍只有 0.25；Decode 改为 SEQUENTIAL 后达到 2.81/1.35，最终动态全 SEQUENTIAL 为 2.84/1.40，与禁用路径差距缩小到 0--4\%。这条消融链直接证明阶段识别而非“SLIM-ARC 开或关”决定了结果。
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{RK3588 动态 MADV 消融（80B，p32/n16/t4）}
+  \label{tab:rk-dynamic-madv}
+  \begin{tabular}{lrrp{0.34\textwidth}}
+    \toprule
+    策略 & Prefill & Decode & 解释 \\
+    \midrule
+    静态 RANDOM & 0.44 & 0.26 & 顺序访问被拆成同步小读 \\
+    禁用 SLIM-ARC & 2.74 & 1.41 & upstream reference \\
+    Prefill SEQUENTIAL / Decode RANDOM & 2.82 & 0.25 & 只恢复 Prefill \\
+    Decode SEQUENTIAL & 2.81 & 1.35 & 恢复 Decode \\
+    Decode NORMAL & 2.57 & 1.41 & Decode 快，Prefill 较低 \\
+    动态全 SEQUENTIAL & \textbf{2.84} & \textbf{1.40} & 保留运行时且追平 reference \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\scriptsize,x=3.25cm,y=0.72cm]
+  \node[font=\small\bfseries] at (0,6.55) {Prefill / reference};
+  \node[font=\small\bfseries] at (1,6.55) {Decode / reference};
+  \foreach \name/\y in {静态 RANDOM/5.7,禁用路径/4.7,Prefill SEQ/3.7,Decode SEQ/2.7,Decode NORMAL/1.7,动态全 SEQ/0.7}
+    \node[anchor=east,font=\bfseries] at (-0.58,\y) {\name};
+  \node[draw,fill=red!62,minimum width=2.8cm,minimum height=6.5mm] at (0,5.7) {0.44 / 0.16};
+  \node[draw,fill=red!58,minimum width=2.8cm,minimum height=6.5mm] at (1,5.7) {0.26 / 0.18};
+  \node[draw,fill=gray!10,minimum width=2.8cm,minimum height=6.5mm] at (0,4.7) {2.74 / 1.00};
+  \node[draw,fill=gray!10,minimum width=2.8cm,minimum height=6.5mm] at (1,4.7) {1.41 / 1.00};
+  \node[draw,fill=green!14,minimum width=2.8cm,minimum height=6.5mm] at (0,3.7) {2.82 / 1.03};
+  \node[draw,fill=red!60,minimum width=2.8cm,minimum height=6.5mm] at (1,3.7) {0.25 / 0.18};
+  \node[draw,fill=green!13,minimum width=2.8cm,minimum height=6.5mm] at (0,2.7) {2.81 / 1.03};
+  \node[draw,fill=orange!16,minimum width=2.8cm,minimum height=6.5mm] at (1,2.7) {1.35 / 0.96};
+  \node[draw,fill=orange!22,minimum width=2.8cm,minimum height=6.5mm] at (0,1.7) {2.57 / 0.94};
+  \node[draw,fill=gray!10,minimum width=2.8cm,minimum height=6.5mm] at (1,1.7) {1.41 / 1.00};
+  \node[draw,fill=green!16,minimum width=2.8cm,minimum height=6.5mm] at (0,0.7) {2.84 / 1.04};
+  \node[draw,fill=gray!10,minimum width=2.8cm,minimum height=6.5mm] at (1,0.7) {1.40 / 0.99};
+  \node[align=center,text=gray!70!black] at (0.5,-0.05) {每格为 token/s / 相对禁用路径；红色表示明显回退，绿色表示恢复};
+\end{tikzpicture}
+\caption{RK3588 动态页建议的策略响应温度图。单独修复 Prefill 不能恢复 Decode，完整阶段策略才接近 reference。}
+\label{fig:rk-dynamic-heatmap}
+\end{figure}
+
+\subsubsection{Raspberry Pi 5 慢存储主实验}
+
+Pi 的核心策略从“扩大预取”转为“保留确定复用页并停止无收益投机”。A24 关闭 expert prefetch 后为 0.201104/0.055614\,token/s、547\,s。A28 加入 shared expert 与 resident hot512 后达到 0.204023/0.063486、511\,s，即 Decode $+14.16\%$、wall $-6.58\%$。A29 将总预算限制为 16\,MiB，issued/in-flight weight bytes 均减少 98.44\%，吞吐近似不变。A32 完全关闭 weight prefetch 后 wall 505\,s；A34 的 512\,MiB 跨 token LRU 达到 Decode 0.065856、wall 503\,s。
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Raspberry Pi 5 的慢存储策略演进}
+  \label{tab:pi-main}
+  \begin{tabular}{llrrr}
+    \toprule
+    编号 & 策略 & Prefill & Decode & Wall(s) \\
+    \midrule
+    A24 & no expert prefetch & 0.201104 & 0.055614 & 547.0 \\
+    A26 & resident hot512 & 0.200578 & 0.060726 & 522.5 \\
+    A28 & shared + hot512 & 0.204023 & 0.063486 & 511.0 \\
+    A29 & A28 + 16\,MiB budget & 0.204283 & 0.063585 & 510.5 \\
+    A32 & no weight prefetch & 0.203642 & 0.065246 & 505.0 \\
+    A34 & 512\,MiB cross-token LRU & 0.203585 & \textbf{0.065856} & \textbf{503.0} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[font=\scriptsize,x=1cm,y=1cm]
+  \fill[green!7,rounded corners] (3.0,2.1) rectangle (7.0,4.2);
+  \node[green!45!black] at (5.0,4.55) {Pareto 优选区：更快 Decode、更短 Wall};
+  \draw[->] (0.4,0.35)--(7.1,0.35) node[right]{更短 Wall};
+  \draw[->] (0.4,0.35)--(0.4,4.35) node[above]{更高 Decode};
+  \foreach \x/\label in {0.4/550,1.6/540,2.8/530,4.0/520,5.2/510,6.4/500} {
+    \draw[gray!25] (\x,0.35)--(\x,4.1);
+    \node[below] at (\x,0.35) {\label s};
+  }
+  \foreach \y/\label in {0.55/.056,1.45/.059,2.35/.062,3.25/.065} {
+    \draw[gray!25] (0.4,\y)--(6.9,\y);
+    \node[left] at (0.4,\y) {\label};
+  }
+  \draw[gray!55,dashed,line width=1pt] (0.76,0.43)--(3.70,1.97)--(5.08,2.90)--(5.14,2.93)--(5.80,3.43)--(6.04,3.61);
+  \fill[gray!70] (0.76,0.43) circle (2.2pt) node[above left]{A24};
+  \fill[blue!65] (3.70,1.97) circle (2.8pt) node[below right]{A26};
+  \fill[green!55!black] (5.08,2.90) circle (3.2pt);
+  \draw[green!45!black] (5.08,2.90)--(4.72,3.20) node[above left]{A28};
+  \node[draw,diamond,fill=orange!65,inner sep=2.1pt] at (5.14,2.93) {};
+  \draw[orange!80!black] (5.14,2.93)--(4.72,2.55) node[below left]{A29: 16 MiB};
+  \node[draw,rectangle,fill=purple!55,inner sep=2.2pt] at (5.80,3.43) {};
+  \draw[purple!70!black] (5.80,3.43)--(5.35,3.78) node[above left]{A32: no weight prefetch};
+  \node[draw,star,star points=5,fill=red!55,inner sep=2.2pt] at (6.04,3.61) {};
+  \draw[red!70!black] (6.04,3.61)--(6.35,3.92) node[above left]{A34: cross-token LRU};
+  \draw[->,very thick,green!45!black] (5.8,1.25)--(6.65,2.0) node[midway,right]{理想方向};
+\end{tikzpicture}
+\caption{Raspberry Pi 5 的 Decode--Wall 多目标 Pareto 图。预算收缩、关闭无收益预取和跨 token LRU 依次把运行点推向右上角。}
+\label{fig:pi-pareto}
+\end{figure}
+
+主实验共同回答 RQ4：RK3588 3\,GiB 的强压力需要有界预取避免同步抖动；Pi 的 FUSE/USB 链路则更适合零投机和常驻复用页。两者都使用 mmap 和动态机制，但最终策略方向不同。
+
+\subsection{消融实验}
+
+\subsubsection{Mac 正式机制矩阵}
+
+Mac 五配置两轮 cold/warm 的结构化结果由 hash 绑定的 \texttt{finals-results.json} 导入。所有配置的 \texttt{memory.peak} 都为 2\,GiB，因此本轮不能证明峰值内存降低。cold 条件下 reclaim 相对 patched-control 的 wall 改善 4.39\%、Decode 提高 6.31\%，但回收计数为 0，变化不能归因于 DONTNEED；residency 仅改善 0.21\% wall；combined wall 回退 19.95\% 并被拒绝。warm 条件下 baseline 快于 patched-control，进一步说明缓存状态足以改变排序。
 
 \FinalsResultsTable
 \FinalsDecisionSummary
 
-\subsection{赛前末次 A24 运行复核}
+\FinalsMacIntervalFigure
 
-2026 年 8 月 17 日又执行了一次单独的终态复核：仍使用 48,410,988,384 B 的 Qwen3-Next-80B-A3B-Instruct Q4\_K\_M、2\,GiB cgroup、4 vCPU、no-swap、\texttt{pp64}/\texttt{tg16} 和 cold cache，并开启动态阶段建议，同时设置 \texttt{SLIM\_ARC\_NO\_EXPERT\_PREFETCH=1}。该运行成功退出，没有 OOM；Prefill 为 3.908455\,t/s，Decode 为 0.709095\,t/s，wall time 为 58.06\,s，\texttt{memory.peak} 为 2\,GiB，major faults 为 402,118。运行时记录了 816 个专家样本，而 expert advice requests、issued bytes 和 waste bytes 均为 0，说明 A24 精确关闭专家投机预取的开关在最终镜像中生效。
+\subsubsection{专家预测、门控与预算}
 
-该复核只有一次运行，而且镜像与 8 月 12 日正式矩阵不同，因此只用作“二进制、资源边界和开关仍然可运行”的终态证据，不参与表\ref{tab:finals-results}的配置排序，也不与旧行相除形成新加速比。结构化控制器结果、llama-bench JSON、GNU time、cgroup 和运行时指标保存在 \path{docs/macos_test_notes/2026-08-17/ecospec-a24-final-2g-4c-pp64-tg16-cold/}。
+RK3588 的 temporal predictor 准确率为 34.9\%，明显高于约 2\% 的随机参考和 4.5\% 的 spatial predictor。confidence gating 将 expert issued 从 27,836.7\,MB 降至 12,123.6\,MB，hit rate 从 31.05\% 提高到 55.35\%，速度保持约 1.9\,token/s；confidence 与 budget 组合达到 54.00\% hit 和 2.1\,token/s。相反，popular-16 将 issued 增加到 72,634.4\,MB、hit 降至 19.31\%，因此被拒绝。
+
+Mac A18 的 inline Router + hot512 相对对照带来 Decode $+10.35\%$、wall $-7.77\%$；A20 layer-local pipeline 将 fault 降低 4.09\%、I/O 降低 5.10\%，但 Prefill 回退 2.10\%；A22 cross-layer Router Top2 的命中率达到 88.56\%，Decode $+9.96\%$、wall $-7.77\%$，仍未超过更低开销候选。A24 关闭 expert speculative prefetch 的三轮中位数为 Prefill $+10.66\%$、Decode $+22.45\%$、wall $-15.72\%$，说明在该合同下额外专家 I/O 的边际收益不足。
+
+\subsubsection{线程、readahead 与普通权重预取}
+
+Mac A4 将 Prefill/Decode 线程设为 8/6，Decode 提高 20.23\%、wall 降低 5.91\%；A10 进一步确认 6 个 Decode 线程是 wall 与吞吐的折中点。A11 的 128/192/256\,KiB readahead 形成 Pareto 前沿，A16 的 sustained 256\,KiB 配置使 Prefill 提高 13.39\%、Decode 提高 2.10\%、wall 降低 6.39\%。该参数不被硬编码，因为 Pi 和 RK3588 的链路不同。
+
+A32/A33 给出明确跨设备反例：Mac 上 weight prefetch on 为 Decode 1.083、wall 92.19\,s，off 为 1.022/96.14\,s；Pi 上 on/off wall 均约 505\,s，而 off 消除了 60.59\,MiB 投机 I/O。系统因此保留设备配置，而不定义跨平台默认值。
+
+\subsubsection{KV、FlashAttention 与量化}
+
+RK3588 Qwen3-4B 上 FlashAttention auto 的 Decode 为 6.90\,token/s，关闭后为 3.49，说明 ARM 小模型的 Attention 路径受益明显；KV q4\_0 为 5.05，短上下文下反量化开销超过节省的带宽。初赛 80B 长上下文实验确认 KV eviction 在 8192--16384 context 下可以稳定执行，但 4\,GiB cgroup 的 4096/8192 Prompt 在 600\,s 内均未完成 Prefill，原因是权重换页与大 Prompt 扫描，而非 OOM。
+
+IQ4\_XS 在初赛显示更小模型文件和较高热缓存吞吐，但 GSM8K 10 题得到 0/10；Q4\_K\_M + KV q4\_0 为 5/10，Qwen3-4B Q4\_K\_M 为 15/20。样本规模不足以给出正式精度排名，但足以阻止 IQ4\_XS 成为默认方案。
+
+\subsubsection{被拒绝的优化}
+
+Self-draft speculative decoding 将 80B Decode 从 3.01 降至 1.41\,token/s（$-53.2\%$），accept rate 33.3\%，因此不再进入主线。Mac expert RANDOM 将 Decode 从 0.801 降至 0.262、wall 从 55.90 增至 96.42\,s；expert NORMAL 也回退。Pi 的 LFRU 使 wall 增加 1.50\%，二次命中准入使 Prefill 下降约 54\%，NTFS3 虽提高 direct-read 57.28\%，真实 mmap Prefill 却下降 65.70\%，exact expert \texttt{fadvise} 为 $-0.2517\%$。这些结果共同说明，局部 cache、带宽或命中指标不能替代端到端测量。
+
+\subsection{设备专项与补充实验}
+
+\subsubsection{RK3588 长上下文、压力与内存}
+
+RK3588 的长上下文动态策略在 \texttt{p512/n128} 下达到 6.09/2.08\,token/s，接近禁用路径的 6.33/2.15。3\,GiB RSS 补测中，baseline VmHWM 4324\,MB，SLIM-ARC 为 3986\,MB，SLIM-ARC + KV eviction 为 3951\,MB；三个 user scope 的 \texttt{memory.current} 都触及 3072\,MB。由于文件页可能计费到外部 session cgroup，进程 RSS 大于 scope current，两者不能直接相减为“未计费内存”。
+
+4B 五轮对话中，baseline Generation 均值为 4.52\,token/s，SLIM-ARC + KV eviction 为 5.20（$+15\%$），Prompt 基本持平；H1 首轮输入含 shell \texttt{echo -e} artifact，因此结果列为探索性。4\,GiB、5\,GiB 和并发压力实验还分别观察到 Decode $+13.3\%$、$+15.7\%$ 和 $+5.8\%$，完整合同见附录。
+
+\subsubsection{Raspberry Pi 5 替换策略与质量边界}
+
+A34 512\,MiB LRU 相对旧 cache 将 hits 提高 6.53\%、evictions 降低 36.31\%；384\,MiB 使 evictions 相对 A34 增加 121.10\%。A37 LFRU 虽将部分 cache counter 改善，却使 nonresident scan 增加 56.33\% 并降低吞吐。A49 top-8 相对 A50 top-10 在单次 \texttt{pp4/tg1} 中 Prefill $+17.56\%$、Decode $+10.53\%$、wall $-3.30\%$，但一题算术质量检查无法区分二者，因而只保留为精度门之前的研究开关。
+
+\subsubsection{HiDevLab aarch64 CPU-only 实验}
+
+HiDevLab 环境确认 aarch64、Ascend 910B4 32\,GiB HBM 和驱动可枚举，但系统缺少匹配 CANN toolkit、\texttt{libascendcl.so} 和完整 \texttt{torch\_npu}。因此性能实验使用 OLMoE-1B-7B Q2\_K 的 llama.cpp CPU-only 路径，固定 16 threads、\texttt{pp64/tg16}、3 repetitions 和 warm cache。
+
+baseline 为 100.724597/51.340323\,token/s、wall 3.2546\,s；patched-default 为 101.175889/45.254024、3.415535\,s；A24 为 100.602680/48.184150、3.373611\,s。A24 相对 patched-default 的 Decode 提高 6.47\%，但相对原生 baseline 仍低 6.15\%。该结果证明 POSIX 路径可移植，也说明 2.56\,GB 小模型在内存充足和 warm cache 时没有足够的换页压力产生系统收益。
 
 \begin{figure}[H]
 \centering
-\begin{tikzpicture}[x=0.105cm,y=0.72cm,font=\small]
-  \draw[->] (0,0) -- (88,0) node[right] {cold wall time (s)};
-  \foreach \x in {0,20,40,60,80} {\draw[gray!35] (\x,0) -- (\x,5.2) node[below=2pt,black] {\x};}
-  \fill[gray!55] (0,0.35) rectangle (\FinalsBaselineColdWall,1.00);
-  \fill[blue!55] (0,1.35) rectangle (\FinalsControlColdWall,2.00);
-  \fill[green!55!black] (0,2.35) rectangle (\FinalsReclaimColdWall,3.00);
-  \fill[orange!70] (0,3.35) rectangle (\FinalsResidencyColdWall,4.00);
-  \fill[red!65] (0,4.35) rectangle (\FinalsCombinedColdWall,5.00);
-  \node[anchor=east] at (-1,0.68) {baseline};
-  \node[anchor=east] at (-1,1.68) {control};
-  \node[anchor=east] at (-1,2.68) {reclaim};
-  \node[anchor=east] at (-1,3.68) {residency};
-  \node[anchor=east] at (-1,4.68) {combined};
-  \node[anchor=west] at (\FinalsBaselineColdWall+1,0.68) {\FinalsBaselineColdWall};
-  \node[anchor=west] at (\FinalsControlColdWall+1,1.68) {\FinalsControlColdWall};
-  \node[anchor=west] at (\FinalsReclaimColdWall+1,2.68) {\FinalsReclaimColdWall};
-  \node[anchor=west] at (\FinalsResidencyColdWall+1,3.68) {\FinalsResidencyColdWall};
-  \node[anchor=west] at (\FinalsCombinedColdWall+1,4.68) {\FinalsCombinedColdWall};
+\begin{tikzpicture}[font=\scriptsize,x=2.55cm,y=0.72cm]
+  \foreach \x/\name in {0/Prefill$\uparrow$,1/Decode$\uparrow$,2/Wall$\downarrow$,3/RSS$\downarrow$}
+    \node[font=\bfseries] at (\x,6.6) {\name};
+  \foreach \name/\y in {WSL 8 GiB/5.7,RK 3 GiB/4.7,RK 2.5 GiB/3.7,Mac reclaim cold/2.7,Pi A28 vs A24/1.7,HiDev A24 vs BL/0.7}
+    \node[anchor=east,font=\bfseries] at (-0.58,\y) {\name};
+  \node[draw,fill=green!20,minimum width=2.25cm,minimum height=6mm] at (0,5.7) {$+13.6\%$};
+  \node[draw,fill=green!78,minimum width=2.25cm,minimum height=6mm] at (1,5.7) {$+437.5\%$};
+  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (2,5.7) {--};
+  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (3,5.7) {--};
+  \node[draw,fill=green!20,minimum width=2.25cm,minimum height=6mm] at (0,4.7) {$+14.3\%$};
+  \node[draw,fill=green!68,minimum width=2.25cm,minimum height=6mm] at (1,4.7) {$+215.7\%$};
+  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (2,4.7) {--};
+  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (3,4.7) {--};
+  \node[draw,fill=green!14,minimum width=2.25cm,minimum height=6mm] at (0,3.7) {$+7.3\%$};
+  \node[draw,fill=green!22,minimum width=2.25cm,minimum height=6mm] at (1,3.7) {$+15.7\%$};
+  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (2,3.7) {--};
+  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (3,3.7) {--};
+  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (0,2.7) {--};
+  \node[draw,fill=green!13,minimum width=2.25cm,minimum height=6mm] at (1,2.7) {$+6.3\%$};
+  \node[draw,fill=green!12,minimum width=2.25cm,minimum height=6mm] at (2,2.7) {$+4.4\%$};
+  \node[draw,fill=gray!12,minimum width=2.25cm,minimum height=6mm] at (3,2.7) {$0.0\%$};
+  \node[draw,fill=green!8,minimum width=2.25cm,minimum height=6mm] at (0,1.7) {$+1.5\%$};
+  \node[draw,fill=green!20,minimum width=2.25cm,minimum height=6mm] at (1,1.7) {$+14.2\%$};
+  \node[draw,fill=green!13,minimum width=2.25cm,minimum height=6mm] at (2,1.7) {$+6.6\%$};
+  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (3,1.7) {--};
+  \node[draw,fill=red!10,minimum width=2.25cm,minimum height=6mm] at (0,0.7) {$-0.1\%$};
+  \node[draw,fill=red!18,minimum width=2.25cm,minimum height=6mm] at (1,0.7) {$-6.1\%$};
+  \node[draw,fill=red!14,minimum width=2.25cm,minimum height=6mm] at (2,0.7) {$-3.7\%$};
+  \node[draw,fill=gray!8,minimum width=2.25cm,minimum height=6mm] at (3,0.7) {--};
+  \node[align=center,text=gray!70!black] at (1.5,-0.05) {正值表示更优；仅在同设备、同模型、同资源和同缓存合同内计算；-- 表示没有可比指标};
 \end{tikzpicture}
-\caption{固定 2\,GiB 协议下的 cold wall time。数值由 hash 绑定的正式 JSON 宏生成；该图用于展示配置排序和组合回退，不表示跨设备加速比。}
-\label{fig:finals-cold-wall}
+\caption{跨设备同合同效应矩阵。颜色编码有利方向的相对变化，既显示强压力场景的收益，也显示内存充足小模型上的回退。}
+\label{fig:cross-device-effect-matrix}
 \end{figure}
 
-\subsection{跨设备边界实验}
+\subsubsection{端侧 Agent Harness 功能实验}
 
-Mac 正式矩阵回答“在严格可复现的 2\,GiB 容器协议下是否应推广新机制”；RK3588 与树莓派实验回答“页建议和提前读在不同存储链路上为什么会改变方向”。三者的 CPU、文件系统、缓存边界和工作负载不同，因此表\ref{tab:edge-boundaries}只在每台设备内部做匹配比较，不计算跨设备加速比。
+确定性本地 endpoint 首轮返回 \texttt{uname -m} 工具请求，Harness 在受限工作目录执行并回填观测，第二轮返回最终答案。首轮估算速度 1.999\,token/s，触发 \texttt{max\_tokens} 从 192 降至 124；若持续低于阈值，最低可降至 48。工具返回码为 0，输出未截断。图\ref{fig:agent-harness-smoke}展示实际 JSONL 事件。
 
-\begin{table}[H]
+\begin{figure}[H]
   \centering
-  \scriptsize
-  \caption{决赛跨设备实验及其可推广边界}
-  \label{tab:edge-boundaries}
-  \begin{tabular}{p{0.14\textwidth}p{0.22\textwidth}p{0.27\textwidth}p{0.21\textwidth}}
-    \toprule
-    环境 & 匹配实验 & 观测 & 决策 \\
-    \midrule
-    Mac/Colima，2\,GiB，no-swap
-      & 两轮五配置 cold/warm，\texttt{pp64}/\texttt{tg16}
-      & 20/20 成功；所有配置峰值均为 2\,GiB；组合策略 cold wall 回退 \FinalsCombinedColdRegressionPercent\%
-      & 回收/驻留保留 opt-in；组合拒绝 \\
-    RK3588，8\,GB，NVMe
-      & 80B，\texttt{p32/n16/t4}；静态 RANDOM、禁用、动态阶段建议
-      & 静态全开为 0.44/0.26\,t/s；禁用为 2.74/1.41\,t/s；动态策略达到 2.84/1.40\,t/s
-      & Prefill 使用 SEQUENTIAL；Decode 在该设备保留预读，拒绝静态 RANDOM \\
-    树莓派 5，4\,GiB，NTFS-3G/FUSE，no-swap
-      & A24--A50：resident cache、统一预算、预取开关、替换策略、文件系统与 top-$k$
-      & A28 相对 A24 decode $+14.16\%$；A29 投机 weight I/O $-98.44\%$；A45 文件预读 $-0.25\%$
-      & 常驻 shared/hot 路径并关闭投机预取；top-8 保留质量门 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
+  \includegraphics[width=\textwidth]{figures/agent_harness_smoke.png}
+  \caption{Agent Harness 的模型、受限 Shell 和观测回填闭环。该图验证功能、边界和指标，不代表真实 80B TPS 加速。}
+  \label{fig:agent-harness-smoke}
+\end{figure}
 
-RK3588 的反例揭示了机制边界：当 45.09\,GiB 权重在 8\,GB 内存中持续轮转时，静态 \path{MADV_RANDOM} 把可合并的读请求分裂为大量同步小缺页；顺序预读通过较大 I/O 摊薄内核 fault、DMA 与 SMMU 以及弱核中断路径上的固定开销。阶段感知策略恢复了 Prefill，并使 Decode 追平禁用路径。这里的结论是“策略匹配硬件”，而不是“SEQUENTIAL 在所有设备上更快”。
+\subsection{综合结果分析}
 
-树莓派实验使用同一 48,410,988,384 B 模型和相邻开/关运行。\texttt{POSIX\_FADV\_WILLNEED} 只把请求提前交给 FUSE/内核，没有减少实际读取量，也没有改善 USB Bulk-Only 队列深度，因而结果中性略负。A47 对旧源码的复现与当前 control 只差 0.61\%，却无法复现历史所谓 cold 绝对值，说明仅清 Linux page cache 不能证明 FUSE、USB bridge 和 SSD 内部缓存同时为 cold；相关历史跨批次倍数不用于结论。
+实验支持四项总体结论。第一，mmap、关闭 repack 和页缓存逐出使 48.41\,GB 模型能够在 2--8\,GiB 环境中运行；“可运行”与“全部权重常驻”是不同目标。第二，页建议的收益由阶段和存储决定：RK3588 的动态 SEQUENTIAL 消除了静态 RANDOM 负优化，Pi 则进一步关闭投机预取。第三，专家管理的关键不是单独追求命中率，而是减少无收益 I/O 并为确定复用页保留有限容量；A22 高命中和 popular-16 负结果都支持这一点。第四，组合机制必须重新验证。Mac combined 的回退、KV q4\_0 在 ARM 小模型上的变慢和 LFRU 的负结果说明，局部正确性或单项指标不能推出端到端协同。
 
-\subsection{Ascend 910B4 最小兼容性验证}
-
-项目通过 HiDevlab 跳板 SSH 在独立目录完成一次最小硬件与软件栈探测。表\ref{tab:ascend-smoke}中的初始快照确认 910B4、驱动和 HBM 枚举正常，但该裸环境只有驱动，没有 CANN toolkit、\texttt{libascendcl.so}、系统 PyTorch 或 \texttt{torch\_npu}。只读调用既有 Python 环境时又因缺少 \texttt{libhccl.so} 停止，未执行算子。随后检测到另一个比赛的 NPU 进程开始占用 313\,MiB HBM，本项目立即停止，不终止、不附着也不与其竞争资源。
-
-\begin{table}[H]
-  \centering
-  \small
-  \caption{Ascend 910B4 最小兼容性 smoke（非性能实验）}
-  \label{tab:ascend-smoke}
-  \begin{tabular}{p{0.24\textwidth}p{0.63\textwidth}}
-    \toprule
-    项目 & 观测 \\
-    \midrule
-    硬件 & \texttt{aarch64}，Ascend 910B4，32\,GiB HBM，Health OK \\
-    驱动 & \texttt{npu-smi 25.2.0}，\texttt{ascendhal 7.35.23} \\
-    初始空闲快照 & AICore 0\%，HBM 2889/32768\,MiB，89.9\,W，46\,$^\circ$C，无 NPU 进程 \\
-    用户态栈 & Python 3.11.6；CANN/ACL/PyTorch/\texttt{torch\_npu} 不完整 \\
-    结论 & 仅证明 SSH、驱动和硬件枚举可用；没有 LLM TPS、算子吞吐或 SLIM-ARC 加速结论 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-这项验证同时划清可移植边界：SLIM-ARC 的 POSIX/llama.cpp CPU 路径可以在 \texttt{aarch64} Linux 上构建，但 CANN 路径必须在匹配 toolkit、算子库和量化支持的独立镜像中重新构建与测量。当前 80B \texttt{Q4\_K\_M} 模型不能因“设备可枚举”就宣称已在 910B 上运行。
-
-在用户新建的 HiDevLab 独立环境中，项目进一步完成 OLMoE-1B-7B Q2\_K 的系统开/关 A/B。该模型为真实 MoE，但执行路径仍是 \texttt{aarch64} llama.cpp CPU-only，不使用 CANN 或 NPU。为使 2,562,763,232,B 小模型进入运行时，本次隔离构建仅把 admission guard 从 6,GiB 降到 2,GiB；baseline 不改，仓库默认阈值也不据此变更。模型 SHA-256、完整七组结果和 runtime 计数器保存于 \path{docs/ascend_test_notes/2026-08-17/olmoe-q2-runtime-ab.json}。
-
-\begin{table}[H]
-  \centering
-  \small
-  \caption{HiDevLab aarch64 CPU 路径上的 OLMoE 系统 A/B（非 NPU 性能）}
-  \label{tab:ascend-olmoe-ab}
-  \begin{tabular}{lrrrr}
-    \toprule
-    配置 & Prefill t/s & Decode t/s & Wall s & Max RSS KiB \\
-    \midrule
-    llama.cpp baseline & 100.724597 & 51.340323 & 3.254600 & 2,575,956 \\
-    SLIM-ARC default & 101.175889 & 45.254024 & 3.415535 & 2,577,888 \\
-    SLIM-ARC A24 & 100.602680 & 48.184150 & 3.373611 & 2,577,380 \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-两条 patched 结果都各自输出一条 schema 3 runtime 指标，证明比较的不是误链接 baseline。A24 相对 default 的 Decode 提升 6.47\%，wall 降低 1.23\%；但相对原生 baseline 仍为 Decode $-6.15\%$、wall $+3.66\%$。运行时记录了 785 个 expert samples 和 19,116 次 weight advice request，但 \texttt{expert\_issued\_bytes=0}。因此，本实验的正确结论是：SLIM-ARC 已在华为 \texttt{aarch64} 环境真实运行，A24 能缓解小模型上的调度开销；内存充足、热缓存的 2.56,GB MoE 不是系统优势区间，也没有专家预取或 NPU 加速结论。
-
-\subsection{树莓派慢存储专项优化}
-
-树莓派上的核心转向是从“尽量提前读”改为“只保留确定会复用的页，并停止无收益的投机 I/O”。表\ref{tab:pi-policy-evolution}按实施顺序汇总有效机制和被否决方向。A24 是同一 campaign 的 demand-paging 参考；A28 将每层总会执行的 shared expert 和跨 token 复用的 hot experts 保留在内存，避免每 token 重新穿过 FUSE/USB。A29 再用 16\,MiB 统一预算限制 speculative weight advice；A32 证明将其完全关闭也不损失 wall time，因此形成慢盘零投机默认候选。A34 的 512\,MiB LRU 用有限驻留预算保留跨 token 页；更复杂的 LFRU 虽改善部分 cache counters，却增加非驻留扫描和 wall time，因而被拒绝。
-
-\begin{table}[H]
-  \centering
-  \scriptsize
-  \setlength{\tabcolsep}{3pt}
-  \caption{树莓派 5 慢存储策略演进（均为设备内匹配比较）}
-  \label{tab:pi-policy-evolution}
-  \begin{tabular}{p{0.10\textwidth}p{0.24\textwidth}p{0.36\textwidth}p{0.13\textwidth}}
-    \toprule
-    实验 & 机制 & 结果 & 决策 \\
-    \midrule
-    A26 & 512\,MiB resident hot-expert cache
-      & 相对 A24：decode $+9.19\%$，wall $-4.48\%$；两次运行相差 1\,s
-      & 保留 \\
-    A28 & A26 + 94.8\,MB shared-expert mlock
-      & 相对 A24：prefill $+1.45\%$，decode $+14.16\%$，wall $-6.58\%$
-      & 设备候选 \\
-    A29 & 16\,MiB unified speculative-I/O budget
-      & 相对 A28：吞吐约 $\pm0.2\%$；issued 与 in-flight bytes 均 $-98.44\%$
-      & 推广到慢盘 \\
-    A32/A33 & 关闭 weight/expert speculative advice
-      & 505\,s 两次复现；相对同环境 control wall 持平、decode $+0.37\%$，投机 I/O 清零
-      & 慢盘默认 \\
-    A34/A35 & 512/384\,MiB 跨 token LRU
-      & 512\,MiB 相对旧 cache：evictions $-36.31\%$、hits $+6.53\%$、decode $+0.93\%$；384\,MiB 反向
-      & 选 512\,MiB \\
-    A37 & LFRU 替换 LRU
-      & prefill $-1.60\%$，decode $-1.99\%$，wall $+1.50\%$，nonresident scan $+56.33\%$
-      & 拒绝 \\
-    A38--A40 & hot admission threshold 由 1 提到 2
-      & 三个实现的 prefill 均约 $-54\%$；recurrent microbatch 丢失首次命中后的复用
-      & 拒绝 \\
-    A41/A42 & NTFS-3G/FUSE 改为只读 NTFS3
-      & 1\,MiB direct-read bandwidth $+57.28\%$，真实 mmap prefill 却 $-65.70\%$
-      & 保留 FUSE \\
-    A45/A46 & exact expert \texttt{fadvise}
-      & prefill $-0.251714\%$；只提前请求，未减少读取量
-      & 默认关闭 \\
-    A49/A50 & routed top-8 对 top-10，\texttt{pp4/tg1}
-      & 单次 prefill $+17.56\%$、decode $+10.53\%$、wall $-3.30\%$
-      & 质量门前 opt-in \\
-    \bottomrule
-  \end{tabular}
-\end{table}
-
-Top-8 的数据只代表性能上限，不是默认配置。A51 与 A52 使用同一算术问题时，top-8 与原始 top-10 都回答 50\%，而正确答案为 46.67\%；该问题无法区分裁剪造成的质量变化。因此报告保留 A49/A50 的单次方向性数据，同时要求后续 ARC-Challenge 多选准确率和重复 A/B 同时通过。这个边界体现了端侧优化的基本约束：减少专家计算与 I/O 可以直接换取性能，但必须把质量损失作为一等预算。
+SLIM-ARC 最强的正向场景出现在内存压力与同步缺页足够强的设备内合同，例如 RK3588 3\,GiB 和 Pi 4\,GiB 慢存储；在内存充足、模型较小或 warm cache 的 HiDevLab OLMoE 环境中，运行时管理成本可能高于收益。系统因此将策略保留为设备化配置，并把负面结果作为适用范围的一部分。

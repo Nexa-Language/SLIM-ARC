@@ -1,17 +1,106 @@
-\section{生命周期、并发与可观测性}
+\section{系统实现}
+\label{sec:implementation}
 
-\subsection{模型所有权与租约}
+\subsection{与 llama.cpp 的增量集成}
 
-运行时作为 \texttt{llama\_model::impl} 的成员，在模型映射和张量注册完成后激活，而不是作为进程全局调度器。图执行 hook 获取 move-only 租约；它不保存裸调度器指针。析构顺序为：从全局获取注册表移除运行时、拒绝新租约、等待在途租约、停止并 join 预取线程、发出最终指标、销毁地址注册表，最后才允许模型映射销毁。这一顺序的目标是避免有效模型/上下文生命周期内的 use-after-destruction，而不是宣称对违反上游生命周期约定的调用提供保护。
+SLIM-ARC 基于 llama.cpp 构建，决赛正式 Mac 镜像固定 upstream revision \texttt{360e134}。项目没有维护一份长期分叉的完整 llama.cpp 源码，而是将独立运行时模块存放在 \path{patches/llama-upstream/}，由 \path{scripts/apply-slim-arc.py} 复制源文件并对指定 anchor 执行幂等变换。补丁重复应用后生成树的哈希必须保持不变，anchor 缺失时脚本直接失败，避免上游变化被静默忽略。
 
-\subsection{并发边界}
+集成点分为模型构造和图执行两类。模型构造完成 mmap mapping 与 tensor 迁移后建立 model-owned runtime，注册普通权重、专家张量和 shared expert 元数据；图执行在每轮计算前取得 runtime 租约，调用统一调度器和预取调度器，在 Router 结果可用后结算 generation。baseline 和 patched 分别构建到独立前缀，运行脚本为每个变体设置对应 \texttt{LD\_LIBRARY\_PATH}，并用动态链接检查确认 \texttt{llama-bench} 解析到自己的 \texttt{libllama.so}。
 
-工作请求是有界的 \texttt{(generation, layer)} 队列。工作线程在队列锁内认领请求，然后在不持有调度器互斥锁时执行 \texttt{posix\_madvise}；相同 generation 的请求不能被两个 worker 重复认领。队列满时丢弃最旧的未认领请求并计数。这将高负载时的行为从无界积压变成可观测的降级。
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \caption{SLIM-ARC 主要实现模块}
+  \label{tab:implementation-modules}
+  \begin{tabular}{p{0.28\textwidth}p{0.24\textwidth}p{0.38\textwidth}}
+    \toprule
+    模块 & 主要对象 & 职责 \\
+    \midrule
+    \texttt{slim-arc-runtime} & runtime owner、lease & 模型所有权、注册、租约和析构屏障 \\
+    \texttt{slim-arc-prefetch} & prefetch scheduler & 阶段预取、generation、专家观测、热度与指标 \\
+    \texttt{slim-arc-unified-scheduler} & unified scheduler & 阶段预算、压力采样、权重/专家额度下发 \\
+    \texttt{slim-arc-cgroup-memory} & pressure snapshot & 严格读取 cgroup v2 current/max \\
+    \texttt{slim-arc-pressure-budget} & budget planner & 计算 headroom、reserve 和有效额度 \\
+    \texttt{slim-arc-page-range} & page range & 地址溢出检查和内部页对齐 \\
+    \texttt{slim-arc-expert-reclaim} & reclaim planner & 错误 ID、专家切片和 DONTNEED 计划 \\
+    \texttt{slim-arc-expert-residency} & residency policy & 压力滞回、浪费 EWMA、确定性准入 \\
+    \texttt{slim-arc-expert-transition} & transition model & 在线跨层转移计数和候选排序 \\
+    \texttt{slim-arc-kv-eviction} & KV manager & attention sink、sliding window 与卸载入口 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
 
-\subsection{严格指标契约}
+\subsection{模型所有权与地址生命周期}
 
-每个成功 patched benchmark 进程只允许一条带显式版本号的 \texttt{[SLIM-ARC-RUNTIME]} 行，记录专家发出/命中/浪费字节、页建议请求与合并区间、回收候选/调用/跳过/失败、驻留准入/回退和压力计数。解析器按对应版本拒绝重复行、缺失字段、未知字段、非十进制和溢出；baseline 必须没有该行。这样可以同时保留旧实验所绑定的历史 schema 和当前扩展后的 schema，而不会把不同版本的字段静默拼接。机制测试可验证这一契约，但不能替代真实模型上的性能实验。
+早期实现使用进程全局调度器和 mmap registry。该结构无法证明模型销毁后后台 worker 不再访问映射，也使多模型进程的指标和地址相互污染。当前实现把 runtime 作为 \texttt{llama\_model::impl} 的末级成员。模型映射和张量注册完成后 runtime 才激活；成员顺序保证 runtime 在 mappings 之前析构。
 
-\subsection{实现边界与故障回退}
+图执行路径不保存裸调度器指针，而是获取 move-only lease。runtime 销毁时依次执行：从可获取 registry 中移除、拒绝新 lease、等待 in-flight lease 归零、通知 worker 停止、join 全部线程、输出该模型的最终指标、清除张量元数据，最后返回模型析构流程。该顺序将“地址仍有效”和“后台任务仍可能运行”绑定在同一个 owner 内。
 
-页建议均在状态锁外执行，返回值逐次计数；失败只取消本次建议，不改变计算结果。权重预算不足时跳过超额范围并累加 skipped bytes，专家 generation 无法发布或队列已满时不消耗预算。cgroup 读数缺失、上限为无限、当前值大于上限或发生算术溢出时，压力策略进入 missing/fallback 状态，不把异常读数解释为可用内存。上述回退保证 opt-in 优化失败时仍退回原始推理路径。
+\subsection{并发调度与一次性结算}
+
+预取 worker 使用有界请求队列。每个请求包含 generation、层号、合并后的页范围和冻结预算。producer 在锁内发布或替换尚未领取的请求，worker 在锁内认领并从队列删除，随后释放锁执行 \texttt{posix\_madvise}。相同 generation 不会被两个 worker 重复领取；队列满时根据设备模式丢弃最旧未领取请求或拒绝新请求，并增加 dropped/stale 指标。
+
+专家状态由独立互斥锁保护。Router ID、专家张量、上一轮候选、热度和 pending generation 都在锁内复制为值快照；candidate selection、page-range planning 和系统调用均在锁外执行。advice 完成后再以 generation 校验发布成功字节。计算成功时 token-aware settle 会删除恰好一条 pending 记录；失败或无 Router 节点时 unconditional cancel 清理剩余 token，避免 64 个失败轮次耗尽 pending 上限。
+
+\subsection{页范围、预算与错误处理}
+
+页范围模块使用运行时 \texttt{sysconf(\_SC\_PAGESIZE)}，验证页大小为正且是 2 的幂；起始地址加长度、专家偏移和累计字节均使用 checked/saturating arithmetic。普通权重 WILLNEED 需要覆盖相交页，因此向外对齐；错误专家 DONTNEED 只能回收独占页，因此向内对齐。这两个方向不能混用。
+
+统一预算从严格十进制环境变量读取。\texttt{SLIM\_ARC\_TOTAL\_BUDGET\_MB} 的合法范围为 16--1,048,576\,MiB，非法值发出警告并恢复历史默认。cgroup 文件采用固定长度读取和 \texttt{from\_chars} 解析，拒绝空值、尾随字符、负数、溢出和不一致 current/max。预算不足时记录 skipped bytes；advice 失败记录 errno 相关计数，但不使推理失败。
+
+\subsection{运行时配置接口}
+
+所有实验优化均通过严格 opt-in 开关实现，未设置时保持兼容路径。表\ref{tab:runtime-flags}按功能列出主要配置；完整组合由每次 run manifest 保存。
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \caption{主要运行时配置}
+  \label{tab:runtime-flags}
+  \begin{tabular}{p{0.30\textwidth}p{0.58\textwidth}}
+    \toprule
+    功能 & 环境变量 \\
+    \midrule
+    总体与阶段页策略 & \texttt{SLIM\_ARC\_DISABLE}、\texttt{DYNAMIC\_MADV}、\texttt{DECODE\_MADV}、\texttt{SLOW\_STORAGE} \\
+    预取路径 & \texttt{NO\_PREFETCH}、\texttt{NO\_WEIGHT\_PREFETCH}、\texttt{NO\_EXPERT\_PREFETCH} \\
+    专家候选 & \texttt{EXPERT\_CONF}、\texttt{EXPERT\_POP}、\texttt{INLINE\_ROUTER}、\texttt{CROSS\_LAYER\_TOPK} \\
+    专家常驻与替换 & \texttt{SHARED\_MLOCK}、\texttt{EXPERT\_HOT\_MB}、\texttt{EXPERT\_HOT\_LRU}、\texttt{EXPERT\_HOT\_LFRU} \\
+    回收与压力 & \texttt{EXPERT\_RECLAIM\_WASTE}、\texttt{EXPERT\_RESIDENCY}、\texttt{PRESSURE\_ADMISSION} \\
+    预算与线程 & \texttt{TOTAL\_BUDGET\_MB}、\texttt{EXPERT\_PIPELINE\_MB}、\texttt{DECODE\_THREADS} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{跨硬件实现与适配过程}
+
+\subsubsection{x86/WSL：功能基线与受限环境}
+
+x86/WSL 阶段建立 cgroup v2 隔离、模型量化、mmap、关闭 repack、KV q4\_0、FlashAttention 和初始预取路径。三档环境用于验证模型远大于物理内存时的启动和吞吐。该阶段也暴露了并行实验、缓存状态和工作负载不一致造成的数据波动，后续实验改为串行执行并保留原始日志。
+
+\subsubsection{RK3588：从静态建议到阶段策略}
+
+RK3588 为 4$\times$A76+4$\times$A55 的 aarch64 SoC。初次 80B 上机时，模型通过 SSD 和 mmap 在 8\,GB 物理内存上运行，但静态 RANDOM 明显慢于禁用路径。实现随后增加阶段控制器和可配置 Decode MADV：Prefill 改为 SEQUENTIAL 后恢复顺序读取，Decode 在 SEQUENTIAL/NORMAL 之间根据实验选择。后续通过用户级 systemd scope 创建 3--5\,GiB cgroup，并用 \texttt{memory.current} 轮询弥补 5.10 内核缺少 \texttt{memory.peak} 的限制。
+
+\subsubsection{Mac/Colima：可复现的低内存控制面}
+
+Mac 实验运行在 ARM64 Colima VM 内的 Linux 容器，VM 配置为 8 vCPU/16\,GiB，benchmark 容器单独限制 1--4\,GiB 和 CPU 数，\texttt{memory.swap.max}=0。容器 runner 在执行前后保存 cgroup、GNU time、llama-bench JSON 和 runtime metrics。baseline-first 动态库问题修复后，构建流程把源码 commit、build context hash、patched tree hash、模型 SHA 和 image ID 写入 manifest，避免同名 tag 或错误链接污染 A/B。
+
+\subsubsection{Raspberry Pi 5：慢存储设备策略}
+
+Raspberry Pi 5 使用 4 核 A76、4\,GiB 内存以及 USB 存储上的 NTFS-3G/FUSE。该链路的主要问题不是带宽上限，而是同步缺页经 FUSE 和 USB bridge 往返的固定延迟。系统为此实现 shared expert mlock、resident-only hot cache、16\,MiB 总预算、weight/expert prefetch 独立开关、跨 token LRU 和文件级 expert advice。实验否决了 LFRU、二次命中准入、NTFS3 mmap 和提前文件预读，最终保留“确定复用页常驻、投机 I/O 关闭或严格限额”的策略。
+
+\subsubsection{华为 HiDevLab：aarch64 可移植路径}
+
+HiDevLab 独立目录中的环境可以枚举 Ascend 910B4，但缺少完整 CANN/\texttt{torch\_npu} 用户态栈。本项目没有修改系统驱动，也没有占用其他比赛的 NPU 进程。为获得与系统相关的数据，项目在该环境编译 llama.cpp aarch64 CPU-only 路径，并以 OLMoE Q2\_K 执行 baseline、patched-default 和多种页策略 A/B。该实现证明 POSIX 路径可移植，不等同于 NPU kernel 适配。
+
+\subsection{端侧 Agent Harness 实现}
+
+Harness 位于 \path{scripts/agent/edge_agent.py}。正式路径通过 OpenAI-compatible HTTP endpoint 发送消息并解析 SSE，模型只允许返回 \texttt{\{"tool":"shell","args":[...]\}} 或 \texttt{\{"final":"..."\}}。工具参数以 argv 数组传入 \texttt{subprocess}，不启用 \texttt{shell=True}；程序名、相对路径、工作目录和符号链接目标均在执行前验证。
+
+上下文构造先固定 system prefix，再从最近消息向前装入字符预算；工具输出采用头尾保留的居中截断。输出预算以最近一次估算 TPS 更新，低于 2.0\,token/s 时乘 0.65，最低 48 tokens。每轮生成事件记录上下文字符、最大 token、请求耗时、TTFT 和估算 TPS；工具事件记录 argv、返回码、耗时、输出长度和截断标志。CLI fallback 便于功能诊断，但会重复加载模型，不用于性能比较。
+
+\subsection{指标、测试与复现实现}
+
+patched 进程结束时输出一条带 schema 版本的 \texttt{[SLIM-ARC-RUNTIME]} 行。字段包括普通权重请求/发出/跳过字节、expert issue/hit/waste、pending 与 stale 请求、页范围合并、回收候选/调用/跳过/失败、驻留样本/准入/跳过/fallback 和压力状态。解析器拒绝重复行、缺失字段、未知字段、非十进制或溢出；baseline 必须不输出该行。
+
+C++ 单元测试覆盖 page range、pressure budget、prefetch budget、expert reclaim、expert residency、unified pressure 和 runtime lifecycle，并可启用 ASan/UBSan。Python 测试覆盖 patcher 幂等性、Mac controller、runtime metrics、evidence aggregation 和 Agent Harness。实验运行额外保存模型哈希、源码身份、镜像身份、资源限制、workload 和原始输出，使表格中的每一行都能回到对应目录。

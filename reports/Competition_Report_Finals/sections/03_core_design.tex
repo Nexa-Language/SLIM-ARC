@@ -1,45 +1,162 @@
-\section{决赛运行时设计}
+\section{SLIM-ARC 系统设计}
+\label{sec:design}
 
-\subsection{阶段感知的映射建议}
+\subsection{设计目标与基本原则}
 
-一次性对整个模型设置固定页建议并不可靠。Prefill 通常按层扫描较大范围，连续预读可以摊薄缺页与存储请求开销；Decode 只激活少量专家，但在内存远小于模型且存储随机访问较弱时，彻底关闭预读反而会把大块顺序 I/O 分裂为同步小读。SLIM-ARC 因而把页建议作为设备策略：加载与 Prefill 使用 \texttt{SEQUENTIAL}；Decode 在随机按需和保留预读之间由设备配置选择。该机制只改变内核 readahead 提示，不改变计算图或 Router 结果。
+SLIM-ARC 的目标是在模型文件显著大于物理内存时，利用 MoE 的稀疏访问减少不必要的物理页驻留和同步存储访问。系统不修改模型结构和训练参数，也不把内存建议的成功作为推理正确性的前提。所有优化遵循以下原则。
 
-\subsection{层感知预取调度}
+\begin{enumerate}
+  \item \textbf{语义透明}：权重内容、张量地址、Router top-$k$、KV 内容和采样语义保持不变；页建议失败只能引起性能降级。
+  \item \textbf{事实晚于预测}：预取是候选动作，原生 Router 结果才是权威事实；预测必须可以被结算、取消和回收。
+  \item \textbf{资源统一}：普通权重、专家权重、KV cache 与驻留集合共同竞争物理内存和 I/O，不能分别无限扩大窗口。
+  \item \textbf{阶段与设备相关}：Prefill、Decode、NVMe、虚拟磁盘和 FUSE/USB 的最佳策略可能相反，运行时提供机制，设备策略决定配置。
+  \item \textbf{有界与可观测}：队列、预算、窗口、驻留集合和指标版本均有明确上界；异常状态不被解释为可用资源。
+\end{enumerate}
 
-层级预取只覆盖本轮计算图及其有限前瞻窗口。设 $l_{\min}$ 和 $l_{\max}$ 为计算图中出现的最小、最大 Transformer 层，$w$ 为随 Prefill/Decode 阶段变化的前瞻层数，$T_l$ 为第 $l$ 层已注册的 mmap 权重张量集合。算法\ref{alg:layer-prefetch}给出调度路径；循环上界已经截断到 $l_{\max}$，因此不再保留旧稿中永远不可满足的 $l>l_{\max}$ 分支。
+这些原则将“尽可能多地预取”改写为“在正确时间对有限候选执行可撤回动作”。图\ref{fig:system-overview}给出总体结构。
+
+\begin{figure}[H]
+\centering
+\resizebox{0.88\textwidth}{!}{%
+\begin{tikzpicture}[node distance=5mm and 6mm,>=Latex,font=\small,
+  layer/.style={draw,rounded corners,minimum width=0.92\textwidth,minimum height=10mm,align=center},
+  mod/.style={draw,rounded corners,fill=white,minimum height=8mm,align=center}]
+  \node[layer,fill=purple!7] (work) {工作负载层：llama-bench / llama-cli / 常驻 Agent Harness};
+  \node[layer,fill=blue!7,below=of work] (observe) {观测层：阶段识别 \quad 计算图层范围 \quad Router 结果 \quad cgroup 压力 \quad fault/I/O 指标};
+  \node[layer,fill=green!8,below=of observe] (control) {控制层：候选生成 \quad 统一预算 \quad 压力准入 \quad generation 结算 \quad 设备策略};
+  \node[layer,fill=orange!9,below=of control] (action) {动作层：权重预取 \quad 专家预取/驻留 \quad 错误页回收 \quad KV 量化/淘汰 \quad FA};
+  \node[layer,fill=gray!12,below=of action] (os) {系统层：mmap / page cache / cgroup v2 / POSIX madvise / 文件系统 / 存储设备};
+  \draw[->] (work) -- (observe);
+  \draw[->] (observe) -- (control);
+  \draw[->] (control) -- (action);
+  \draw[->] (action) -- (os);
+  \draw[->,dashed,bend right=38] (os.west) to node[left,align=center]{fault、I/O、压力\\反馈} (observe.west);
+  \draw[->,dashed,bend left=38] (action.east) to node[right,align=center]{命中、浪费\\结算} (control.east);
+\end{tikzpicture}
+}
+\caption{SLIM-ARC 的分层架构。上层给出负载和事实观测，中层决定候选与预算，下层通过标准操作系统接口执行可回退动作。}
+\label{fig:system-overview}
+\end{figure}
+
+\subsection{阶段感知的权重访问控制}
+
+\subsubsection{mmap 按需加载与 CPU repack 控制}
+
+模型权重以只读 mmap 映射到进程地址空间。虚拟映射允许 48.41\,GB 模型在数 GiB 物理内存下启动，实际驻留由访问和页缓存逐出决定。SLIM-ARC 同时关闭 GGML CPU repack。repack 会为量化权重建立适合特定 kernel 的重排副本，在内存充足时可提高算子效率，但在受限环境中可能使约 45\,GB 权重产生接近双倍的物理内存需求。系统保留 GGUF 原始布局，把可用内存留给当前工作集。
+
+\subsubsection{访问阶段与页建议}
+
+SLIM-ARC 将推理划分为加载、短 Prefill、长 Prefill、短 Decode、长 Decode 和 MoE Decode。Prefill 通常按层扫描较大范围，适合合并顺序读；Decode 的普通权重仍按层重复访问，但 routed experts 稀疏且跨 token 变化。由此形成两级决策：阶段控制器给出默认页建议，设备配置根据存储链路覆盖 Decode 行为。
+
+静态 \texttt{MADV\_RANDOM} 会关闭内核 readahead。在随机访问介质上，它可以避免读取未访问页；在 RK3588 SSD 和 FUSE/USB 等链路上，它也可能将顺序读拆成大量同步小请求。因而系统把 SEQUENTIAL、NORMAL 和 RANDOM 视为可选择策略，而不是固定优化。Prefill 默认倾向 SEQUENTIAL；Decode 的普通权重在 Mac/RK3588 可保留适度预读，在 Raspberry Pi 慢盘上则由预算和开关进一步收缩。
+
+\subsubsection{层感知的有界预取}
+
+设当前计算图的层范围为 $[l_{\min},l_{\max}]$，阶段相关前瞻窗口为 $w$，第 $l$ 层已注册权重集合为 $T_l$。预取范围为
+\begin{equation}
+  l \in [l_{\min},\min(l_{\max},l_{\min}+w)].
+\end{equation}
+系统只为该范围内且通过预算的页区间发出 WILLNEED。窗口之外的权重继续由 demand paging 加载。慢存储模式使用单 worker、window 1、同层去重和 latest-wins：尚未被 worker 领取的旧请求可由更新 generation 替换，已经进入系统调用的请求则不伪装成可取消。
 
 \begin{algorithm}[H]
-  \caption{有界层感知预取}
-  \label{alg:layer-prefetch}
-  \renewcommand{\algorithmicrequire}{\textbf{输入:}}
-  \renewcommand{\algorithmicensure}{\textbf{输出:}}
+  \caption{阶段感知的有界权重预取}
+  \label{alg:bounded-prefetch}
   \begin{algorithmic}[1]
-    \REQUIRE 计算图 $G$，阶段相关窗口 $w$
-    \ENSURE 对有限后续层发出 best-effort 页建议
+    \REQUIRE 计算图 $G$、阶段 $p$、有效预算 $B_w$
     \STATE $(l_{\min},l_{\max}) \gets \mathrm{layer\_range}(G)$
-    \STATE $l_{\mathrm{end}} \gets \min(l_{\max},l_{\min}+w)$
+    \STATE $l_{\mathrm{end}} \gets \min(l_{\max},l_{\min}+w_p)$
     \FOR{$l=l_{\min}$ \TO $l_{\mathrm{end}}$}
-      \FORALL{$t \in T_l$}
-        \STATE $\mathrm{madvise}(t.\mathrm{addr},t.\mathrm{size},\mathrm{WILLNEED})$
+      \FORALL{$r \in \mathrm{merge\_page\_ranges}(T_l)$}
+        \IF{$\mathrm{bytes}(r)$ 不超过剩余 $B_w$}
+          \STATE $\mathrm{advise}(r,\mathrm{WILLNEED},\mathrm{policy}(p,device))$
+        \ELSE
+          \STATE 记录 skipped bytes 并停止扩张
+        \ENDIF
       \ENDFOR
     \ENDFOR
   \end{algorithmic}
 \end{algorithm}
 
-Router 观测不通过裸指针跨线程共享。每次预取分配单调递增的 generation token，并把层号、专家集合和成功建议字节作为不可变记录发布；实际 Router 结果只结算同 token 的记录。计算失败、缺少 Router 节点或过滤后集合为空时显式取消 token，从而避免旧预测占满有界队列。
+\subsection{Router 反馈驱动的专家管理闭环}
 
-\subsection{统一预算：计算方式与生效范围}
+\subsubsection{专家候选的来源与优先级}
 
-调度器先从静态周期额度 $B_{\mathrm{static}}$ 出发；压力准入开启时，根据 cgroup 当前占用、上限和保留量得到有效额度 $B_{\mathrm{eff}}\le B_{\mathrm{static}}$。随后按阶段系数 $\boldsymbol{\alpha}_p=(\alpha_w,\alpha_{kv},\alpha_e)$ 计算
+SLIM-ARC 使用四类无需训练的候选信号。Temporal predictor 使用上一 token 同层的专家集合；popularity predictor 使用饱和热度计数；inline Router 在原生 Router 执行后立即发布当前层事实，缩短 cache 更新延迟；cross-layer Router 复用下一层 gate 权重，在当前层 expert FFN 和下一层 Attention 期间提前计算下一层 top-$k$。候选按照稳定性和时效性排序，并由预算截断，而非简单取并集。
+
+Temporal predictor 成本最低，但对输入变化敏感。Cross-layer Router 能在 Mac 上达到更高预测命中率，却增加一次 gate matmul，因此高命中不保证 wall time 最优。系统保留多种候选来源，设备策略可关闭边际收益不足的预测。在 Raspberry Pi 慢盘上，最终策略直接关闭 speculative expert prefetch，仅保留确定复用的 shared/hot 专家。
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/moe_router_hook_updated.png}
+  \caption{Router 观测与跨层专家预测。图中缓存 ID 和发光网格表示候选专家页；原生下一层 Router 仍给出最终选择。}
+  \label{fig:router-hook}
+\end{figure}
+
+\subsubsection{generation token 与一次性结算}
+
+同一层可以在一个计算图中重复出现，后台 worker 也可能晚于下一次 Router 观测完成。仅以层号保存“最近预测”会把两个轮次覆盖或错配。SLIM-ARC 为每次专家预取分配单调递增的 generation token，并在 advice 前预留有界 pending 记录。记录包含层号、候选专家、每个专家成功建议的字节和状态。
+
+实际 Router 结果只结算相同 token 的记录。成功计算且获得非空 ID 时，系统计算命中和浪费；计算失败、缺少 Router 节点或过滤后为空时，系统显式取消 token，并把已经成功建议的字节归入浪费。每个 token 只能结算一次，token 0 只用于不参与归因的兼容预测。该设计使 Router occurrences、专家集合和成功 advice bytes 使用同一统计单位。
+
+\subsubsection{错误专家页的安全回收}
+
+令预取专家集合为 $P$，实际选择集合为 $S$，错误候选为 $W=P\setminus S$。对每个 $e\in W$，规划器在所有专家张量中定位该专家切片。若张量大小不能被专家数整除、专家 ID 越界、地址加法溢出或页大小无效，则跳过该候选并记录原因。合法切片 $[a,b)$ 被向内对齐为
 \begin{equation}
-  (B_w,B_{kv},B_e)=B_{\mathrm{eff}}\boldsymbol{\alpha}_p,
-  \qquad \alpha_w+\alpha_{kv}+\alpha_e=1.
+  [\lceil a/P_s\rceil P_s,\lfloor b/P_s\rfloor P_s),
 \end{equation}
-运行时统计可在有限范围内调高发生 stall 的路径，并缩减另外两路。当前实现采用启发式乘法调整，没有在每次调整后对三路比例做二次归一化；因此这些额度应解释为各路径的 admission 上限，而不是三路实际 I/O 字节和严格等于 $B_{\mathrm{eff}}$。表\ref{tab:budget-ratios-finals}列出当前初始系数。
+其中 $P_s$ 为系统页大小。只有非空的完整内部页区间才接收 DONTNEED 建议。这样既不触及选中专家，也不回收与相邻专家共享的边界页。
+
+回收不是推理成功的前置条件。系统调用失败只增加 failure 计数，成功回收字节只统计返回码为 0 的调用。状态锁只用于生成不可变快照，页面建议在锁外执行，避免慢系统调用阻塞 Router hook。
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[node distance=7mm and 7mm,>=Latex,every node/.style={font=\small,align=center},
+  b/.style={draw,rounded corners,minimum height=9mm,text width=0.19\textwidth}]
+  \node[b,fill=blue!8] (pred) {预测集合 $P$\\generation $g$};
+  \node[b,fill=orange!10,right=of pred] (admit) {预算准入\\成功 advice bytes};
+  \node[b,fill=green!9,right=of admit] (truth) {Router 事实 $S$\\一次性结算};
+  \node[b,fill=red!7,below=of admit] (reclaim) {$P\setminus S$\\内部页回收};
+  \node[b,fill=purple!7,below=of truth] (resident) {$P\cap S$\\热度与驻留更新};
+  \draw[->] (pred)--(admit); \draw[->] (admit)--(truth);
+  \draw[->] (truth)--(reclaim); \draw[->] (truth)--(resident);
+  \draw[->,dashed] (reclaim.west) -| node[below,left]{压力/浪费反馈} (pred.south);
+\end{tikzpicture}
+\caption{专家预测、事实结算、错误页回收和驻留更新构成的闭环。}
+\label{fig:expert-loop}
+\end{figure}
+
+\subsection{专家驻留与替换策略}
+
+\subsubsection{shared expert 与 hot expert}
+
+shared expert 在每个 token 上执行，具有确定复用价值；routed experts 的价值由跨 token 访问频率决定。系统先为 shared expert 保留一个较小的锁页集合，再以设备相关容量维护 hot expert cache。驻留不是复制权重，而是对 mmap 页进行 mlock 或保留建议，因此张量地址和 GGUF 内容保持不变。
+
+热度计数使用 $\mathrm{uint32}$ 饱和累加，避免长期运行溢出；每 64 个有效 Router 样本统一衰减，防止早期热点永久占据缓存。Raspberry Pi 的实验表明，512\,MiB 跨 token LRU 能同时利用频率和最近性；更复杂的 LFRU 虽提高部分 hit counter，却增加非驻留扫描和 wall time。系统因此优先选择能够直接减少缺页和淘汰的简单策略。
+
+\subsubsection{压力与预测质量控制}
+
+压力控制器以 $r=\mathrm{memory.current}/\mathrm{memory.max}$ 生成 normal、high、critical 或 missing 状态。$r\ge 0.85$ 进入 high，$r\ge 0.95$ 进入 critical；恢复使用滞回和连续样本，避免阈值附近震荡。invalid、zero max、current 大于 max 或无限上限统一进入 missing，并清除恢复计数。
+
+预测浪费使用千分比样本 $x_t$ 的 EWMA：
+\begin{equation}
+  E_t=\left\lfloor\frac{3E_{t-1}+x_t}{4}\right\rfloor.
+\end{equation}
+$E_t\ge 600$ 时收缩预测驻留，连续两个样本低于 400 后恢复。critical 压力下不准入 routed expert；high 压力下只保留稳定候选；normal 时按 stable、temporal、hot 的顺序选择。预算或最大专家数是硬上限，重复和非法 ID 被确定性过滤。
+
+\subsection{统一内存与 I/O 预算}
+
+统一调度器先从静态周期额度 $B_{static}$ 出发。压力准入开启时，依据 cgroup 上限 $M$、当前占用 $C$ 和保留量 $R$ 得到
+\begin{equation}
+  B_{eff}=\min(B_{static},\max(0,M-C-R)).
+\end{equation}
+异常读数采用保守 fallback，不把算术溢出或缺失状态解释为剩余容量。阶段比例 $\boldsymbol{\alpha}_p=(\alpha_w,\alpha_{kv},\alpha_e)$ 决定普通权重、KV 与专家路径的 admission 上限：
+\begin{equation}
+  (B_w,B_{kv},B_e)=B_{eff}\boldsymbol{\alpha}_p.
+\end{equation}
 
 \begin{table}[H]
   \centering
-  \caption{统一预算的阶段初始比例（策略参数，不是测得带宽占比）}
+  \caption{统一预算的阶段初始比例}
   \label{tab:budget-ratios-finals}
   \begin{tabular}{lccc}
     \toprule
@@ -54,33 +171,54 @@ Router 观测不通过裸指针跨线程共享。每次预取分配单调递增�
   \end{tabular}
 \end{table}
 
-必须区分“计算出额度”和“严格执行额度”。当前权重预取通过 \texttt{set\_memory\_budget} 执行 $B_w$，专家路径在压力准入、驻留或专家预算开关启用时执行 $B_e$；决赛的 model-owned runtime 尚未绑定 KV manager，因此 $B_{kv}$ 只存在于策略计算中，没有进入正式实验路径。即使后续绑定 KV manager，现有接口也尚未把 $B_{kv}$ 作为逐周期硬 admission。因此本报告将其称为\textbf{统一预算策略与两路执行路径}，不宣称权重、KV、专家三路已经完成同等强度的带宽隔离。补齐 KV manager 绑定、字节级 admission 和比例归一化后，才能把表中 KV 比例解释为实际约束。
+当前权重和专家路径执行字节级 admission；KV 路径完成策略计算与长上下文模块配置，但尚未与 model-owned runtime 建立同等强度的逐周期硬限制。因此表\ref{tab:budget-ratios-finals}表示初始策略，而不是三路实际 I/O 带宽的测量值。Raspberry Pi 的 16\,MiB 预算和零投机模式进一步表明，慢存储上的最优额度可能接近零：预算的价值是拒绝无收益动作，而非始终填满链路。
 
-\subsection{错误专家页回收：安全优先的候选建议}
+\subsection{KV cache 与计算协同}
 
-每轮 Router 观测产生已预取集合和实际选中集合。回收规划器保留前者中未出现在后者的 ID，并保持首次出现顺序。对于每个候选专家，它验证张量的专家数、可整除布局、ID 范围和无溢出的偏移计算；再把专家切片向内收缩到完整页面。一个专家通常跨越多个页面，边界页还可能与相邻切片共享，因此系统只对完全位于该专家切片内部的页面提出建议。零长度、跨越张量边界、非整除布局或非法 ID 都不产生页面建议，而是记录可审核的原因。这样，建议绝不覆盖选中专家，也不触及专家切片外的字节。
+权重页管理解决模型文件远大于内存的问题，KV 管理解决工作集随上下文增长的问题。SLIM-ARC 支持 q4\_0 KV，将 key/value 从高精度表示压缩为低比特缓存；StreamingLLM 保留 attention sink 和最近窗口，将 KV 内存从 $O(L)$ 控制为 $O(S+W)$；FlashAttention 在后端支持时减少 Attention 中间量和高层 I/O\cite{flashattention2022,streamingllm2024}。
 
 \begin{figure}[H]
-\centering
-\begin{tikzpicture}[node distance=9mm and 7mm, >=Latex, every node/.style={font=\small,align=center,draw,rounded corners,minimum height=9mm}]
-  \node[fill=blue!9] (router) {Router 观测\\\textbf{事实}};
-  \node[fill=orange!12,right=of router] (plan) {差集与内部页规划\\\textbf{设计}};
-  \node[fill=green!10,right=of plan] (advice) {可选页建议\\\textbf{设计}};
-  \node[fill=gray!14,below=of plan] (metrics) {命中、浪费、跳过、失败\\\textbf{事实记录}};
-  \draw[->] (router) -- (plan);
-  \draw[->] (plan) -- (advice);
-  \draw[->] (advice) |- (metrics);
-  \draw[->] (router) -- (metrics);
-\end{tikzpicture}
-\caption{安全错误专家页回收闭环（\textbf{设计图，非性能测量}）。事实记录由严格运行时指标输出；是否带来性能收益必须由第\ref{sec:protocol}节协议的正式结果判定。}
-% chktex 24 is a false positive: this figure label belongs after its caption.
-\label{fig:reclaim-loop} % chktex 24
+  \centering
+  \includegraphics[width=\textwidth]{figures/kv_eviction_updated.png}
+  \caption{StreamingLLM KV eviction 的设计示意。attention sink 永久保留，最近窗口沿序列滑动，中间 KV 被释放或卸载。}
+  \label{fig:kv-eviction}
 \end{figure}
 
-\subsection{压力/准确性导向的专家驻留}
+这些模块不能无条件叠加。顺序删除 KV 可能破坏某些 FlashAttention 布局，低比特 KV 在短上下文小模型上也可能因量化开销变慢。系统按上下文长度、可用内存和后端能力启用相应路径，并在第\ref{sec:evaluation}节分别报告性能与精度边界。
 
-驻留不是无条件缓存。运行时从 cgroup v2 读取 \texttt{memory.current} 与 \texttt{memory.max}，将压力归为 normal、high、critical 或 missing；无效、溢出或不一致读数走显式兼容回退，而不被当作剩余容量。策略同时参考预测浪费的 EWMA 和饱和的专家热度：高压力时缩紧准入，错误率高时不为不可靠预测预留预算。压力阈值、恢复所需的连续样本和预算均为可测试的确定性规则，而非从最终结果反推的参数。
+\subsection{优化之间的层次与相互作用}
 
-\subsection{不变量与设计取舍}
+SLIM-ARC 将优化分为释放资源、降低需求和缩短执行三类。第一类包括 mmap、关闭 repack、阶段页建议和错误页回收；第二类包括权重量化、KV 量化、KV eviction、预算和驻留集合；第三类包括 FlashAttention、线程配置、readahead 和能覆盖 I/O 的预取窗口。资源释放能够为缓存和计算优化创造空间，但也可能改变 cache 状态，使简单相加失效。
 
-回收与驻留只发出建议，建议失败记为指标并回退，不使推理失败。其代价是保守：页边缘和不规则张量可能被跳过，错误预测也可能使驻留无收益。该取舍优先于以任何性能代价换取覆盖率；是否满足推广门槛留给受控实验决定。
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/optimization_waterfall_updated.png}
+  \caption{优化类别及其相互作用示意。底部吞吐序列来自初赛不同合同下的历史探索，仅用于说明研发路径，不能解释为同一受控实验的累积加速；正式结果见第\ref{sec:evaluation}节。}
+  \label{fig:optimization-waterfall}
+\end{figure}
+
+组合策略必须重新测量。Mac 正式矩阵中，reclaim 和 residency 单项均未越过拒绝门槛，但 combined cold wall time 回退 19.95\%。这个结果并不否定各机制的安全性，而是说明回收产生的 fault 与驻留产生的 admission 工作可能在同一阶段相互放大。
+
+\subsection{端侧 Agent Harness 扩展}
+
+端侧 Agent 会反复执行“模型决策、工具调用、观测回填、继续生成”。若每一步重新加载权重，或把完整终端输出持续加入上下文，运行时节省的内存和 I/O 会被上层编排重新消耗。SLIM-ARC 因此提供一个最小 Harness，使多轮工具负载遵守同样的资源约束。该扩展不修改计算图，也不属于本文主要性能贡献。
+
+Harness 复用常驻 OpenAI-compatible endpoint，只接受结构化 Shell 工具调用或最终回答。稳定 system prefix 始终保留，历史消息从最近轮次向前装入字符预算，单次工具观测单独截断。若上一轮输出速度低于阈值，下一轮 \texttt{max\_tokens} 逐步收缩；命令白名单、工作目录、超时、输出长度、最大轮数和总墙钟共同限制工具闭环。模型事件和工具事件分别记录，从而区分推理慢与外部工具慢。
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{端侧 Agent Harness 的资源策略}
+  \label{tab:agent-harness-policy}
+  \begin{tabular}{p{0.23\textwidth}p{0.36\textwidth}p{0.30\textwidth}}
+    \toprule
+    端侧问题 & 设计策略 & 默认边界 \\
+    \midrule
+    重复加载权重 & 复用常驻 HTTP 模型服务 & CLI fallback 不用于性能结论 \\
+    工具轮次扩大上下文 & 稳定 prefix、最近消息窗口、观测截断 & 8192/2048 字符 \\
+    Decode 较慢 & 依据观测 TPS 收缩下一轮输出预算 & 192 tokens，最低 48 \\
+    工具阻塞或输出爆炸 & 白名单、工作目录、超时和输出上限 & 8\,s、4\,KiB \\
+    多轮失控 & step 与总墙钟双上限 & 4 steps、300\,s \\
+    \bottomrule
+  \end{tabular}
+\end{table}
