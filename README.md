@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="assets/slim-arc-logo.png" alt="SLIM-ARC Logo" width="116" />
+
 # SLIM-ARC
 
 ### Synergistic LLM Integration with Memory-Aware Runtime Co-Optimization
@@ -9,6 +11,10 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![OS Competition](https://img.shields.io/badge/OS%20Challenge-2026%20Proj%2059-cyan.svg)](https://gitlab.eduxiji.net/T2026105589911358/project3136859-389100)
 [![School](https://img.shields.io/badge/Sun%20Yat--sen%20University-SYSU-purple.svg)](https://www.sysu.edu.cn/)
+
+<br />
+
+<img src="assets/slim-arc-readme-cover.png" alt="SLIM-ARC memory-aware MoE inference runtime" width="100%" />
 
 </div>
 
