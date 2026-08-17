@@ -29,14 +29,14 @@ MAX_PPTX_MEMBERS = 1024
 MAX_PPTX_MEMBER_BYTES = 64 * 1024 * 1024
 MAX_PPTX_TOTAL_BYTES = 128 * 1024 * 1024
 MAX_PPTX_COMPRESSION_RATIO = 100
-ALLOWED_ROOT_FILES = {".gitattributes", ".gitignore", "CHANGELOG.md", "CMakeLists.txt", "LICENSE", "Makefile", "NOTICE", "README.md", "ROADMAP.md", "pyproject.toml", "requirements.txt"}
+ALLOWED_ROOT_FILES = {".gitattributes", "CHANGELOG.md", "CMakeLists.txt", "LICENSE", "Makefile", "NOTICE", "README.md", "pyproject.toml", "requirements.txt"}
 TEXT_SUFFIXES = {".c", ".cc", ".cpp", ".csv", ".h", ".hpp", ".json", ".jsonl", ".md", ".py", ".sh", ".toml", ".txt", ".yaml", ".yml"}
 SOURCE_SUFFIXES = TEXT_SUFFIXES | {".css", ".html", ".js"}
 IMAGE_SUFFIXES = {".jpeg", ".jpg", ".png", ".svg"}
-REPORT_DIRS = {"Competition_Report", "Competition_Report_Finals", "Finals_Competition_Report"}
-FINAL_PPTX = {"SLIM-ARC展示PPT.pptx", "SLIM-ARC决赛展示PPT.pptx"}
-FINAL_PDF = {"SLIM-ARC展示PPT.pdf", "SLIM-ARC决赛展示PPT.pdf"}
-FINAL_DOCS = {"docs/moe_cpu_memory_limited_survey.pdf", "docs/macos_test_notes/2026-08-12/finals-evidence.csv", "docs/macos_test_notes/2026-08-12/finals-evidence.json", "docs/macos_test_notes/2026-08-12/finals-validated-summary.md"}
+REPORT_DIRS = {"Competition_Report_Official"}
+FINAL_PPTX: set[str] = set()
+FINAL_PDF: set[str] = set()
+FINAL_DOCS: set[str] = set()
 DENIED_COMPONENTS = {".agent", ".agents", ".cache", ".claude", ".codex", ".git", ".omo", ".roo", ".svn", ".venv", "__pycache__", "build", "cache", "dist", "downloads", "models", "node_modules", "superpowers", "target"}
 DENIED_SUFFIXES = {".a", ".bin", ".bz2", ".class", ".dll", ".dmg", ".dylib", ".exe", ".gguf", ".gz", ".iso", ".o", ".obj", ".onnx", ".pt", ".pth", ".pyc", ".rar", ".safetensors", ".so", ".tar", ".tgz", ".xz", ".zip", ".7z"}
 MACHO_MAGICS = {b"\xce\xfa\xed\xfe", b"\xcf\xfa\xed\xfe", b"\xfe\xed\xfa\xce", b"\xfe\xed\xfa\xcf", b"\xca\xfe\xba\xbe", b"\xbe\xba\xfe\xca", b"\xca\xfe\xba\xbf", b"\xbf\xba\xfe\xca"}
@@ -103,12 +103,10 @@ def _allowlisted(relative: PurePosixPath) -> bool:
         return relative.suffix.lower() in TEXT_SUFFIXES
     if parts[0] in {"patches", "scripts", "tests"}:
         return relative.suffix.lower() in SOURCE_SUFFIXES
-    if parts[0] in {"src", "include", "examples", "assets", "site"}:
+    if parts[0] in {"src", "include", "examples", "assets"}:
         return relative.suffix.lower() in SOURCE_SUFFIXES | IMAGE_SUFFIXES
-    if parts[0] == "plan":
-        return relative.suffix.lower() == ".md"
     if parts[0] == "docs":
-        return relative.as_posix() in FINAL_DOCS or len(parts) >= 3 and parts[1] in {"design", "guide", "integration", "official", "papers"} and relative.suffix.lower() in TEXT_SUFFIXES | {".pdf"}
+        return relative.as_posix() in FINAL_DOCS
     if parts[0] != "reports":
         return False
     return len(parts) == 2 and relative.name in FINAL_PPTX | FINAL_PDF or len(parts) >= 3 and parts[1] in REPORT_DIRS and relative.suffix.lower() in SOURCE_SUFFIXES | IMAGE_SUFFIXES | {".bib", ".pdf", ".tex"}
@@ -118,10 +116,10 @@ def _may_contain_allowed(relative: PurePosixPath) -> bool:
     parts = relative.parts
     if not parts:
         return False
-    if parts[0] in {"config", "data", "patches", "scripts", "tests", "src", "include", "examples", "assets", "site", "plan"}:
+    if parts[0] in {"config", "data", "patches", "scripts", "tests", "src", "include", "examples", "assets"}:
         return True
     if parts[0] == "docs":
-        return len(parts) == 1 or len(parts) >= 2 and parts[1] in {"design", "guide", "integration", "official", "papers"} or any(PurePosixPath(item).parts[: len(parts)] == parts for item in FINAL_DOCS)
+        return any(PurePosixPath(item).parts[: len(parts)] == parts for item in FINAL_DOCS)
     return parts[0] == "reports" and (len(parts) == 1 or len(parts) >= 2 and (parts[1] in REPORT_DIRS or parts[1] in FINAL_PPTX | FINAL_PDF))
 
 
@@ -132,6 +130,24 @@ def _must_fail_when_seen(relative: PurePosixPath) -> bool:
 
 def _internal_agent_file(relative: PurePosixPath) -> bool:
     return relative.name.lower() in {"agent.md", "agents.md"}
+
+
+def _public_exclusion(relative: PurePosixPath) -> bool:
+    """Exclude planning, generation traces, and non-public result trees."""
+    parts = tuple(part.lower() for part in relative.parts)
+    if relative.name.lower() in {"agent.md", "agents.md", "roadmap.md", ".gitignore"}:
+        return True
+    if not parts:
+        return False
+    if parts[0] in {"docs", "plan", "site"}:
+        return True
+    if parts[0] == "scripts" and len(parts) >= 2 and parts[1] in {"agent", "release"}:
+        return True
+    if parts[0] == "tests" and ("agent" in parts or relative.name.lower() == "test_prepare_finals_gitlab.py"):
+        return True
+    if parts[0] == "reports" and len(parts) >= 2 and parts[1] != "competition_report_official":
+        return True
+    return False
 
 
 def _ensure_directory(path: Path, label: str) -> Path:
@@ -287,6 +303,20 @@ def _scan_secrets(path: Path, relative: PurePosixPath) -> None:
             raise ReleaseError(f"secret-like content is denied: {relative.as_posix()}")
 
 
+PUBLIC_CONTENT_DENY = re.compile(
+    r"(?i)\b(?:agent\s+harness|codex|chatgpt|openai)\b|依托\s*agent|(?:负向|负优化|回退|被拒绝)实验|内部审计|队内沟通"
+)
+
+
+def _scan_public_content(path: Path, relative: PurePosixPath) -> None:
+    public_document = relative.as_posix() == "README.md" or relative.parts[:2] == ("reports", "Competition_Report_Official")
+    if not public_document or relative.suffix.lower() in IMAGE_SUFFIXES | {".pdf"}:
+        return
+    for fragment in _content_fragments(path):
+        if PUBLIC_CONTENT_DENY.search(fragment):
+            raise ReleaseError(f"non-public narrative is denied: {relative.as_posix()}")
+
+
 def _scan_source(root: Path, max_file_bytes: int) -> list[dict[str, object]]:
     entries: list[dict[str, object]] = []
     for current, directories, filenames in os.walk(root, topdown=True, followlinks=False):
@@ -299,6 +329,8 @@ def _scan_source(root: Path, max_file_bytes: int) -> list[dict[str, object]]:
             relative = PurePosixPath(child.relative_to(root).as_posix())
             if child.is_symlink():
                 raise ReleaseError(f"symlink is denied: {relative}")
+            if _public_exclusion(relative):
+                continue
             reason = _denied_reason(relative)
             if relative.parts == (".git",):
                 continue
@@ -312,6 +344,8 @@ def _scan_source(root: Path, max_file_bytes: int) -> list[dict[str, object]]:
             relative = PurePosixPath(child.relative_to(root).as_posix())
             if child.is_symlink():
                 raise ReleaseError(f"symlink is denied: {relative}")
+            if _public_exclusion(relative):
+                continue
             reason = _denied_reason(relative)
             if reason:
                 if not _internal_agent_file(relative) and (_must_fail_when_seen(relative) or _may_contain_allowed(relative)):
@@ -328,6 +362,7 @@ def _scan_source(root: Path, max_file_bytes: int) -> list[dict[str, object]]:
             if size > max_file_bytes:
                 raise ReleaseError(f"file exceeds size policy ({max_file_bytes} bytes): {relative}")
             _scan_secrets(child, relative)
+            _scan_public_content(child, relative)
             entries.append({"path": relative.as_posix(), "sha256": _sha256(child), "size": size})
     return entries
 
