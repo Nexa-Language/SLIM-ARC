@@ -143,6 +143,8 @@ def _public_exclusion(relative: PurePosixPath) -> bool:
         return True
     if parts[0] == "scripts" and len(parts) >= 2 and parts[1] in {"agent", "release"}:
         return True
+    if parts[0] == "scripts" and relative.name.lower().startswith("prepare-gitlab"):
+        return True
     if parts[0] == "tests" and ("agent" in parts or relative.name.lower() == "test_prepare_finals_gitlab.py"):
         return True
     if parts[0] == "reports" and len(parts) >= 2 and parts[1] != "competition_report_official":
