@@ -22,6 +22,8 @@ SLIM-ARC 是中山大学参加 2026 全国大学生计算机系统能力大赛�
 
 | 平台与约束 | 模型 | 结果 |
 |---|---|---|
+| x86/WSL，8 GiB cgroup | Qwen3-Next-80B-A3B | 同合同 Decode 0.08 → 0.43 token/s（+437.5%） |
+| x86/WSL，32 GiB，warm cache | Qwen3-Next-80B-A3B IQ4_XS | FlashAttention 消融 Decode 3.01 → 5.16 token/s（+71.4%） |
 | Mac/Colima，2 GiB，4 vCPU，no-swap | Qwen3-Next-80B-A3B Q4_K_M，48.41 GB | Prefill 3.908455 token/s，Decode 0.709095 token/s |
 | RK3588，3 GiB cgroup，swap 0 | Qwen3-Next-80B-A3B Q4_K_M | Decode 0.70 → 2.21 token/s（3.16×） |
 | Raspberry Pi 5，4 GiB，USB/FUSE，no-swap | Qwen3-Next-80B-A3B Q4_K_M | shared/hot 驻留使 Decode 提升 14.16%，wall time 缩短 6.58% |
