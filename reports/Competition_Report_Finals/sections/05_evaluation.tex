@@ -68,13 +68,63 @@ Mac 正式矩阵回答“在严格可复现的 2\,GiB 容器协议下是否应�
       & 静态全开为 0.44/0.26\,t/s；禁用为 2.74/1.41\,t/s；动态策略达到 2.84/1.40\,t/s
       & Prefill 使用 SEQUENTIAL；Decode 在该设备保留预读，拒绝静态 RANDOM \\
     树莓派 5，4\,GiB，NTFS-3G/FUSE，no-swap
-      & A45/A46 相邻 \texttt{pp16}：精确 expert 文件预读开/关
-      & 0.0936006 对 0.0938368\,t/s，开启后为 $-0.251714\%$；没有测得 decode
-      & 默认关闭文件级提前读；下一步优先减少实际专家读取量 \\
+      & A24--A50：resident cache、统一预算、预取开关、替换策略、文件系统与 top-$k$
+      & A28 相对 A24 decode $+14.16\%$；A29 投机 weight I/O $-98.44\%$；A45 文件预读 $-0.25\%$
+      & 常驻 shared/hot 路径并关闭投机预取；top-8 保留质量门 \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 RK3588 的反例揭示了机制边界：当 45.09\,GiB 权重在 8\,GB 内存中持续轮转时，静态 \path{MADV_RANDOM} 把可合并的读请求分裂为大量同步小缺页；顺序预读通过较大 I/O 摊薄内核 fault、DMA 与 SMMU 以及弱核中断路径上的固定开销。阶段感知策略恢复了 Prefill，并使 Decode 追平禁用路径。这里的结论是“策略匹配硬件”，而不是“SEQUENTIAL 在所有设备上更快”。
 
-树莓派实验使用同一 48,410,988,384 B 模型和相邻开/关运行。\texttt{POSIX\_FADV\_WILLNEED} 只把请求提前交给 FUSE/内核，没有减少实际读取量，也没有改善 USB Bulk-Only 队列深度，因而结果中性略负。A47 对旧源码的复现与当前 control 只差 0.61\%，却无法复现历史所谓 cold 绝对值，说明仅清 Linux page cache 不能证明 FUSE、USB bridge 和 SSD 内部缓存同时为 cold；相关历史跨批次倍数不用于结论。正在探索的 expert top-$k$ 裁剪也不进入本报告性能表，除非固定质量题与原始 top-10 的匹配对照完成。
+树莓派实验使用同一 48,410,988,384 B 模型和相邻开/关运行。\texttt{POSIX\_FADV\_WILLNEED} 只把请求提前交给 FUSE/内核，没有减少实际读取量，也没有改善 USB Bulk-Only 队列深度，因而结果中性略负。A47 对旧源码的复现与当前 control 只差 0.61\%，却无法复现历史所谓 cold 绝对值，说明仅清 Linux page cache 不能证明 FUSE、USB bridge 和 SSD 内部缓存同时为 cold；相关历史跨批次倍数不用于结论。
+
+\subsection{树莓派慢存储专项优化}
+
+树莓派上的核心转向是从“尽量提前读”改为“只保留确定会复用的页，并停止无收益的投机 I/O”。表\ref{tab:pi-policy-evolution}按实施顺序汇总有效机制和被否决方向。A24 是同一 campaign 的 demand-paging 参考；A28 将每层总会执行的 shared expert 和跨 token 复用的 hot experts 保留在内存，避免每 token 重新穿过 FUSE/USB。A29 再用 16\,MiB 统一预算限制 speculative weight advice；A32 证明将其完全关闭也不损失 wall time，因此形成慢盘零投机默认候选。A34 的 512\,MiB LRU 用有限驻留预算保留跨 token 页；更复杂的 LFRU 虽改善部分 cache counters，却增加非驻留扫描和 wall time，因而被拒绝。
+
+\begin{table}[H]
+  \centering
+  \scriptsize
+  \setlength{\tabcolsep}{3pt}
+  \caption{树莓派 5 慢存储策略演进（均为设备内匹配比较）}
+  \label{tab:pi-policy-evolution}
+  \begin{tabular}{p{0.10\textwidth}p{0.24\textwidth}p{0.36\textwidth}p{0.13\textwidth}}
+    \toprule
+    实验 & 机制 & 结果 & 决策 \\
+    \midrule
+    A26 & 512\,MiB resident hot-expert cache
+      & 相对 A24：decode $+9.19\%$，wall $-4.48\%$；两次运行相差 1\,s
+      & 保留 \\
+    A28 & A26 + 94.8\,MB shared-expert mlock
+      & 相对 A24：prefill $+1.45\%$，decode $+14.16\%$，wall $-6.58\%$
+      & 设备候选 \\
+    A29 & 16\,MiB unified speculative-I/O budget
+      & 相对 A28：吞吐约 $\pm0.2\%$；issued 与 in-flight bytes 均 $-98.44\%$
+      & 推广到慢盘 \\
+    A32/A33 & 关闭 weight/expert speculative advice
+      & 505\,s 两次复现；相对同环境 control wall 持平、decode $+0.37\%$，投机 I/O 清零
+      & 慢盘默认 \\
+    A34/A35 & 512/384\,MiB 跨 token LRU
+      & 512\,MiB 相对旧 cache：evictions $-36.31\%$、hits $+6.53\%$、decode $+0.93\%$；384\,MiB 反向
+      & 选 512\,MiB \\
+    A37 & LFRU 替换 LRU
+      & prefill $-1.60\%$，decode $-1.99\%$，wall $+1.50\%$，nonresident scan $+56.33\%$
+      & 拒绝 \\
+    A38--A40 & hot admission threshold 由 1 提到 2
+      & 三个实现的 prefill 均约 $-54\%$；recurrent microbatch 丢失首次命中后的复用
+      & 拒绝 \\
+    A41/A42 & NTFS-3G/FUSE 改为只读 NTFS3
+      & 1\,MiB direct-read bandwidth $+57.28\%$，真实 mmap prefill 却 $-65.70\%$
+      & 保留 FUSE \\
+    A45/A46 & exact expert \texttt{fadvise}
+      & prefill $-0.251714\%$；只提前请求，未减少读取量
+      & 默认关闭 \\
+    A49/A50 & routed top-8 对 top-10，\texttt{pp4/tg1}
+      & 单次 prefill $+17.56\%$、decode $+10.53\%$、wall $-3.30\%$
+      & 质量门前 opt-in \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Top-8 的数据只代表性能上限，不是默认配置。A51 与 A52 使用同一算术问题时，top-8 与原始 top-10 都回答 50\%，而正确答案为 46.67\%；该问题无法区分裁剪造成的质量变化。因此报告保留 A49/A50 的单次方向性数据，同时要求后续 ARC-Challenge 多选准确率和重复 A/B 同时通过。这个边界体现了端侧优化的基本约束：减少专家计算与 I/O 可以直接换取性能，但必须把质量损失作为一等预算。

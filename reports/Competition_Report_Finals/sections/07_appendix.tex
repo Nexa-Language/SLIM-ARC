@@ -17,7 +17,7 @@
     6/21--6/26 & 完成初赛基线、mmap/MADV、量化、预取与初步消融 & 作为技术起点保留；跨缓存、跨设备或审计失效的倍数不沿用 \\
     8/5--8/10 & 在 RK3588 上跑通 80B，并定位静态 RANDOM 的严重负优化 & 实现阶段感知建议；动态策略在匹配工作负载下追平禁用路径 \\
     8/11--8/12 & 完成 Mac 2\,GiB/no-swap 身份绑定矩阵 & 20 次成功运行由同一 JSON 导入；回收/驻留 opt-in，组合拒绝 \\
-    8/13--8/15 & 转向真实边缘设备与慢存储链路 & 树莓派精确文件预读无收益；继续研究减少专家读取量而非只提前读取 \\
+    8/13--8/17 & 转向真实边缘设备与慢存储链路 & 树莓派形成 shared/hot 常驻、16\,MiB 预算、零投机预取与 512\,MiB LRU 的设备策略；top-8 保留质量门 \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -39,6 +39,10 @@
     & 旧 patched 性能行全部作废；正式矩阵在每次运行中绑定镜像、源码树、variant linkage、模型和 cgroup 证据。 \\
   慢 FUSE/USB 存储提前读无收益
     & 树莓派 A45/A46 显示精确 expert \texttt{fadvise} 为 $-0.251714\%$；默认关闭，后续优先低比特专家、静态裁剪或缓存替换策略。 \\
+  慢盘投机 I/O 大但吞吐无收益
+    & A29 的 16\,MiB 预算将 issued/in-flight weight bytes 降低 98.44\% 且吞吐近似不变；A32/A33 进一步证明完全关闭 weight/expert speculative advice 后 wall 同为 505\,s。 \\
+  热专家 cache 需要匹配 recurrent 访问
+    & 512\,MiB LRU 将 evictions 降低 36.31\% 并保持吞吐；LFRU 增加 nonresident scan 56.33\%，两次命中准入使 prefill 下降约 54\%，均被拒绝。 \\
   \bottomrule
 \end{longtable}
 
