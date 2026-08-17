@@ -21,6 +21,12 @@ JSON 的生成、核验和填表步骤记录于 \texttt{RESULTS\_IMPORT.md}。�
 \FinalsResultsTable
 \FinalsDecisionSummary
 
+\subsection{赛前末次 A24 运行复核}
+
+2026 年 8 月 17 日又执行了一次单独的终态复核：仍使用 48,410,988,384 B 的 Qwen3-Next-80B-A3B-Instruct Q4\_K\_M、2\,GiB cgroup、4 vCPU、no-swap、\texttt{pp64}/\texttt{tg16} 和 cold cache，并开启动态阶段建议，同时设置 \texttt{SLIM\_ARC\_NO\_EXPERT\_PREFETCH=1}。该运行成功退出，没有 OOM；Prefill 为 3.908455\,t/s，Decode 为 0.709095\,t/s，wall time 为 58.06\,s，\texttt{memory.peak} 为 2\,GiB，major faults 为 402,118。运行时记录了 816 个专家样本，而 expert advice requests、issued bytes 和 waste bytes 均为 0，说明 A24 精确关闭专家投机预取的开关在最终镜像中生效。
+
+该复核只有一次运行，而且镜像与 8 月 12 日正式矩阵不同，因此只用作“二进制、资源边界和开关仍然可运行”的终态证据，不参与表\ref{tab:finals-results}的配置排序，也不与旧行相除形成新加速比。结构化控制器结果、llama-bench JSON、GNU time、cgroup 和运行时指标保存在 \path{docs/macos_test_notes/2026-08-17/ecospec-a24-final-2g-4c-pp64-tg16-cold/}。
+
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[x=0.105cm,y=0.72cm,font=\small]
@@ -102,6 +108,26 @@ RK3588 的反例揭示了机制边界：当 45.09\,GiB 权重在 8\,GB 内存中
 \end{table}
 
 这项验证同时划清可移植边界：SLIM-ARC 的 POSIX/llama.cpp CPU 路径可以在 \texttt{aarch64} Linux 上构建，但 CANN 路径必须在匹配 toolkit、算子库和量化支持的独立镜像中重新构建与测量。当前 80B \texttt{Q4\_K\_M} 模型不能因“设备可枚举”就宣称已在 910B 上运行。
+
+在用户新建的 HiDevLab 独立环境中，项目进一步完成 OLMoE-1B-7B Q2\_K 的系统开/关 A/B。该模型为真实 MoE，但执行路径仍是 \texttt{aarch64} llama.cpp CPU-only，不使用 CANN 或 NPU。为使 2,562,763,232,B 小模型进入运行时，本次隔离构建仅把 admission guard 从 6,GiB 降到 2,GiB；baseline 不改，仓库默认阈值也不据此变更。模型 SHA-256、完整七组结果和 runtime 计数器保存于 \path{docs/ascend_test_notes/2026-08-17/olmoe-q2-runtime-ab.json}。
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{HiDevLab aarch64 CPU 路径上的 OLMoE 系统 A/B（非 NPU 性能）}
+  \label{tab:ascend-olmoe-ab}
+  \begin{tabular}{lrrrr}
+    \toprule
+    配置 & Prefill t/s & Decode t/s & Wall s & Max RSS KiB \\
+    \midrule
+    llama.cpp baseline & 100.724597 & 51.340323 & 3.254600 & 2,575,956 \\
+    SLIM-ARC default & 101.175889 & 45.254024 & 3.415535 & 2,577,888 \\
+    SLIM-ARC A24 & 100.602680 & 48.184150 & 3.373611 & 2,577,380 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+两条 patched 结果都各自输出一条 schema 3 runtime 指标，证明比较的不是误链接 baseline。A24 相对 default 的 Decode 提升 6.47\%，wall 降低 1.23\%；但相对原生 baseline 仍为 Decode $-6.15\%$、wall $+3.66\%$。运行时记录了 785 个 expert samples 和 19,116 次 weight advice request，但 \texttt{expert\_issued\_bytes=0}。因此，本实验的正确结论是：SLIM-ARC 已在华为 \texttt{aarch64} 环境真实运行，A24 能缓解小模型上的调度开销；内存充足、热缓存的 2.56,GB MoE 不是系统优势区间，也没有专家预取或 NPU 加速结论。
 
 \subsection{树莓派慢存储专项优化}
 

@@ -6,7 +6,9 @@ MoE Router 每步只选择少量专家\cite{shazeer2017moe,fedus2022switch}，�
 
 \subsection{相关工作的设计启发}
 
-FlexInfer 以异步预取、内存锁定和灵活张量保留拓展端侧推理的内存设计空间\cite{flexinfer2025}。PowerInfer-2 说明端侧设备上的高效模型执行需要系统级资源管理\cite{powerinfer2_2024}。MoE-Prism 进一步将专家的系统弹性与模型结构协同讨论\cite{moeprism2025}。本项目不复现或比较这些论文的数值；它们只支持两个设计动机：专家活动可提供有用的局部信号，且内存资源管理必须在可观察的系统约束中进行。
+FlexInfer 以异步预取、内存锁定和灵活张量保留拓展端侧推理的内存设计空间\cite{flexinfer2025}。PowerInfer-2 说明端侧设备上的高效模型执行需要系统级资源管理\cite{powerinfer2_2024}。MoE-Prism 进一步将专家的系统弹性与模型结构协同讨论\cite{moeprism2025}。EcoSpec 从 MoE 投机解码角度指出，新增专家会产生离散的边际加载成本，并据此选择草稿长度\cite{ecospec2026}；KTransformers 则展示了异构执行、热冷专家放置和异步流水线的价值\cite{ktransformers2025}。
+
+SLIM-ARC 不实现 EcoSpec 的 draft model，也不复现 KTransformers 的 AMX、NUMA 或 GPU/NPU 算子路径。我们只吸收其中可移植的系统原则：专家预测必须同时考虑收益和新增 I/O 成本；在慢盘或极低内存下，如果额外专家预取的边际收益不足，就精确关闭专家 \texttt{WILLNEED}，保留 demand paging、Router 观测和其他运行时路径。该原则对应树莓派 A24--A33 的投机预取开关与统一预算，而不是新增一个未经验证的性能模块。本项目也不复现或比较这些论文的数值；相关工作只支持设计动机，性能结论仍来自第\ref{sec:protocol}节的本项目证据。
 
 \subsection{决赛证据口径}
 

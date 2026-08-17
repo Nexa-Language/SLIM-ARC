@@ -1,0 +1,158 @@
+{
+  "schema_version": 1,
+  "date": "2026-08-17",
+  "environment": {
+    "provider": "Huawei HiDevLab",
+    "architecture": "aarch64-linux",
+    "device_available": "Ascend 910B",
+    "execution_backend": "llama.cpp CPU-only",
+    "npu_used": false,
+    "note": "This experiment validates the portable POSIX/llama.cpp path inside an Ascend development environment. It is not a CANN or NPU performance result."
+  },
+  "source": {
+    "slim_arc_commit": "5a488ec8238e0e027c826e6dd6548276177ea33c",
+    "llama_cpp_commit": "360e1349f0009c5ad99d21e3c4546b707addc68a",
+    "patched_variant": "isolated experimental build",
+    "experimental_change": "Lower the generated runtime admission guard from 6 GiB to 2 GiB so that a compact MoE model exercises the runtime.",
+    "default_repository_behavior_changed": false
+  },
+  "model": {
+    "repository": "allenai/OLMoE-1B-7B-0924-Instruct-GGUF",
+    "filename": "olmoe-1b-7b-instruct-q2_k.gguf",
+    "bytes": 2562763232,
+    "sha256": "30a594dcb82aedfa10af714cdd218717dc00de71b980e7bf35d18055f82ea525",
+    "architecture": "Mixture of Experts"
+  },
+  "contract": {
+    "threads": 16,
+    "poll": 50,
+    "n_prompt": 64,
+    "n_gen": 16,
+    "n_depth": 0,
+    "repetitions": 3,
+    "no_warmup": true,
+    "n_gpu_layers": 0,
+    "load_mode": "mmap",
+    "offline": true,
+    "cache_state": "warm page cache after one explicit warm-up for the main three-way comparison"
+  },
+  "cases": [
+    {
+      "name": "baseline",
+      "system_enabled": false,
+      "prefill_tps": 100.724597,
+      "prefill_stddev_tps": 3.915396,
+      "decode_tps": 51.340323,
+      "decode_stddev_tps": 0.494744,
+      "wall_seconds": 3.254600,
+      "max_rss_kib": 2575956,
+      "runtime_metric_lines": 0
+    },
+    {
+      "name": "patched-default",
+      "system_enabled": true,
+      "prefill_tps": 101.175889,
+      "prefill_stddev_tps": 3.327939,
+      "decode_tps": 45.254024,
+      "decode_stddev_tps": 0.855374,
+      "wall_seconds": 3.415535,
+      "max_rss_kib": 2577888,
+      "runtime_metric_lines": 1
+    },
+    {
+      "name": "patched-a24",
+      "system_enabled": true,
+      "environment": {
+        "SLIM_ARC_DYNAMIC_MADV": "1",
+        "SLIM_ARC_DECODE_MADV": "SEQUENTIAL",
+        "SLIM_ARC_NO_EXPERT_PREFETCH": "1"
+      },
+      "prefill_tps": 100.602680,
+      "prefill_stddev_tps": 4.078274,
+      "decode_tps": 48.184150,
+      "decode_stddev_tps": 0.882315,
+      "wall_seconds": 3.373611,
+      "max_rss_kib": 2577380,
+      "runtime_metric_lines": 1,
+      "runtime": {
+        "schema": 3,
+        "expert_samples": 785,
+        "expert_issued_bytes": 0,
+        "expert_hit_bytes": 0,
+        "expert_waste_bytes": 0,
+        "weight_requested_bytes": 243197116416,
+        "weight_covered_bytes": 243200667648,
+        "weight_issued_bytes": 122087583744,
+        "weight_skipped_bytes": 121113083904,
+        "weight_advice_requests": 19116,
+        "weight_coalesced_ranges": 867,
+        "weight_rounds_throttled": 528
+      }
+    },
+    {
+      "name": "patched-no-prefetch",
+      "system_enabled": true,
+      "prefill_tps": 99.618235,
+      "prefill_stddev_tps": 2.821855,
+      "decode_tps": 45.803109,
+      "decode_stddev_tps": 0.642258,
+      "wall_seconds": 3.457525,
+      "max_rss_kib": 2577572,
+      "runtime_metric_lines": 1
+    },
+    {
+      "name": "patched-dynamic-normal",
+      "system_enabled": true,
+      "prefill_tps": 100.326690,
+      "prefill_stddev_tps": 2.163517,
+      "decode_tps": 47.396683,
+      "decode_stddev_tps": 1.122831,
+      "wall_seconds": 3.443797,
+      "max_rss_kib": 2577576,
+      "runtime_metric_lines": 1
+    },
+    {
+      "name": "patched-dynamic-random",
+      "system_enabled": true,
+      "prefill_tps": 100.237988,
+      "prefill_stddev_tps": 2.621499,
+      "decode_tps": 44.155583,
+      "decode_stddev_tps": 0.161255,
+      "wall_seconds": 3.535042,
+      "max_rss_kib": 2577052,
+      "runtime_metric_lines": 1
+    },
+    {
+      "name": "patched-sequential-prefetch",
+      "system_enabled": true,
+      "prefill_tps": 99.443328,
+      "prefill_stddev_tps": 2.780278,
+      "decode_tps": 47.358331,
+      "decode_stddev_tps": 0.069655,
+      "wall_seconds": 3.484104,
+      "max_rss_kib": 2578344,
+      "runtime_metric_lines": 1
+    }
+  ],
+  "comparisons": {
+    "patched_default_vs_baseline": {
+      "prefill_percent": 0.448045,
+      "decode_percent": -11.854812,
+      "wall_percent": 4.944847,
+      "rss_percent": 0.075001
+    },
+    "patched_a24_vs_baseline": {
+      "prefill_percent": -0.121040,
+      "decode_percent": -6.147552,
+      "wall_percent": 3.656701,
+      "rss_percent": 0.055280
+    },
+    "patched_a24_vs_patched_default": {
+      "prefill_percent": -0.566547,
+      "decode_percent": 6.474841,
+      "wall_percent": -1.227450,
+      "rss_percent": -0.019706
+    }
+  },
+  "conclusion": "A24 is the fastest tested SLIM-ARC configuration, but the native baseline remains faster for decode and wall time in this compact, warm-cache, memory-unconstrained workload. The result is a portability and boundary measurement, not an NPU acceleration claim."
+}
