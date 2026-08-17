@@ -306,7 +306,7 @@ def _scan_secrets(path: Path, relative: PurePosixPath) -> None:
 
 
 PUBLIC_CONTENT_DENY = re.compile(
-    r"(?i)\b(?:agent\s+harness|codex|chatgpt|openai)\b|依托\s*agent|(?:负向|负优化|回退|被拒绝)实验|内部审计|队内沟通"
+    r"(?i)\b(?:codex|chatgpt)\b|内部审计|队内沟通"
 )
 
 
