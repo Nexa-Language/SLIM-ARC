@@ -1,0 +1,37 @@
+\section{端侧 Agent Harness：低优先级扩展}
+
+赛题主体是受限内存下的模型推理运行时，而 Agent 会在其上形成“生成工具调用、执行工具、回填观测、继续生成”的多轮负载。若每轮重新加载模型、无限携带终端输出或允许模型长篇生成，端侧设备的短上下文与低 Decode 吞吐会被编排开销进一步放大。为展示 SLIM-ARC 与 Agent 场景的连接，项目实现了一个最小 Harness；它是低优先级上层扩展，不改变前述运行时，也不作为本报告的核心性能贡献。
+
+Harness 的性能路径连接常驻的 OpenAI-compatible HTTP endpoint，模型严格输出 \texttt{shell} 工具 JSON 或最终答案 JSON。工具请求以 argv 数组执行，不经过 shell 解释器；结果被裁剪后作为 observation 回填。稳定 system prefix 始终保留，其余消息从最近轮次向前装入字符预算，使每次工具调用不会无界扩大 Prefill。兼容路径可以直接调用 \texttt{llama-cli}，但它会在每个 Agent step 重新加载模型，因此只用于功能 smoke，不用于性能演示。
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Edge Agent Harness 的端侧约束策略}
+  \label{tab:agent-harness-policy}
+  \begin{tabular}{p{0.24\textwidth}p{0.33\textwidth}p{0.32\textwidth}}
+    \toprule
+    端侧问题 & Harness 策略 & 默认边界与可观测量 \\
+    \midrule
+    重复加载权重
+      & 复用常驻 HTTP 模型服务
+      & 每轮记录 endpoint 请求耗时，不把 CLI fallback 作为性能路径 \\
+    工具轮次扩大上下文
+      & 稳定 prefix + 最近消息窗口；工具观测居中截断
+      & context 8192 字符，单次 observation 2048 字符 \\
+    Decode 很慢、回答过长
+      & 根据观测到的估算 TPS 缩减下一轮 \texttt{max\_tokens}
+      & 低于 2.0,t/s 时乘 0.65；192 tokens 最低降到 48 \\
+    工具阻塞或输出爆炸
+      & 命令白名单、固定工作目录、超时和输出上限
+      & 默认 8,s、4,KiB；记录 return code、耗时和截断标志 \\
+    多轮失控
+      & Agent step 与总墙钟时间双重上限
+      & 默认 4 steps、300,s；超限显式失败 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+安全边界服务于比赛演示而非通用运维：Harness 拒绝非白名单程序、绝对路径、\texttt{..} 和越出工作目录的符号链接；不使用 \texttt{shell=True}，也不记录认证头或环境变量。默认命令集中在 \texttt{pwd}、\texttt{uname}、\texttt{df}、\texttt{npu-smi} 等只读诊断操作。运行指标以 JSONL 输出 Model 的 TTFT、请求耗时、估算输出 token/TPS、上下文字符数，以及 Tool 的耗时、返回码和输出字符数，可用于后续在 Mac、树莓派或 Ascend 上分析 Agent 编排开销。
+
+当前证据只覆盖功能正确性：9 个单元测试验证上下文裁剪、慢输出预算调整、命令与路径拒绝、输出截断，以及 fake model 驱动的 \texttt{shell $\rightarrow$ observation $\rightarrow$ final} 闭环。尚未在固定端侧模型上完成 Harness 开/关 A/B，因此本节不宣称 TTFT、TPS 或内存收益。其与 SLIM-ARC 的关系是：运行时减少每轮权重与专家访问成本，Harness 则减少不必要的轮数、上下文和输出长度；二者必须分别测量后才能讨论端到端收益。
