@@ -16,7 +16,7 @@
 
 **让 80B MoE 大模型在 8GB 内存端侧设备上流畅运行**
 
-[架构设计](#系统架构) · [核心成果](#核心成果) · [快速开始](#快速开始) · [实验数据](docs/design/architecture.md) · [论文报告](reports/Competition_Report/main.pdf)
+[架构设计](#系统架构) · [核心成果](#核心成果) · [快速开始](#快速开始) · [统一实验数据](docs/results/README.md) · [论文报告](reports/Competition_Report/main.pdf)
 
 </div>
 
@@ -40,6 +40,7 @@ SLIM-ARC 是 2026 全国大学生系统能力大赛操作系统设计赛 Proj 59
 | 📦 项目仓库（GitLab） | https://gitlab.eduxiji.net/T2026105589911358/project3136859-389100 |
 | 🎬 项目介绍与 Demo 视频（B站 P2） | https://www.bilibili.com/video/BV1fXTF6HEAw?p=2 |
 | 📄 项目报告 PDF | [`reports/Competition_Report/main.pdf`](reports/Competition_Report/main.pdf) |
+| 📊 初赛至决赛统一数据索引 | [`docs/results/README.md`](docs/results/README.md) |
 | 📑 展示 PPT | [`reports/SLIM-ARC展示PPT.pdf`](reports/SLIM-ARC展示PPT.pdf) |
 | 📁 报告+实机Demo+PPT（百度网盘） | https://pan.baidu.com/s/1i83bdq-oiqOCvga3g05v8g （提取码 `m8yy`） |
 
