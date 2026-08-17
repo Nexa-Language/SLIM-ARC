@@ -34,4 +34,4 @@ Harness 的性能路径连接常驻的 OpenAI-compatible HTTP endpoint，模型�
 
 安全边界服务于比赛演示而非通用运维：Harness 拒绝非白名单程序、绝对路径、\texttt{..} 和越出工作目录的符号链接；不使用 \texttt{shell=True}，也不记录认证头或环境变量。默认命令集中在 \texttt{pwd}、\texttt{uname}、\texttt{df}、\texttt{npu-smi} 等只读诊断操作。运行指标以 JSONL 输出 Model 的 TTFT、请求耗时、估算输出 token/TPS、上下文字符数，以及 Tool 的耗时、返回码和输出字符数，可用于后续在 Mac、树莓派或 Ascend 上分析 Agent 编排开销。
 
-当前证据只覆盖功能正确性：9 个单元测试验证上下文裁剪、慢输出预算调整、命令与路径拒绝、输出截断，以及 fake model 驱动的 \texttt{shell $\rightarrow$ observation $\rightarrow$ final} 闭环。尚未在固定端侧模型上完成 Harness 开/关 A/B，因此本节不宣称 TTFT、TPS 或内存收益。其与 SLIM-ARC 的关系是：运行时减少每轮权重与专家访问成本，Harness 则减少不必要的轮数、上下文和输出长度；二者必须分别测量后才能讨论端到端收益。
+当前证据只覆盖功能正确性：10 个单元测试验证上下文裁剪、慢输出预算调整、命令与路径拒绝、输出截断，以及 fake model 驱动的 \texttt{shell $\rightarrow$ observation $\rightarrow$ final} 闭环。尚未在固定端侧模型上完成 Harness 开/关 A/B，因此本节不宣称 TTFT、TPS 或内存收益。其与 SLIM-ARC 的关系是：运行时减少每轮权重与专家访问成本，Harness 则减少不必要的轮数、上下文和输出长度；二者必须分别测量后才能讨论端到端收益。

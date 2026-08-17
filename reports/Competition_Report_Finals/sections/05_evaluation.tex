@@ -79,6 +79,30 @@ RK3588 的反例揭示了机制边界：当 45.09\,GiB 权重在 8\,GB 内存中
 
 树莓派实验使用同一 48,410,988,384 B 模型和相邻开/关运行。\texttt{POSIX\_FADV\_WILLNEED} 只把请求提前交给 FUSE/内核，没有减少实际读取量，也没有改善 USB Bulk-Only 队列深度，因而结果中性略负。A47 对旧源码的复现与当前 control 只差 0.61\%，却无法复现历史所谓 cold 绝对值，说明仅清 Linux page cache 不能证明 FUSE、USB bridge 和 SSD 内部缓存同时为 cold；相关历史跨批次倍数不用于结论。
 
+\subsection{Ascend 910B4 最小兼容性验证}
+
+项目通过 HiDevlab 跳板 SSH 在独立目录完成一次最小硬件与软件栈探测。表\ref{tab:ascend-smoke}中的初始快照确认 910B4、驱动和 HBM 枚举正常，但该裸环境只有驱动，没有 CANN toolkit、\texttt{libascendcl.so}、系统 PyTorch 或 \texttt{torch\_npu}。只读调用既有 Python 环境时又因缺少 \texttt{libhccl.so} 停止，未执行算子。随后检测到另一个比赛的 NPU 进程开始占用 313\,MiB HBM，本项目立即停止，不终止、不附着也不与其竞争资源。
+
+\begin{table}[H]
+  \centering
+  \small
+  \caption{Ascend 910B4 最小兼容性 smoke（非性能实验）}
+  \label{tab:ascend-smoke}
+  \begin{tabular}{p{0.24\textwidth}p{0.63\textwidth}}
+    \toprule
+    项目 & 观测 \\
+    \midrule
+    硬件 & \texttt{aarch64}，Ascend 910B4，32\,GiB HBM，Health OK \\
+    驱动 & \texttt{npu-smi 25.2.0}，\texttt{ascendhal 7.35.23} \\
+    初始空闲快照 & AICore 0\%，HBM 2889/32768\,MiB，89.9\,W，46\,$^\circ$C，无 NPU 进程 \\
+    用户态栈 & Python 3.11.6；CANN/ACL/PyTorch/\texttt{torch\_npu} 不完整 \\
+    结论 & 仅证明 SSH、驱动和硬件枚举可用；没有 LLM TPS、算子吞吐或 SLIM-ARC 加速结论 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+这项验证同时划清可移植边界：SLIM-ARC 的 POSIX/llama.cpp CPU 路径可以在 \texttt{aarch64} Linux 上构建，但 CANN 路径必须在匹配 toolkit、算子库和量化支持的独立镜像中重新构建与测量。当前 80B \texttt{Q4\_K\_M} 模型不能因“设备可枚举”就宣称已在 910B 上运行。
+
 \subsection{树莓派慢存储专项优化}
 
 树莓派上的核心转向是从“尽量提前读”改为“只保留确定会复用的页，并停止无收益的投机 I/O”。表\ref{tab:pi-policy-evolution}按实施顺序汇总有效机制和被否决方向。A24 是同一 campaign 的 demand-paging 参考；A28 将每层总会执行的 shared expert 和跨 token 复用的 hot experts 保留在内存，避免每 token 重新穿过 FUSE/USB。A29 再用 16\,MiB 统一预算限制 speculative weight advice；A32 证明将其完全关闭也不损失 wall time，因此形成慢盘零投机默认候选。A34 的 512\,MiB LRU 用有限驻留预算保留跨 token 页；更复杂的 LFRU 虽改善部分 cache counters，却增加非驻留扫描和 wall time，因而被拒绝。

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "date": "2026-08-17",
+  "connection": {
+    "entry": "openlibing-cann83-910b3",
+    "backend": "ssh_via_hidevlab_jump",
+    "isolated_directory": "/workspace/slim-arc-ouyang-20260817"
+  },
+  "hardware": {
+    "architecture": "aarch64",
+    "kernel": "Linux 5.10.0-216.0.0.115.oe2203sp4.aarch64",
+    "device": "Ascend 910B4",
+    "health": "OK",
+    "hbm_total_mib": 32768,
+    "driver_version": "25.2.0",
+    "ascendhal_version": "7.35.23"
+  },
+  "initial_idle_snapshot": {
+    "aicore_percent": 0,
+    "hbm_used_mib": 2889,
+    "power_watts": 89.9,
+    "temperature_celsius": 46,
+    "npu_processes": 0
+  },
+  "software": {
+    "system_python": "3.11.6",
+    "cann_toolkit_present": false,
+    "libascendcl_present": false,
+    "system_torch_present": false,
+    "system_torch_npu_present": false
+  },
+  "compatibility_probe": {
+    "operator_executed": false,
+    "result": "blocked_missing_cann_runtime",
+    "existing_environment_error": "libhccl.so not found"
+  },
+  "interference_guard": {
+    "other_competition_process_detected_after_probe": true,
+    "other_process_hbm_mib": 313,
+    "action": "stopped_without_running_npu_workload_or_touching_other_process"
+  },
+  "decision": "hardware_compatibility_only_no_performance_claim"
+}
