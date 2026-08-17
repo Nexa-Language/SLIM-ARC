@@ -216,10 +216,11 @@ __marimo__/
 
 # ===== SLIM-ARC Project Specific =====
 
-# Local Finder and agent-workspace state
+# Local Finder and workspace state
 .DS_Store
 **/.DS_Store
 .omo/
+tmp/
 
 # Reproducible report and presentation inspection outputs
 reports/Competition_Report*/main.aux

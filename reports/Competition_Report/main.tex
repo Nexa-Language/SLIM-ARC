@@ -1,6 +1,6 @@
 \documentclass[a4paper]{article}
 
-\usepackage[UTF8]{ctex}
+\usepackage[UTF8,fontset=none]{ctex}
 \usepackage[a4paper,margin=1in]{geometry}
 \usepackage{graphicx}
 \usepackage{float}
@@ -29,10 +29,12 @@
 \usepackage{inconsolata}
 \usepackage{cite}
 
-% 设置中文字体 (Noto CJK)
-\setCJKmainfont{Noto Serif CJK SC}
-\setCJKsansfont{Noto Sans CJK SC}
-\setCJKmonofont{Noto Sans Mono CJK SC}
+% 使用 macOS 自带字体，避免 ctex 依赖已移除的 STHeiti 字体集。
+\setCJKmainfont{Songti SC}
+\setCJKsansfont{Songti SC}
+\setCJKmonofont{Songti SC}
+\setCJKfamilyfont{song}{Songti SC}
+\newcommand{\kaishu}{\CJKfamily{song}}
 
 \setlist[itemize]{
     itemsep=2pt,
@@ -77,7 +79,7 @@
 \newcommand{\reporttitlelineB}{内存感知 MoE 大模型推理协同优化}
 \newcommand{\reporttitle}{\reporttitlelineA\reporttitlelineB}
 \newcommand{\teamname}{依托Agent答辩OS}
-\newcommand{\members}{欧阳易{\CJKfontspec{Noto Serif CJK SC}芃} \quad 马福泉 \quad 刘昊}
+\newcommand{\members}{欧阳易芃 \quad 马福泉 \quad 刘昊}
 \newcommand{\advisers}{赵帅 \quad 张献伟}
 \newcommand{\schoolname}{中山大学}
 \newcommand{\trackname}{操作系统功能挑战赛}
