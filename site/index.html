@@ -1,255 +1,266 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SLIM-ARC | 端侧 MoE 大模型推理优化</title>
-    <meta name="description" content="SLIM-ARC：利用操作系统虚拟内存机制让 80B MoE 大模型在 8GB 内存端侧设备流畅运行。">
-    <link rel="stylesheet" href="css/style.css">
-    <link rel="icon" href="assets/logo_nobg.png">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#05070b">
+  <meta name="description" content="SLIM-ARC：面向内存受限设备的稀疏大模型推理运行时，协同虚拟内存、MoE Router、专家驻留与跨设备策略。">
+  <title>SLIM-ARC｜让稀疏大模型穿过内存边界</title>
+  <link rel="icon" href="assets/logo_nobg.png">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <canvas id="particle-field" aria-hidden="true"></canvas>
 
-<!-- Navigation -->
-<nav class="nav">
-    <div class="nav-inner">
-        <a href="index.html" class="nav-logo">
-            <img src="assets/logo_nobg.png" alt="SLIM-ARC" class="nav-logo-img">
-            <span class="nav-title">SLIM-ARC</span>
-        </a>
-        <div class="nav-links">
-            <a href="index.html" class="active">首页</a>
-            <a href="architecture.html">架构</a>
-            <a href="benchmark.html">基准测试</a>
-            <a href="team.html">团队</a>
-            <a href="https://gitlab.eduxiji.net/T2026105589911358/project3136859-389100" target="_blank" class="nav-cta">GitLab ↗</a>
+  <header class="site-header" data-header>
+    <a class="brand" href="#top" aria-label="返回首页">
+      <img src="assets/logo_nobg.png" alt="SLIM-ARC S 形标识">
+      <span class="brand-name">SLIM-ARC</span>
+      <span class="brand-note">端侧 MoE 运行时系统研究</span>
+    </a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">菜单</button>
+    <nav id="site-nav" class="site-nav" aria-label="主导航">
+      <a href="#overview">项目概览</a>
+      <a href="#runtime">核心机制</a>
+      <a href="#evidence">实验结果</a>
+      <a href="#report">最终报告</a>
+      <a href="https://github.com/Nexa-Language/SLIM-ARC" target="_blank" rel="noreferrer">GitHub</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <img class="hero-visual" src="assets/runtime-atlas-hero.png" alt="虚拟内存页经过 MoE Router 分发到专家池与异构设备的科研示意图">
+      <div class="hero-content">
+        <p class="kicker">SYSTEMS RESEARCH · PROJ 59 · SYSU</p>
+        <h1 id="hero-title">小内存，<br>也能承载大模型</h1>
+        <p class="hero-lead">以虚拟内存为数据平面，以 MoE 稀疏性为调度信号，构建跨越 WSL、Apple Silicon、RK3588、Raspberry Pi 与 Ascend 的端侧推理运行时。</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="assets/SLIM-ARC-决赛报告.pdf">阅读最终报告</a>
+          <a class="button button-secondary" href="#evidence">查看跨设备实验</a>
         </div>
+        <dl class="hero-proof" aria-label="关键实验结果">
+          <div>
+            <dt>Mac / 2 GiB / no-swap</dt>
+            <dd>48.41 GB 80B 模型完成推理</dd>
+          </div>
+          <div>
+            <dt>RK3588 / 3 GiB</dt>
+            <dd>Decode 0.70 → 2.21 tok/s</dd>
+          </div>
+          <div>
+            <dt>WSL / 32 GiB / warm</dt>
+            <dd>FlashAttention 3.01 → 5.16 tok/s</dd>
+          </div>
+        </dl>
+      </div>
+      <a class="scroll-cue" href="#overview">向下阅读 <span aria-hidden="true">↓</span></a>
+    </section>
+
+    <section id="overview" class="section narrative">
+      <div class="section-index">01 / RESEARCH QUESTION</div>
+      <div class="narrative-grid">
+        <div>
+          <h2>当模型规模超越设备内存</h2>
+          <p class="section-lead">80B 级 MoE 的模型文件远大于常见端侧内存，但每个 token 实际只激活极少数专家。问题不是把全部参数塞进内存，而是让正确的页在正确的阶段及时到达。</p>
+        </div>
+        <div class="research-claims">
+          <article>
+            <span>01</span>
+            <h3>权重访问具有阶段性</h3>
+            <p>Prefill 偏向连续扫描，Decode 偏向复用与稀疏访问。固定页建议会在不同设备上产生相反结果。</p>
+          </article>
+          <article>
+            <span>02</span>
+            <h3>专家命中率不是最终目标</h3>
+            <p>预取正确仍可能付出过高 I/O 成本；运行时必须同时约束预测、回收、驻留与预算。</p>
+          </article>
+          <article>
+            <span>03</span>
+            <h3>跨设备需要策略而非常数</h3>
+            <p>NVMe、虚拟磁盘、SSD 与 FUSE/USB 的同步缺页代价不同，统一机制必须允许设备化选择。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="runtime" class="section runtime-section">
+      <div class="section-heading">
+        <p class="section-index">02 / MEMORY-AWARE RUNTIME</p>
+        <h2>让 Router 反馈进入操作系统路径</h2>
+        <p>SLIM-ARC 把模型阶段、专家事实与 cgroup 压力连接成一个闭环。页建议不再是静态开关，而是由当前工作负载和设备状态共同决定。</p>
+      </div>
+
+      <div class="runtime-layout">
+        <ol class="runtime-layers">
+          <li class="active" data-runtime-tab="pages">
+            <span>01</span>
+            <div><h3>页粒度权重访问</h3><p>mmap 按需加载、阶段化 SEQUENTIAL/NORMAL 与有界 readahead。</p></div>
+          </li>
+          <li data-runtime-tab="experts">
+            <span>02</span>
+            <div><h3>专家预测、结算与回收</h3><p>Temporal 与 cross-layer Router 候选在事实返回后按 generation 精确结算。</p></div>
+          </li>
+          <li data-runtime-tab="pressure">
+            <span>03</span>
+            <div><h3>压力自适应驻留</h3><p>以 cgroup headroom、热度和 waste EWMA 约束专家集合与 I/O 预算。</p></div>
+          </li>
+          <li data-runtime-tab="kv">
+            <span>04</span>
+            <div><h3>KV 与算子协同</h3><p>滑动窗口、KV 量化与 FlashAttention 根据上下文和内存余量组合。</p></div>
+          </li>
+        </ol>
+
+        <figure class="runtime-figure" data-runtime-panel>
+          <img src="assets/moe-router-loop.png" alt="MoE Router 跨层专家预测与页缓存预取闭环">
+          <figcaption><strong>专家管理闭环。</strong> 预测只负责提出候选；实际 Router 结果负责结算；错误页回收和驻留更新在有限预算内完成。</figcaption>
+        </figure>
+      </div>
+
+      <div class="mechanism-notes">
+        <div><strong>Model-owned lifecycle</strong><span>运行时与模型映射同生共死，图执行只持有安全 lease。</span></div>
+        <div><strong>Generation settlement</strong><span>每次预取都携带不可复用 token，成功、失败与空结果均可终结。</span></div>
+        <div><strong>Opt-in policies</strong><span>新机制保留回退路径；组合策略必须在同合同下重新验证。</span></div>
+      </div>
+    </section>
+
+    <section id="evidence" class="section evidence-section">
+      <div class="section-heading">
+        <p class="section-index">03 / EDGE EVIDENCE ATLAS</p>
+        <h2>跨设备证据地图</h2>
+        <p>数据不跨设备相乘，也不把 cold 与 warm 混为一谈。每个结论都绑定模型、缓存状态、内存限制和 workload。</p>
+      </div>
+
+      <div class="device-matrix" role="table" aria-label="跨设备实验结果">
+        <div class="matrix-head" role="row">
+          <span role="columnheader">平台与合同</span>
+          <span role="columnheader">约束</span>
+          <span role="columnheader">核心结果</span>
+          <span role="columnheader">结论</span>
+        </div>
+        <article role="row">
+          <div role="cell"><b>WSL / x86</b><small>Qwen3-Next-80B</small></div>
+          <div role="cell">8 GiB · pp4/tg1</div>
+          <div role="cell"><strong>0.08 → 0.43</strong><small>Decode tok/s</small></div>
+          <div role="cell">强约束下页管理改善 Decode；同合同提升 437.5%</div>
+        </article>
+        <article role="row">
+          <div role="cell"><b>Mac / Colima</b><small>80B Q4_K_M · 48.41 GB</small></div>
+          <div role="cell">2 GiB · 4 vCPU · swap 0</div>
+          <div role="cell"><strong>3.908 / 0.709</strong><small>Prefill / Decode tok/s</small></div>
+          <div role="cell">模型文件为内存上限 24.2 倍，终态运行成功</div>
+        </article>
+        <article class="matrix-emphasis" role="row">
+          <div role="cell"><b>RK3588</b><small>80B · pp128/tg64</small></div>
+          <div role="cell">3 GiB · 4 threads · swap 0</div>
+          <div role="cell"><strong>0.70 → 2.21</strong><small>Decode tok/s · 3.16×</small></div>
+          <div role="cell">受限越强收益越明显；Prefill 同时提高 14%</div>
+        </article>
+        <article role="row">
+          <div role="cell"><b>Raspberry Pi 5</b><small>80B · USB/FUSE 慢存储</small></div>
+          <div role="cell">4 GiB · no-swap</div>
+          <div role="cell"><strong>+14.16%</strong><small>shared/hot Decode</small></div>
+          <div role="cell">驻留确定复用页，并以 16 MiB 预算削减 98.44% 投机 I/O</div>
+        </article>
+        <article role="row">
+          <div role="cell"><b>Ascend 910B4</b><small>OLMoE Q2_K · aarch64</small></div>
+          <div role="cell">llama.cpp CPU-only</div>
+          <div role="cell"><strong>系统 A/B 跑通</strong><small>NPU 路径未宣称加速</small></div>
+          <div role="cell">验证 POSIX/aarch64 可移植性，并明确 CANN 工具链边界</div>
+        </article>
+      </div>
+
+      <div class="evidence-foot">
+        <p>完整实验包含原始日志、结构化 JSON、缓存状态、cgroup 指标和版本身份；负面结果同样保留，用于确定策略适用范围。</p>
+        <a href="assets/SLIM-ARC-决赛报告.pdf">阅读 41 页完整评测与附录</a>
+      </div>
+    </section>
+
+    <section class="section boundary-section">
+      <div class="section-heading compact">
+        <p class="section-index">04 / BOUNDARIES MATTER</p>
+        <h2>极致性能来自选择，而不是堆叠</h2>
+      </div>
+      <div class="boundary-grid">
+        <figure>
+          <img src="assets/kv-eviction.png" alt="Attention sink、驱逐区和滑动窗口构成的 KV cache 有界管理示意图">
+          <figcaption>KV cache 采用 attention sink 与 recent window；被驱逐页可以释放或转入 mmap 临时文件。</figcaption>
+        </figure>
+        <div class="decision-ledger">
+          <div>
+            <span class="decision keep">保留</span>
+            <h3>阶段化页建议</h3>
+            <p>RK3588 上静态 RANDOM 只有 0.44/0.26 tok/s；动态 SEQUENTIAL 恢复到 2.84/1.40。</p>
+          </div>
+          <div>
+            <span class="decision keep">保留</span>
+            <h3>慢盘 shared/hot 驻留</h3>
+            <p>Pi 5 上将容量留给确定复用页，比盲目扩大专家预测更有效。</p>
+          </div>
+          <div>
+            <span class="decision reject">拒绝</span>
+            <h3>无条件组合优化</h3>
+            <p>Mac 正式矩阵中 combined cold wall 回退 19.95%；局部正确不等于端到端更快。</p>
+          </div>
+          <div>
+            <span class="decision reject">拒绝</span>
+            <h3>把命中率当作终点</h3>
+            <p>popular-16 增加 I/O、降低命中；cross-layer 高命中也必须支付额外 gate 计算。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section agent-section">
+      <div>
+        <p class="section-index">05 / LOW-OVERHEAD EXTENSION</p>
+        <h2>面向端侧推理的 Agent Harness</h2>
+        <p>在主运行时之外，SLIM-ARC 提供最小 shell harness：压缩上下文、限制输出预算、记录工具调用，并把超时和失败归一化为可复现实验事件。它用于验证“运行大模型”之外的真实工作负载，而不改变核心推理路径。</p>
+        <div class="agent-contract">
+          <span>短上下文模板</span><span>输出预算</span><span>Shell allowlist</span><span>结构化轨迹</span>
+        </div>
+      </div>
+      <figure>
+        <img src="assets/agent-harness-smoke.png" alt="SLIM-ARC Agent Harness shell 任务执行截图">
+        <figcaption>最小化 harness 的本地 smoke 记录；该扩展在报告中作为低开销应用层验证。</figcaption>
+      </figure>
+    </section>
+
+    <section id="report" class="section report-section">
+      <div class="report-copy">
+        <p class="section-index">06 / READ THE SYSTEM</p>
+        <h2>从研究动机到跨设备证据</h2>
+        <p>最终报告按照系统论文结构完整呈现背景、相关工作、动机、系统设计、工程实现、实验评估、边界分析与原始数据附录。</p>
+        <div class="report-actions">
+          <a class="button button-primary" href="assets/SLIM-ARC-决赛报告.pdf">下载最终报告</a>
+          <a class="button button-secondary" href="https://www.bilibili.com/video/BV1fXTF6HEAw?p=2" target="_blank" rel="noreferrer">观看 B 站 P2 演示</a>
+        </div>
+      </div>
+      <dl class="report-outline">
+        <div><dt>01</dt><dd>引言与核心贡献</dd></div>
+        <div><dt>02</dt><dd>背景、相关工作与动机</dd></div>
+        <div><dt>03</dt><dd>SLIM-ARC 系统设计</dd></div>
+        <div><dt>04</dt><dd>系统实现与硬件特化</dd></div>
+        <div><dt>05</dt><dd>实验评估与结果分析</dd></div>
+        <div><dt>06–08</dt><dd>结论、附录与引用</dd></div>
+      </dl>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-brand">
+      <img src="assets/logo_nobg.png" alt="">
+      <div><b>SLIM-ARC</b><span>Synergistic LLM Integration with Memory-Aware Runtime Co-Optimization</span></div>
     </div>
-</nav>
-
-<!-- Hero -->
-<section class="hero">
-    <div class="container">
-        <div class="hero-badge">
-            <span class="dot"></span>
-            OS挑战赛 Proj 59 · 中山大学
-        </div>
-        <h1 class="hero-title">
-            让 <span class="gradient-text">80B MoE</span> 大模型<br>
-            在 8GB 内存设备上流畅运行
-        </h1>
-        <p class="hero-subtitle">// SLIM-ARC</p>
-        <p class="hero-desc">Synergistic LLM Integration with Memory-Aware Runtime Co-Optimization — 利用操作系统虚拟内存机制作为 MoE 稀疏性的天然接口</p>
-        <div class="hero-cta">
-            <a href="architecture.html" class="btn btn-primary">探索架构 →</a>
-            <a href="benchmark.html" class="btn btn-secondary">查看数据</a>
-        </div>
-
-        <!-- 终端代码块：展示核心命令 -->
-        <div class="terminal">
-            <div class="terminal-header">
-                <span class="terminal-dot red"></span>
-                <span class="terminal-dot yellow"></span>
-                <span class="terminal-dot green"></span>
-                <span class="terminal-title">slim-arc@edge-device: ~</span>
-            </div>
-            <div class="terminal-body">
-<span class="comment"># 80B MoE 模型（38GB）跑在 32GB RAM 上，mmap 按需加载</span><br>
-<span class="cmd">llama-server</span> <span class="flag">-m</span> <span class="val">Qwen3-Next-80B-IQ4_XS.gguf</span> \<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">-fa</span> <span class="val">auto</span> <span class="flag">-ctk</span> <span class="val">q4_0</span> <span class="flag">-ctv</span> <span class="val">q4_0</span> <span class="flag">--no-repack</span> \<br>
-&nbsp;&nbsp;&nbsp;&nbsp;<span class="flag">-t</span> <span class="val">8</span> <span class="flag">--host</span> <span class="val">0.0.0.0</span> <span class="flag">--port</span> <span class="val">8080</span><br>
-<br>
-<span class="output">[OK] model loaded (38 GB, mmap on-demand)</span><br>
-<span class="output">[OK] server listening on http://0.0.0.0:8080</span><br>
-<span class="output">[OK] active experts: 10/512 (sparse 98%)</span><br>
-<span class="output">[OK] decode: 5.16 tokens/s</span>
-            </div>
-        </div>
-
-        <!-- 核心数据 -->
-        <div class="hero-stats">
-            <div class="hero-stat">
-                <div class="hero-stat-value">64.5×</div>
-                <div class="hero-stat-label">累计加速</div>
-            </div>
-            <div class="hero-stat">
-                <div class="hero-stat-value">5.16</div>
-                <div class="hero-stat-label">tokens/s</div>
-            </div>
-            <div class="hero-stat">
-                <div class="hero-stat-value">+71%</div>
-                <div class="hero-stat-label">FlashAttn</div>
-            </div>
-            <div class="hero-stat">
-                <div class="hero-stat-value">2GB</div>
-                <div class="hero-stat-label">RSS</div>
-            </div>
-        </div>
+    <div class="footer-links">
+      <a href="https://github.com/Nexa-Language/SLIM-ARC" target="_blank" rel="noreferrer">GitHub</a>
+      <a href="https://gitlab.eduxiji.net/T2026105589911358/project3136859-389100" target="_blank" rel="noreferrer">赛事 GitLab</a>
+      <a href="assets/SLIM-ARC-决赛报告.pdf">最终报告</a>
     </div>
-</section>
+    <p>2026 全国大学生计算机系统能力大赛 · 操作系统设计赛 Proj 59 · 中山大学</p>
+  </footer>
 
-<!-- 核心成果 -->
-<section class="section">
-    <div class="container">
-        <div class="section-header">
-            <span class="section-eyebrow">// 核心成果</span>
-            <h2 class="section-title">数据说话</h2>
-            <p class="section-desc">在三档受限环境下验证 SLIM-ARC 的优化效果，所有数据可溯源至原始日志</p>
-        </div>
-        <div class="stats-grid">
-            <div class="stat-card reveal">
-                <div class="stat-number">850%</div>
-                <div class="stat-desc">8GB 环境解码加速</div>
-                <span class="stat-sub">0.08 → 0.76 t/s</span>
-            </div>
-            <div class="stat-card reveal">
-                <div class="stat-number">98%</div>
-                <div class="stat-desc">物理内存节省</div>
-                <span class="stat-sub">MADV_RANDOM</span>
-            </div>
-            <div class="stat-card reveal">
-                <div class="stat-number">75%</div>
-                <div class="stat-desc">GSM8K 精度保持</div>
-                <span class="stat-sub">Qwen3-4B Q4_K_M</span>
-            </div>
-            <div class="stat-card reveal">
-                <div class="stat-number">30+</div>
-                <div class="stat-desc">引用论文</div>
-                <span class="stat-sub">NeurIPS / ICLR</span>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- 技术亮点 -->
-<section class="section">
-    <div class="container">
-        <div class="section-header">
-            <span class="section-eyebrow">// 技术亮点</span>
-            <h2 class="section-title">OS × MoE 协同优化</h2>
-            <p class="section-desc">三类优化协同工作：内核协同释放内存 → 量化压缩降低需求 → 计算融合加速推理</p>
-        </div>
-        <div class="features-grid">
-            <div class="feature-card reveal">
-                <div class="feature-icon">🧠</div>
-                <h3>MoE 稀疏性 × OS 虚拟内存</h3>
-                <p>通过 <code>posix_madvise(MADV_RANDOM)</code> 让内核 demand paging 与 MoE Router 2% 激活率天然匹配，仅加载被激活的专家权重。</p>
-            </div>
-            <div class="feature-card reveal">
-                <div class="feature-icon">⚡</div>
-                <h3>FlashAttention 集成</h3>
-                <p>IO-aware tiling 融合，将 attention 的 QK<sup>T</sup> 和 softmax(P)V 合并为单 kernel，decode 吞吐 +71.4%。</p>
-            </div>
-            <div class="feature-card reveal">
-                <div class="feature-icon">💾</div>
-                <h3>StreamingLLM KV Eviction</h3>
-                <p>sink + sliding window 驱逐策略，KV 内存从 O(L) 降至 O(1)，80B decode +9.6%。</p>
-            </div>
-            <div class="feature-card reveal">
-                <div class="feature-icon">📊</div>
-                <h3>量化精度边界发现</h3>
-                <p>首次用 GSM8K ALEM 协议发现 IQ4_XS 保持语言流畅但推理崩溃，为端侧模型选择提供指导。</p>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- 优化链 -->
-<section class="section">
-    <div class="container">
-        <div class="section-header">
-            <span class="section-eyebrow">// 优化链</span>
-            <h2 class="section-title">0.08 → 5.16 t/s</h2>
-            <p class="section-desc">逐步叠加优化技术，累计实现 64.5× 加速</p>
-        </div>
-        <div class="chain-container">
-            <div class="chain-step reveal">
-                <div class="chain-bar" style="height: 8%"></div>
-                <div class="chain-label">Baseline</div>
-                <div class="chain-value">0.08 t/s</div>
-            </div>
-            <div class="chain-arrow">→</div>
-            <div class="chain-step reveal">
-                <div class="chain-bar" style="height: 15%"></div>
-                <div class="chain-label">+MADV</div>
-                <div class="chain-value">0.42 t/s</div>
-            </div>
-            <div class="chain-arrow">→</div>
-            <div class="chain-step reveal">
-                <div class="chain-bar" style="height: 25%"></div>
-                <div class="chain-label">+KV q4</div>
-                <div class="chain-value">0.76 t/s</div>
-            </div>
-            <div class="chain-arrow">→</div>
-            <div class="chain-step reveal">
-                <div class="chain-bar" style="height: 60%"></div>
-                <div class="chain-label">+IQ4_XS</div>
-                <div class="chain-value">2.45 t/s</div>
-            </div>
-            <div class="chain-arrow">→</div>
-            <div class="chain-step reveal highlight">
-                <div class="chain-bar" style="height: 100%"></div>
-                <div class="chain-label">+FA</div>
-                <div class="chain-value">5.16 t/s</div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<!-- B站视频 -->
-<section class="section">
-    <div class="container">
-        <div class="section-header">
-            <span class="section-eyebrow">// 演示视频</span>
-            <h2 class="section-title">看看它如何运行</h2>
-            <p class="section-desc">B站项目介绍与 Demo 视频，展示 80B MoE 在端侧的流畅推理</p>
-        </div>
-        <div style="max-width: 800px; margin: 0 auto; position: relative; border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--shadow-lg); border: 1px solid var(--border);">
-            <iframe
-                src="https://player.bilibili.com/player.html?bvid=BV1fXTF6HEAw&page=2&high_quality=1&autoplay=1&muted=1&danmaku=0"
-                style="width: 100%; height: 450px; border: none; display: block;"
-                allowfullscreen="true"
-                scrolling="no"
-                referrerpolicy="no-referrer"
-            ></iframe>
-        </div>
-        <p style="text-align: center; margin-top: 1rem;">
-            <a href="https://www.bilibili.com/video/BV1fXTF6HEAw?p=2" target="_blank" class="btn btn-secondary">在 B站观看 P2 ↗</a>
-        </p>
-    </div>
-</section>
-
-<!-- CTA -->
-<section class="section">
-    <div class="container">
-        <div class="section-header">
-            <span class="section-eyebrow">// 深入了解</span>
-            <h2 class="section-title">探索更多</h2>
-        </div>
-        <div class="cta-grid">
-            <a href="architecture.html" class="cta-card">
-                <h3>系统架构 →</h3>
-                <p>三层设计：内核协同层、运行时调度层、量化优化层</p>
-            </a>
-            <a href="benchmark.html" class="cta-card">
-                <h3>实验数据 →</h3>
-                <p>三档环境性能、GSM8K 精度、消融实验</p>
-            </a>
-            <a href="https://gitlab.eduxiji.net/T2026105589911358/project3136859-389100" target="_blank" class="cta-card">
-                <h3>源代码 →</h3>
-                <p>完整可复现的 SLIM-ARC 实现</p>
-            </a>
-        </div>
-    </div>
-</section>
-
-<footer class="footer">
-    <div class="container">
-        <p>SLIM-ARC · 2026 全国大学生系统能力大赛操作系统设计赛 Proj 59</p>
-        <p>中山大学 · 依托Agent答辩OS团队</p>
-    </div>
-</footer>
-
-<script src="js/main.js"></script>
+  <script src="js/particles.js" defer></script>
+  <script src="js/main.js" defer></script>
 </body>
 </html>
