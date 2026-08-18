@@ -45,7 +45,7 @@
   }
 
   const revealTargets = document.querySelectorAll(
-    '.section-heading, .narrative-grid, .runtime-layout, .mechanism-notes, .device-matrix, .evidence-foot, .boundary-grid, .agent-section > *, .report-section > *'
+    '.section-heading, .narrative-grid, .runtime-layout, .mechanism-notes, .device-matrix, .evidence-foot, .boundary-grid, .agent-section > *, .video-card, .report-section > *'
   );
   if (!reducedMotion && 'IntersectionObserver' in window) {
     revealTargets.forEach((target) => target.classList.add('reveal'));

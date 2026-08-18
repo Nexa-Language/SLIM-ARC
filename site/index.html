@@ -23,6 +23,7 @@
       <a href="#overview">项目概览</a>
       <a href="#runtime">核心机制</a>
       <a href="#evidence">实验结果</a>
+      <a href="#videos">项目视频</a>
       <a href="#report">最终报告</a>
       <a href="https://github.com/Nexa-Language/SLIM-ARC" target="_blank" rel="noreferrer">GitHub</a>
     </nav>
@@ -31,6 +32,20 @@
   <main id="top">
     <section class="hero" aria-labelledby="hero-title">
       <img class="hero-visual" src="assets/runtime-atlas-hero.png" alt="虚拟内存页经过 MoE Router 分发到专家池与异构设备的科研示意图">
+      <div class="hero-reactor" aria-hidden="true">
+        <canvas id="hero-reactor"></canvas>
+        <div class="reactor-chrome">
+          <span>SLIM-ARC / LIVE RUNTIME</span>
+          <span class="reactor-live"><i></i> ROUTING</span>
+        </div>
+        <div class="reactor-label label-router"><b>ROUTER</b><span>top-k experts</span></div>
+        <div class="reactor-label label-pages"><b>PAGE FLOW</b><span>mmap · reclaim</span></div>
+        <div class="reactor-label label-pressure"><b>PRESSURE</b><span>2 GiB · swap 0</span></div>
+        <div class="reactor-readout">
+          <span>ACTIVE EXPERTS</span>
+          <strong data-reactor-count>03 / 512</strong>
+        </div>
+      </div>
       <div class="hero-content">
         <p class="kicker">SYSTEMS RESEARCH · PROJ 59 · SYSU</p>
         <h1 id="hero-title">小内存，<br>也能承载大模型</h1>
@@ -226,14 +241,44 @@
       </figure>
     </section>
 
+    <section id="videos" class="section video-section">
+      <div class="section-heading">
+        <p class="section-index">06 / WATCH THE SYSTEM</p>
+        <h2>从项目简介到决赛答辩</h2>
+        <p>两个视频分别介绍 SLIM-ARC 的问题背景、系统机制与最终跨设备实验。可直接在页面内播放，也可跳转至 B 站观看。</p>
+      </div>
+      <div class="video-grid">
+        <article class="video-card">
+          <div class="video-frame">
+            <iframe src="https://player.bilibili.com/player.html?bvid=BV1fXTF6HEAw&page=1&high_quality=1&danmaku=0&autoplay=0" title="SLIM-ARC 项目简介视频" loading="lazy" allow="fullscreen; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+          </div>
+          <div class="video-meta">
+            <span>INTRODUCTION</span>
+            <h3>我们让 800 亿参数 AI 在手机大小的内存里跑起来</h3>
+            <a href="https://www.bilibili.com/video/BV1fXTF6HEAw/" target="_blank" rel="noreferrer">在 B 站打开 ↗</a>
+          </div>
+        </article>
+        <article class="video-card">
+          <div class="video-frame">
+            <iframe src="https://player.bilibili.com/player.html?bvid=BV1iHbB6CEPb&page=1&high_quality=1&danmaku=0&autoplay=0" title="SLIM-ARC 决赛答辩视频" loading="lazy" allow="fullscreen; autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+          </div>
+          <div class="video-meta">
+            <span>FINAL DEFENSE</span>
+            <h3>让 80 亿参数大模型在 2 GB 内存中跑起来｜答辩展示</h3>
+            <a href="https://www.bilibili.com/video/BV1iHbB6CEPb/" target="_blank" rel="noreferrer">在 B 站打开 ↗</a>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section id="report" class="section report-section">
       <div class="report-copy">
-        <p class="section-index">06 / READ THE SYSTEM</p>
+        <p class="section-index">07 / READ THE SYSTEM</p>
         <h2>从研究动机到跨设备证据</h2>
         <p>最终报告按照系统论文结构完整呈现背景、相关工作、动机、系统设计、工程实现、实验评估、边界分析与原始数据附录。</p>
         <div class="report-actions">
           <a class="button button-primary" href="assets/SLIM-ARC-决赛报告.pdf">下载最终报告</a>
-          <a class="button button-secondary" href="https://www.bilibili.com/video/BV1fXTF6HEAw?p=2" target="_blank" rel="noreferrer">观看 B 站 P2 演示</a>
+          <a class="button button-secondary" href="#videos">观看项目视频</a>
         </div>
       </div>
       <dl class="report-outline">
@@ -261,6 +306,7 @@
   </footer>
 
   <script src="js/particles.js" defer></script>
+  <script src="js/hero-reactor.js" defer></script>
   <script src="js/main.js" defer></script>
 </body>
 </html>
