@@ -31,7 +31,7 @@
 | 架构 | ARM（无 AVX2） | **待确认**（测试首步采集，见 §5.1） |
 | 物理内存 | 8 GB（7.8 GiB） | **待确认** |
 | CPU 核数 | 4 核可用 | **待确认** |
-| 存储/SSD | SSD 读 2.1 GB/s | **待确认**（注意：demo 记录提及"28G 仅剩 17G"，见 [`demo-ui-summary-2026-08-10.md`](rk3588_test_notes/demo-ui-summary-2026-08-10.md:27)，需核实本板可用磁盘是否足够容纳 80B 模型） |
+| 存储/SSD | SSD 读 2.1 GB/s | **待确认**（注意：demo 记录提及"28G 仅剩 17G"，见 [`demo-ui-summary-2026-08-10.md`](rk3588_test_notes/修复记录/demo-ui-summary-2026-08-10.md:27)，需核实本板可用磁盘是否足够容纳 80B 模型） |
 | OS 内核 | Linux（RK3588） | Linux 6.18（可能为 WSL2，见 [`ROADMAP.md`](../ROADMAP.md:8) "WSL2 内核 6.18.35.2"） |
 | 模型实际路径 | `/home/orangepi/ssd/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf` | 计划：`/home/yituodabian/...`（见 §3，**路径待与脚本/配置对齐**） |
 | cgroups | slim-arc-low(8G)/mid(12G)/high(16G) | **待确认是否已配置**（见 §5.2） |
@@ -71,7 +71,7 @@
 | HuggingFace 来源（GGUF） | `Qwen/Qwen3-Next-80B-A3B-Instruct-GGUF`（Q4_K_M / IQ4_XS 单文件） |
 | HuggingFace 来源（原始权重） | `Qwen/Qwen3-Next-80B-A3B-Instruct`（需自行 convert，见 [`environment.md`](guide/environment.md:114)） |
 
-> **来源依据**：[`data/README.md`](../data/README.md:23) 示范了 `huggingface-cli download Qwen/Qwen3-4B-GGUF ...` 模式；[`config/slim-arc.toml`](../config/slim-arc.toml:7) 明确文件名 `Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf`。RK3588 实测使用同文件（[`raw-80b-metrics.txt`](rk3588_test_notes/raw-80b-metrics.txt:14)）。
+> **来源依据**：[`data/README.md`](../data/README.md:23) 示范了 `huggingface-cli download Qwen/Qwen3-4B-GGUF ...` 模式；[`config/slim-arc.toml`](../config/slim-arc.toml:7) 明确文件名 `Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf`。RK3588 实测使用同文件（[`raw-80b-metrics.txt`](rk3588_test_notes/80b专家预取消融-2026-08-08/raw-80b-metrics.txt:14)）。
 
 ### 3.2 下载目标路径
 
@@ -248,8 +248,8 @@ echo "0"   | sudo tee /sys/fs/cgroup/slim-arc-*/cpuset.mems
 | TC-02 | SLIM-ARC 全开 短 | pp32/tg16 | 全开 vs baseline 差距 ≤ ±10%（RK3588 为持平，见 [`测试数据.md`](rk3588_improvement/测试数据.md:48)）；**不得出现 4-6× 负优化**（即不得回退到静态 MADV_RANDOM 行为） |
 | TC-03 | baseline 长 | pp512/tg128 | 不 OOM、产出数值 |
 | TC-04 | SLIM-ARC 全开 长 | pp512/tg128 | 全开 vs baseline ≤ ±10%；KV eviction（若开）日志 `ENABLED` 且输出连贯 |
-| TC-05 | 专家预取指标 | n≥64 | `[SLIM-ARC-METRICS]` 行存在，`hit_rate` 与 `issued` 自洽（hit+waste≈accounted）；temporal 命中率应 ~30%+（RK3588 31%，见 [`raw-80b-ablation-base.txt`](rk3588_test_notes/raw-80b-ablation-base.txt:33)） |
-| TC-06 | CONF=1 | n≥64 | `issued` 较 baseline 下降 ≥40%、`hit_rate` 上升 ≥15pp（RK3588：27.8GB→12.1GB、31%→55%，见 [`raw-80b-ablation-confbud.txt`](rk3588_test_notes/raw-80b-ablation-confbud.txt:33)） |
+| TC-05 | 专家预取指标 | n≥64 | `[SLIM-ARC-METRICS]` 行存在，`hit_rate` 与 `issued` 自洽（hit+waste≈accounted）；temporal 命中率应 ~30%+（RK3588 31%，见 [`raw-80b-ablation-base.txt`](rk3588_test_notes/80b专家预取消融-2026-08-08/raw-80b-ablation-base.txt:33)） |
+| TC-06 | CONF=1 | n≥64 | `issued` 较 baseline 下降 ≥40%、`hit_rate` 上升 ≥15pp（RK3588：27.8GB→12.1GB、31%→55%，见 [`raw-80b-ablation-confbud.txt`](rk3588_test_notes/80b专家预取消融-2026-08-08/raw-80b-ablation-confbud.txt:33)） |
 | TC-07 | decode MADV 消融 | tg16 | 产出 RANDOM/SEQUENTIAL/NORMAL 三组 tg；记录本板最优（RK3588 为 SEQUENTIAL，本板若内存充足可能不同） |
 | TC-08 | 端到端生成 | 开放 prompt | 输出语义连贯、事实正确；不崩溃不截断 |
 
@@ -302,7 +302,7 @@ logs/ablation/raw-80b/80b-yituodabian-<mode>-<spec>-<tier>.txt
 | **RL-06** | **不得绕过 `apply-slim-arc.py` 手改 upstream 源码**。所有 SLIM-ARC 修改必须经集成脚本应用，确保 patches/ 与 src/ 镜像同步（[`AGENT.md`](../AGENT.md:88)）。 | 代码不可恢复（2026-06-23 事故根因） |
 | **RL-07** | **不得 ignore 已修改的源文件**。`.gitignore` 只能 ignore 构建产物（build/、*.o）和外部依赖（data/models/），不得 ignore 修改过的源文件（[`AGENT.md`](../AGENT.md:83)）。 | WSL 重启丢码（2026-06-23 事故） |
 | **RL-08** | **不得无 commit message 提交、不得批量无注释提交**。每次提交须符合 `:<gitmoji>: <type>(<scope>): <subject>`（[`AGENT.md`](../AGENT.md:39)）。 | 历史不可溯源 |
-| **RL-09** | **不得在测试中新增核心功能/机制**。本测试只验证已有机制，不新增 C++ HTTP 端点、不改核心调度逻辑（参考 [`demo-ui-summary-2026-08-10.md`](rk3588_test_notes/demo-ui-summary-2026-08-10.md:118) red-line #1）。 | 范围蔓延、引入未验证变更 |
+| **RL-09** | **不得在测试中新增核心功能/机制**。本测试只验证已有机制，不新增 C++ HTTP 端点、不改核心调度逻辑（参考 [`demo-ui-summary-2026-08-10.md`](rk3588_test_notes/修复记录/demo-ui-summary-2026-08-10.md:118) red-line #1）。 | 范围蔓延、引入未验证变更 |
 | **RL-10** | **不得盲目 `kill -9` 未知 PID**。曾误杀 VSCode Server（[`ROADMAP.md`](../ROADMAP.md:20)）；停服务前先 `ps aux \| grep` 确认。 | 误杀系统进程 |
 | **RL-11** | **不得在一条命令链中混合编译+git 提交**。编译耗时长可能导致 git 超时回退（[`AGENT.md`](../AGENT.md:101)）。 | 提交被覆盖回退（2026-06-26 事故） |
 | **RL-12** | **冷启动测试前必须 `drop_caches`**。否则 page cache 残留使数据不可复现（RK3588 数据波动根因，见 [`ROADMAP.md`](../ROADMAP.md:207)）。 | 数据虚高、不可比 |

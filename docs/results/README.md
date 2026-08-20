@@ -38,7 +38,7 @@
 | 阶段/设备 | 核心模型与合同 | 最重要结果 | 等级 | 详细入口 |
 |---|---|---|---|---|
 | 初赛 WSL/x86 | Qwen3-Next-80B，8–32 GiB cgroup | 证明 mmap、关闭 repack、量化和页建议路径可运行；高倍数数据受缓存/合同混合影响 | C/B | [初赛报告](../../reports/Competition_Report/main.pdf)、[初赛消融](../../reports/raw_analysis/phase4-ablation-summary.md) |
-| RK3588 8GB | 80B Q4_K_M，SSD，ARM CPU；3GiB user cgroup | 3GiB 下 `tg 0.70 → 2.21`（3.16×）；动态阶段策略恢复到 `pp 2.84 / tg 1.40` | A/B | [RK3588 汇总](../../reports/raw_analysis/rk3588-edge-test-summary.md)、[F/G/H](../rk3588_test_notes/SLIM-ARC后续测试汇总-FGH-2026-08-13.md) |
+| RK3588 8GB | 80B Q4_K_M，SSD，ARM CPU；3GiB user cgroup | 3GiB 下 `tg 0.70 → 2.21`（3.16×）；动态阶段策略恢复到 `pp 2.84 / tg 1.40` | A/B | [RK3588 汇总](../../reports/raw_analysis/rk3588-edge-test-summary.md)、[F/G/H](../rk3588_test_notes/优势场景测试-2026-08-13/SLIM-ARC后续测试汇总-FGH-2026-08-13.md) |
 | Pi 5 4GB | 80B Q4_K_M，USB NTFS/FUSE，no-swap | A28 相对 A24：Decode +14.16%，wall -6.58%；A34 LRU 再小幅改善 | A/B | [Pi 目录](../pi5_4GB_test_notes/) |
 | Mac/Colima | 80B Q4_K_M，2 GiB、4/8 CPU、no-swap | 48.41GB 模型在 2GiB 下完成；末次 `pp 3.908 / tg 0.709` | A | [Mac 末次复核](../macos_test_notes/2026-08-17/final-validation-summary.md) |
 | 华为 HiDevLab | OLMoE Q2_K，aarch64 CPU-only | 跑通系统开/关 A/B；A24 比 patched-default Decode +6.47%，但仍慢于 baseline | D/B | [Ascend 环境实验](../ascend_test_notes/2026-08-17/README.md) |
@@ -190,13 +190,13 @@ RSS 补测使用 8 threads，与 F 组不能直接比较。三个 3GiB scope 的
 4324/3986/3951MiB。内核 5.10 缺少 `memory.peak`，因此 cgroup 峰值通过 0.5s 轮询获得。
 进程 RSS 可能包含计费到外部 session cgroup 的文件页，不能与 scope current 直接相减。
 
-证据：[F/G/H 汇总](../rk3588_test_notes/SLIM-ARC后续测试汇总-FGH-2026-08-13.md)、
-[RSS 补测](../rk3588_test_notes/RK3588-SLIMARC-RSS内存峰值补测-2026-08-13.md)、
-[F1 原始日志](../rk3588_test_notes/adv-scenario-F1-2026-08-13.txt)、
-[F2 原始日志](../rk3588_test_notes/adv-scenario-F2-2026-08-13.txt)。
+证据：[F/G/H 汇总](../rk3588_test_notes/优势场景测试-2026-08-13/SLIM-ARC后续测试汇总-FGH-2026-08-13.md)、
+[RSS 补测](../rk3588_test_notes/优势场景测试-2026-08-13/RK3588-SLIMARC-RSS内存峰值补测-2026-08-13.md)、
+[F1 原始日志](../rk3588_test_notes/优势场景测试-2026-08-13/adv-scenario-F1-2026-08-13.txt)、
+[F2 原始日志](../rk3588_test_notes/优势场景测试-2026-08-13/adv-scenario-F2-2026-08-13.txt)。
 
 完整汇总：[RK3588 数据整理](../../reports/raw_analysis/rk3588-edge-test-summary.md)、
-[优势场景报告](../rk3588_test_notes/RK3588-SLIMARC-优势场景测试报告-2026-08-13.md)、
+[优势场景报告](../rk3588_test_notes/优势场景测试-2026-08-13/RK3588-SLIMARC-优势场景测试报告-2026-08-13.md)、
 [原始目录](../rk3588_test_notes/)。这些实验说明“固定 RANDOM”不能跨设备推广。
 
 ## 6. Mac/Colima 数据
