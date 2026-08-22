@@ -18,9 +18,10 @@ test:
 
 check:
 	bash -n scripts/bootstrap-dev.sh scripts/macos/run-native-demo.sh tests/run-cpp-unit.sh
-	python3 -m compileall -q scripts tests
+	PYTHONPYCACHEPREFIX="$(CURDIR)/.cache/python" python3 -m compileall -q scripts tests
 	uv run ruff check --select E9,F63,F7,F82 scripts tests reports/Competition_Report_Finals
 	python3 scripts/check-public-tree.py
+	python3 scripts/check-markdown-links.py
 
 docs:
 	python3 reports/Competition_Report_Finals/build_finals_report.py
