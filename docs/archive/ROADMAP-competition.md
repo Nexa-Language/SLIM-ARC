@@ -986,7 +986,7 @@
 1. **动态 MADV 切换**: prefill→WILLNEED, decode→MADV_RANDOM
    - 实现 `switch_madvise_all()` + `register_mmap_region()`
    - 效果：开销抵消收益（45GB 区域 madvise 开销大）
-   
+
 2. **KV Cache 量化 (q4_0)**: ✅ 有效
    - KV 内存减半，更多 RAM 给权重
    - decode +14%（0.90→1.03 t/s）
