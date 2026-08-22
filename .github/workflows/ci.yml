@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  fast-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install development dependencies
+        run: uv sync --dev --frozen
+      - name: Run C++ and Python tests
+        run: make test
+      - name: Check scripts and public tree
+        run: make check
+
+  pinned-integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Bootstrap pinned llama.cpp
+        run: make bootstrap
+      - name: Reapply integration to prove idempotence
+        run: python3 scripts/apply-slim-arc.py src/llama-upstream
+      - name: Build llama-cli and llama-server
+        run: cmake --build src/llama-upstream/build --config Release -j2 --target llama-cli llama-server

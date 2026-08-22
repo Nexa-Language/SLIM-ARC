@@ -1,0 +1,24 @@
+name: Bug report
+description: 报告可复现的功能或正确性问题
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 问题描述
+      description: 说明预期行为和实际行为。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 复现步骤
+      description: 提供命令、提交、平台和最小复现；请删除密钥与个人信息。
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 日志与证据
+      description: 粘贴必要的精简日志或仓库内证据链接。

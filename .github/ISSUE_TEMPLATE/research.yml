@@ -1,0 +1,23 @@
+name: Research proposal
+description: 提议新的研究方向、平台或论文复现
+title: "[Research] "
+labels: ["research"]
+body:
+  - type: textarea
+    id: motivation
+    attributes:
+      label: 动机与相关工作
+    validations:
+      required: true
+  - type: textarea
+    id: design
+    attributes:
+      label: 设计与可证伪假设
+    validations:
+      required: true
+  - type: textarea
+    id: evaluation
+    attributes:
+      label: 评测计划
+    validations:
+      required: true

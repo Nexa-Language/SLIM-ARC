@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use SLIM-ARC, please cite this software and its final technical report."
+title: "SLIM-ARC: Memory-Aware Runtime Co-Optimization for On-Device MoE Inference"
+type: software
+version: 1.1.0
+date-released: 2026-08-22
+license: Apache-2.0
+repository-code: "https://github.com/Nexa-Language/SLIM-ARC"
+url: "https://slim.nexa-lang.com/"
+authors:
+  - family-names: Ouyang
+    given-names: Yipeng
+  - family-names: Ma
+    given-names: Fuquan
+  - family-names: Liu
+    given-names: Hao

@@ -1,0 +1,11 @@
+SLIM-ARC
+Copyright 2026 SLIM-ARC contributors
+
+This product includes modifications designed for llama.cpp. llama.cpp is maintained by
+the ggml-org contributors and distributed under the MIT License. SLIM-ARC does not
+redistribute the llama.cpp source tree; the bootstrap script retrieves a pinned upstream
+revision and applies this repository's integration.
+
+The repository references third-party papers, models and datasets for reproducibility.
+Those works remain subject to their respective licenses and terms. Model weights are not
+distributed with SLIM-ARC.
