@@ -16,7 +16,7 @@ if [ ! -x "$LLAMA_DIR/build/bin/llama-server" ] && [ -x "$(dirname "$PROJECT_ROO
     LLAMA_DIR="$(dirname "$PROJECT_ROOT")/src/llama-upstream"
 fi
 # SLIM-ARC FIX 2026-08-12: 项目迁移到 data/ 后，llama-server 二进制内嵌 RUNPATH
-# 仍指向旧路径（/home/yituodabian/SLIM-ARC/...），运行时找不到 libllama-server-impl.so。
+# 仍可能指向迁移前的 `$SLIM_ARC_ROOT`，运行时找不到 libllama-server-impl.so。
 # 用 LD_LIBRARY_PATH 显式指向 build/bin 解决（不修改二进制，不动 SLIM-ARC 核心）。
 export LD_LIBRARY_PATH="$LLAMA_DIR/build/bin${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 DEMO_DIR="$PROJECT_ROOT/scripts/demo"

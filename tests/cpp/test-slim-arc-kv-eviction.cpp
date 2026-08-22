@@ -1,6 +1,7 @@
 #include "slim-arc-kv-eviction.h"
 
 #include <cassert>
+#include <cstdlib>
 #include <cstdint>
 #include <fcntl.h>
 #include <sys/mman.h>

@@ -4,7 +4,7 @@ set -uo pipefail
 
 readonly SWAP_UNIT="dev-zram0.swap"
 readonly SETUP_UNIT="systemd-zram-setup@zram0.service"
-readonly BENCHMARK="${SLIM_ARC_PI_BENCHMARK:-/var/tmp/slim-arc-15b23a11-bin/llama-bench}"
+readonly BENCHMARK="${SLIM_ARC_PI_BENCHMARK:?Set SLIM_ARC_PI_BENCHMARK to llama-bench}"
 readonly MODEL="${SLIM_ARC_PI_MODEL:-}"
 readonly MODEL_SHA256="${SLIM_ARC_PI_MODEL_SHA256:-}"
 readonly LABEL="${SLIM_ARC_PI_LABEL:-}"
@@ -14,7 +14,7 @@ readonly PP="${SLIM_ARC_PI_PP:-4}"
 readonly TG="${SLIM_ARC_PI_TG:-1}"
 readonly TOP_K="${SLIM_ARC_PI_TOP_K:-10}"
 readonly TIMEOUT_SECONDS="${SLIM_ARC_PI_TIMEOUT_SECONDS:-1800}"
-readonly RUNTIME_LIB_DIR="${SLIM_ARC_PI_RUNTIME_LIB_DIR:-/home/yituodabian/data/llama-a23-39c88493/build/bin}"
+readonly RUNTIME_LIB_DIR="${SLIM_ARC_PI_RUNTIME_LIB_DIR:-$(dirname "${BENCHMARK}")}"
 
 swap_is_active() {
     [[ -n "$(tail -n +2 /proc/swaps)" ]]
