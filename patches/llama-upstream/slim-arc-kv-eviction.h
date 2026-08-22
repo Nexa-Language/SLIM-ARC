@@ -16,6 +16,10 @@
 
 namespace slim_arc {
 
+namespace detail {
+bool resize_file_mapping(int fd, void *& base, size_t old_size, size_t new_size);
+}
+
 struct kv_eviction_config {
     size_t sink_tokens   = 4;       // permanent hot tokens
     size_t window_tokens = 4096;    // warm sliding window size

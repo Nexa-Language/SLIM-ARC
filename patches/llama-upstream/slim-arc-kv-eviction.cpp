@@ -11,6 +11,34 @@
 
 namespace slim_arc {
 
+bool detail::resize_file_mapping(int fd, void *& base, size_t old_size, size_t new_size) {
+    if (fd < 0 || base == nullptr || base == MAP_FAILED || old_size == 0 || new_size <= old_size) {
+        return false;
+    }
+    if (ftruncate(fd, new_size) != 0) {
+        return false;
+    }
+
+#if defined(__linux__)
+    void * new_base = mremap(base, old_size, new_size, MREMAP_MAYMOVE);
+    if (new_base == MAP_FAILED) {
+        return false;
+    }
+#else
+    void * new_base = mmap(nullptr, new_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    if (new_base == MAP_FAILED) {
+        return false;
+    }
+    if (munmap(base, old_size) != 0) {
+        munmap(new_base, new_size);
+        return false;
+    }
+#endif
+
+    base = new_base;
+    return true;
+}
+
 kv_eviction_manager::kv_eviction_manager(const kv_eviction_config & config)
     : config_(config) {
     if (config_.enable_offload) {
@@ -109,10 +137,7 @@ void kv_eviction_manager::evict_block(kv_block_info & block) {
         // Grow mmap if needed
         while (ssd_usage_ + block.size > mmap_size_) {
             size_t new_size = mmap_size_ * 2;
-            if (ftruncate(mmap_fd_, new_size) != 0) return;
-            void * new_base = mremap(mmap_base_, mmap_size_, new_size, MREMAP_MAYMOVE);
-            if (new_base == MAP_FAILED) return;
-            mmap_base_ = new_base;
+            if (!detail::resize_file_mapping(mmap_fd_, mmap_base_, mmap_size_, new_size)) return;
             mmap_size_ = new_size;
         }
         // Copy to SSD
