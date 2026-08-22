@@ -1,0 +1,26 @@
+- id: persona
+  name: '@deepseek-ai/dsh-persona'
+  config:
+    text: You are a concise coding agent. Use bash to complete the task. The first bash tool call in every session must be exactly set +H. Wait for it to finish before any command containing an exclamation mark.
+    complete: true
+    includeRuntimeContext: false
+
+- id: persistent-shell
+  name: cordis:group
+  group: true
+  isolate:
+    terminals: true
+  config:
+    - id: pty
+      name: '@deepseek-ai/dsh-terminal'
+
+    - id: terminal-bash
+      name: '@deepseek-ai/dsh-terminal-bash'
+      config:
+        timeoutMs: 300000
+
+    - id: persistent-bash
+      name: '@deepseek-ai/dsh-tool-bash-persistent'
+      config:
+        timeoutMs: 300000
+        description: Run commands in a persistent Bash shell in the writable workspace.
