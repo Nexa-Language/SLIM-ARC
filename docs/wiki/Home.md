@@ -1,7 +1,7 @@
 # SLIM-ARC Wiki
 
-SLIM-ARC 是面向内存受限端侧系统的 MoE 大模型推理运行时，获得 2026 年全国大学生
-计算机系统能力大赛操作系统设计赛国家级一等奖（赛题最高奖项）。
+SLIM-ARC 是面向内存受限端侧系统的 MoE 大模型推理运行时，也是团队参加 2026 年
+全国大学生计算机系统能力大赛操作系统设计赛 Proj59 的最终作品。
 
 - [Getting Started](Getting-Started)
 - [Architecture](Architecture)
