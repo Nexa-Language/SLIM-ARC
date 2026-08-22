@@ -2,15 +2,43 @@
 
 set -euo pipefail
 
+readonly repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+readonly source_root="$repo_root/patches/llama-upstream"
+readonly test_root="$repo_root/tests/cpp"
+readonly test_targets=(
+    test-slim-arc-cgroup-memory
+    test-slim-arc-pressure-budget
+    test-slim-arc-prefetch-budget
+    test-slim-arc-runtime
+    test-slim-arc-kv-eviction
+    test-slim-arc-page-range
+    test-slim-arc-expert-reclaim
+    test-slim-arc-expert-residency
+    test-slim-arc-expert-transition
+    test-slim-arc-unified-pressure
+)
+
+usage() {
+    echo "Usage: $0 list|all|<allowlisted-test-target>" >&2
+}
+
 if [[ $# -ne 1 ]]; then
-    echo "Usage: $0 <allowlisted-test-target>" >&2
+    usage
     exit 2
 fi
 
 readonly target=$1
-readonly repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-readonly source_root="$repo_root/patches/llama-upstream"
-readonly test_root="$repo_root/tests/cpp"
+if [[ "$target" == "list" ]]; then
+    printf '%s\n' "${test_targets[@]}"
+    exit 0
+fi
+if [[ "$target" == "all" ]]; then
+    for test_target in "${test_targets[@]}"; do
+        echo "==> $test_target"
+        "$0" "$test_target"
+    done
+    exit 0
+fi
 
 case "$target" in
     test-slim-arc-cgroup-memory)
@@ -48,6 +76,10 @@ case "$target" in
             "$source_root/slim-arc-runtime.cpp"
         )
         ;;
+    test-slim-arc-kv-eviction)
+        readonly test_source="$test_root/test-slim-arc-kv-eviction.cpp"
+        readonly module_sources=("$source_root/slim-arc-kv-eviction.cpp")
+        ;;
     test-slim-arc-page-range)
         readonly test_source="$test_root/test-slim-arc-page-range.cpp"
         readonly module_sources=("$source_root/slim-arc-page-range.cpp")
@@ -82,6 +114,7 @@ case "$target" in
         ;;
     *)
         echo "Unsupported C++ test target: $target" >&2
+        usage
         exit 2
         ;;
 esac

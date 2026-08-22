@@ -12,6 +12,8 @@ APPLY_SCRIPT = REPO_ROOT / "scripts" / "apply-slim-arc.py"
 def write_fixture(root: Path) -> Path:
     src = root / "src"
     src.mkdir(parents=True)
+    models = src / "models"
+    models.mkdir()
     (src / "llama-model-loader.cpp").write_text(
         '#include "llama-model-loader.h"\n#include <regex>\n'
         "void init_mappings() {\n"
@@ -42,6 +44,7 @@ def write_fixture(root: Path) -> Path:
     (src / "llama-context.cpp").write_text(
         '#include "llama-ext.h"\n#include <limits>\n'
         "int graph_compute() {\n"
+        "    int n_threads        = batched ? cparams.n_threads_batch : cparams.n_threads;\n"
         "    auto status = ggml_backend_sched_graph_compute_async(sched.get(), gf);\n"
         "    return status;\n"
         "}\n",
@@ -60,6 +63,31 @@ def write_fixture(root: Path) -> Path:
     )
     (src / "CMakeLists.txt").write_text(
         "set(LLAMA_SOURCES llama-vocab.cpp)\n", encoding="utf-8"
+    )
+    (models / "qwen3next.cpp").write_text(
+        '#include "models.h"\n#include "llama-memory-recurrent.h"\n'
+        "void llama_model_qwen3next::load_arch_hparams(llama_model_loader & ml) {\n"
+        "    ml.get_key(LLM_KV_NEXTN_PREDICT_LAYERS, hparams.n_layer_nextn, false);\n"
+        '    GGML_ASSERT(hparams.n_layer_nextn < hparams.n_layer_all && "n_layer_nextn must be < n_layer_all");\n'
+        "}\n"
+        "void build_qwen3next_graph() {\n"
+        "    for (int il = 0; il < n_layer; ++il) {\n"
+        "        ggml_tensor * attn_post_norm = build_norm(cur, model.layers[il].attn_post_norm, nullptr, LLM_NORM_RMS, il);\n"
+        '        cb(attn_post_norm, "attn_post_norm", il);\n\n'
+        "        // FFN layer (MoE or dense) - without residual connection\n"
+        "        cur = build_layer_ffn(attn_post_norm, il);\n"
+        '        cb(cur, "ffn_out", il);\n'
+        "    }\n"
+        "}\n"
+        "void build_trunk_moe() {\n"
+        "    build_moe_ffn(cur, gate, up, gate_exp, down, nullptr,\n"
+        "        n_expert, n_expert_used, LLM_FFN_SILU);\n"
+        "}\n"
+        "void build_mtp_moe() {\n"
+        "    build_moe_ffn(cur, gate, up, gate_exp, down, nullptr,\n"
+        "        n_expert, n_expert_used, LLM_FFN_SILU);\n"
+        "}\n",
+        encoding="utf-8",
     )
     return src
 
