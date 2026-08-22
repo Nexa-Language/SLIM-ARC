@@ -10,11 +10,8 @@
 
 [![CI](https://github.com/Nexa-Language/SLIM-ARC/actions/workflows/ci.yml/badge.svg)](https://github.com/Nexa-Language/SLIM-ARC/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/code-Apache--2.0-blue.svg)](LICENSE)
-[![Award](https://img.shields.io/badge/2026%20OS%20Challenge-国家级一等奖-gold.svg)](https://gitlab.eduxiji.net/T2026105589911358/project3136859-389100)
 
 <img src="assets/slim-arc-readme-cover.png" alt="SLIM-ARC memory-aware MoE inference runtime" width="100%" />
-
-**2026 年全国大学生计算机系统能力大赛操作系统设计赛国家级一等奖（赛题最高奖项）**
 
 [项目官网](https://slim.nexa-lang.com/) ·
 [技术报告](reports/Competition_Report_Finals/main.pdf) ·

@@ -4,7 +4,7 @@
 
 ### Added
 
-- National first-prize final report, presentation, evidence index, Wiki source and contributor guidance.
+- Final competition report, presentation, evidence index, Wiki source and contributor guidance.
 - Pinned, idempotent development bootstrap and unified Make targets.
 - Cross-platform macOS KV mapping resize path and dedicated regression test.
 
