@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "recorded_at": "2026-08-21T05:23:00+08:00",
+  "slim_arc_git_commit": "8f9aa157d00e53d01dce2f0b408dbc0f6ea53b7d",
+  "llama_build_commit": "8f9aa157",
+  "hardware": {
+    "machine": "Apple M4 Pro",
+    "unified_memory_gib": 48,
+    "metal_recommended_max_working_set_mb": 40200.90
+  },
+  "source_model": {
+    "architecture": "qwen3next",
+    "parameter_count": 79674391296,
+    "active_parameter_label": "A3B",
+    "quantization": "Q4_K_M",
+    "file_bytes": 48410988384,
+    "sha256": "d103b2733ec1012a52d01edda66b7e5c24ae50508c9f99f5297ea459ef3c061a"
+  },
+  "optimized_model": {
+    "quantization": "IQ2_M",
+    "file_bytes": 26056028256,
+    "bench_model_bytes": 26050044928,
+    "sha256": "d8c223bde11695dd562cc5144bf952a059a66e4b6b654b57efddf4a6746406c3",
+    "file_reduction_percent": 46.17745035626745,
+    "requantized_from_q4": true,
+    "quantization_seconds": 794.49622
+  },
+  "importance_matrix": {
+    "repo": "ilintar/Qwen3-Next-80B-A3B-Instruct-GGUF",
+    "revision": "9daa2ea7c6eb2fea72816ffe79a9be1b5322e4c1",
+    "filename": "qwen3_next_full_imatrix.gguf",
+    "sha256": "0d574fc250a9b163c14dfe86e5c87e25db389bb83fe7de96dd644b9d897465e1",
+    "chunks": 2588,
+    "entries": 540
+  },
+  "controlled_benchmarks": {
+    "contract": {
+      "prompt_tokens": 4,
+      "generation_tokens": 128,
+      "repetitions": 2,
+      "gpu_layers": 99,
+      "flash_attention": true,
+      "host_expert_prefetch": false
+    },
+    "metal_decode_tokens_per_second": {
+      "threads_4": {
+        "mean": 45.556287,
+        "samples": [45.6942, 45.4183]
+      },
+      "threads_6": {
+        "mean": 45.808256,
+        "samples": [45.9004, 45.7161]
+      },
+      "threads_8": {
+        "mean": 45.220992,
+        "samples": [45.2487, 45.1933]
+      },
+      "threads_10": {
+        "mean": 43.277332,
+        "samples": [43.5473, 43.0074]
+      },
+      "threads_12": {
+        "mean": 39.926557,
+        "samples": [39.9408, 39.9123]
+      }
+    },
+    "same_iq2_cpu_only_one_thread_tokens_per_second": 4.961730,
+    "same_iq2_speedup_at_threads_6": 9.232315341624796,
+    "metal_threads_12_host_prefetch_on_tokens_per_second": 39.584366,
+    "metal_threads_12_flash_attention_off_tokens_per_second": 39.837135
+  },
+  "visual_stack_baseline": {
+    "model_quantization": "Q4_K_M",
+    "gpu_layers": 0,
+    "threads": 1,
+    "macos_qos": "background",
+    "optional_slim_arc_policies": "off",
+    "prompt_tokens": 22,
+    "completion_tokens": 8,
+    "prompt_tokens_per_second": 1.7027133666249914,
+    "decode_tokens_per_second": 1.8335276108631011,
+    "decode_milliseconds_per_token": 545.39675,
+    "cold_request_milliseconds": 17283.728,
+    "background_bench_decode_tokens_per_second": 1.040104,
+    "optimized_api_speedup": 25.20411875660355
+  },
+  "real_server_request": {
+    "server_args": "-ngl 99 -fa on -t 6 -tb 6 -c 4096 -b 512 -ub 256",
+    "prompt_tokens": 63,
+    "completion_tokens": 256,
+    "finish_reason": "length",
+    "prefill_tokens_per_second": 172.34681650808938,
+    "decode_tokens_per_second": 46.21244764770518,
+    "decode_milliseconds_per_token": 21.63919140625,
+    "model_load_warm_seconds": 1.850796,
+    "model_load_cold_after_q4_seconds": 23.830905,
+    "resident_set_kib_after_load": 25836896
+  },
+  "harness_ui_request": {
+    "preset": "minimal",
+    "model_label": "Qwen3-Next-80B-A3B (SLIM-ARC)",
+    "input_tokens_shown": 1000,
+    "output_tokens": 71,
+    "ui_tokens_per_second": 47,
+    "server_decode_tokens_per_second": 47.28,
+    "token_limit_warning": false
+  },
+  "claim_boundary": "The IQ2_M artifact was requantized from Q4_K_M. Runtime and coherence were verified, but accuracy equivalence to the source model was not measured."
+}

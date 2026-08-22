@@ -1,0 +1,27 @@
+- id: llm-pi-ai
+  config:
+    providers:
+      slim-arc-local:
+        displayName: SLIM-ARC Local Qwen3-Next
+        apiKeyEnv: SLIM_ARC_LOCAL_API_KEY
+        api: openai-completions
+        baseURL: http://127.0.0.1:18080/v1
+        # pi-ai reserves 4096 safety tokens before dispatch. Advertise the
+        # 4096-token local server window plus that adapter-owned reserve.
+        defaultContextWindow: 8192
+        defaultMaxTokens: 256
+        models:
+          - id: qwen3-next-80b-a3b
+            name: Qwen3-Next-80B-A3B (SLIM-ARC)
+            contextWindow: 8192
+            maxTokens: 256
+            reasoningEfforts: false
+
+- id: agent-default-model
+  config:
+    provider: slim-arc-local
+    model: qwen3-next-80b-a3b
+
+- id: agent-presets
+  config:
+    default: minimal

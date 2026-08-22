@@ -1,0 +1,32 @@
+ggml_metal_device_init: tensor API disabled for pre-M5 and pre-A19 devices
+ggml_metal_library_init: default.metallib not found, loading from source
+ggml_metal_library_init: GGML_METAL_PATH_RESOURCES = nil
+ggml_metal_library_init: loading '/Users/bytedance/proj/competition/SLIM-ARC/src/llama-upstream/build-macos/bin/ggml-metal.metal'
+ggml_metal_library_init: loaded in 0.010 sec
+ggml_metal_rsets_init: creating a residency set collection (keep_alive = 180 s)
+ggml_metal_device_init: GPU name:   MTL0 (Apple M4 Pro)
+ggml_metal_device_init: GPU family: MTLGPUFamilyApple9  (1009)
+ggml_metal_device_init: GPU family: MTLGPUFamilyCommon3 (3003)
+ggml_metal_device_init: GPU family: MTLGPUFamilyMetal4  (5002)
+ggml_metal_device_init: simdgroup reduction   = true
+ggml_metal_device_init: simdgroup matrix mul. = true
+ggml_metal_device_init: has unified memory    = true
+ggml_metal_device_init: has bfloat            = true
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = true
+ggml_metal_device_init: recommendedMaxWorkingSetSize  = 40200.90 MB
+/Users/bytedance/proj/competition/SLIM-ARC/src/llama-upstream/ggml/src/ggml-backend.cpp:1668: GGML_ASSERT(id >= 0 && id < n_expert) failed
+WARNING: Using native backtrace. Set GGML_BACKTRACE_LLDB for more info.
+WARNING: GGML_BACKTRACE_LLDB may cause native MacOS Terminal.app to crash.
+See: https://github.com/ggml-org/llama.cpp/pull/17869
+0   libggml-base.0.18.1.dylib           0x0000000104a513d0 ggml_print_backtrace + 276
+1   libggml-base.0.18.1.dylib           0x0000000104abef58 ggml_abort + 156
+2   libggml-base.0.18.1.dylib           0x0000000104a6dd34 ggml_backend_sched_graph_compute_async + 2736
+3   libllama.0.0.214.dylib              0x00000001053436e4 _ZN13llama_context13graph_computeEP11ggml_cgraphb + 1228
+4   libllama.0.0.214.dylib              0x0000000105342ecc _ZN13llama_context14process_ubatchERK12llama_ubatch14llm_graph_typeP22llama_memory_context_iR11ggml_status + 292
+5   libllama.0.0.214.dylib              0x000000010534530c _ZN13llama_context6decodeERK11llama_batch + 2356
+6   libllama.0.0.214.dylib              0x000000010534aae0 llama_decode + 20
+7   libllama-bench-impl.dylib           0x00000001046da2ac _ZL11test_promptP13llama_contextiii + 288
+8   libllama-bench-impl.dylib           0x00000001046d52cc _Z11llama_benchiPPc + 8116
+9   dyld                                0x00000001808fc4e4 start + 6992

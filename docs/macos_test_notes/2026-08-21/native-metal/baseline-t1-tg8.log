@@ -1,0 +1,22 @@
+ggml_metal_device_init: tensor API disabled for pre-M5 and pre-A19 devices
+ggml_metal_library_init: default.metallib not found, loading from source
+ggml_metal_library_init: GGML_METAL_PATH_RESOURCES = nil
+ggml_metal_library_init: loading '/Users/bytedance/proj/competition/SLIM-ARC/src/llama-upstream/build-macos/bin/ggml-metal.metal'
+ggml_metal_library_init: loaded in 0.031 sec
+ggml_metal_rsets_init: creating a residency set collection (keep_alive = 180 s)
+ggml_metal_device_init: GPU name:   MTL0 (Apple M4 Pro)
+ggml_metal_device_init: GPU family: MTLGPUFamilyApple9  (1009)
+ggml_metal_device_init: GPU family: MTLGPUFamilyCommon3 (3003)
+ggml_metal_device_init: GPU family: MTLGPUFamilyMetal4  (5002)
+ggml_metal_device_init: simdgroup reduction   = true
+ggml_metal_device_init: simdgroup matrix mul. = true
+ggml_metal_device_init: has unified memory    = true
+ggml_metal_device_init: has bfloat            = true
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = true
+ggml_metal_device_init: recommendedMaxWorkingSetSize  = 40200.90 MB
+{"build_commit": "8f9aa157", "build_number": 214, "cpu_info": "Accelerate, Apple M4 Pro", "gpu_info": "Apple M4 Pro", "backends": "MTL,BLAS", "model_filename": "data/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf", "model_type": "qwen3next 80B.A3B Q4_K - Medium", "model_size": 48405005312, "model_n_params": 79674391296, "n_batch": 128, "n_ubatch": 64, "n_threads": 1, "cpu_mask": "0x0", "cpu_strict": false, "poll": 50, "type_k": "f16", "type_v": "f16", "n_gpu_layers": 0, "n_cpu_moe": 0, "split_mode": "layer", "main_gpu": 0, "no_kv_offload": false, "flash_attn": 0, "devices": "auto", "tensor_split": "0.00", "tensor_buft_overrides": "none", "load_mode": "mmap", "embeddings": false, "no_op_offload": 0, "no_host": false, "fit_target": 0, "fit_min_ctx": 0, "n_prompt": 4, "n_gen": 0, "n_depth": 0, "test_time": "2026-08-20T20:42:45Z", "avg_ns": 7058732666, "stddev_ns": 0, "avg_ts": 0.566674, "stddev_ts": 0.000000, "samples_ns": [ 7058732666 ],"samples_ts": [ 0.566674 ]}
+{"build_commit": "8f9aa157", "build_number": 214, "cpu_info": "Accelerate, Apple M4 Pro", "gpu_info": "Apple M4 Pro", "backends": "MTL,BLAS", "model_filename": "data/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf", "model_type": "qwen3next 80B.A3B Q4_K - Medium", "model_size": 48405005312, "model_n_params": 79674391296, "n_batch": 128, "n_ubatch": 64, "n_threads": 1, "cpu_mask": "0x0", "cpu_strict": false, "poll": 50, "type_k": "f16", "type_v": "f16", "n_gpu_layers": 0, "n_cpu_moe": 0, "split_mode": "layer", "main_gpu": 0, "no_kv_offload": false, "flash_attn": 0, "devices": "auto", "tensor_split": "0.00", "tensor_buft_overrides": "none", "load_mode": "mmap", "embeddings": false, "no_op_offload": 0, "no_host": false, "fit_target": 0, "fit_min_ctx": 0, "n_prompt": 0, "n_gen": 8, "n_depth": 0, "test_time": "2026-08-20T20:42:52Z", "avg_ns": 12773949500, "stddev_ns": 0, "avg_ts": 0.626275, "stddev_ts": 0.000000, "samples_ns": [ 12773949500 ],"samples_ts": [ 0.626275 ]}
+[SLIM-ARC-RUNTIME] schema=3 expert_samples=432 expert_issued_bytes=0 expert_hit_bytes=0 expert_waste_bytes=0 expert_advice_requests=0 expert_coalesced_ranges=0 expert_covered_bytes=0 expert_advice_failures=0 expert_invalid_ranges=0 weight_requested_bytes=1027397887488 weight_covered_bytes=1027403874304 weight_issued_bytes=76234506240 weight_skipped_bytes=951169368064 weight_advice_requests=17322 weight_coalesced_ranges=353 weight_invalid_ranges=0 weight_advice_failures=0 weight_rounds_throttled=353 weight_stale_requests=0 weight_stale_bytes=0 weight_inflight_peak_bytes=644235264 reclaim_candidates=0 reclaim_calls=0 reclaimed_bytes=0 reclaim_skipped_bytes=0 reclaim_failures=0 residency_samples=0 residency_admitted_experts=0 residency_admitted_bytes=0 residency_skipped_bytes=0 residency_fallbacks=0 pressure_normal=0 pressure_high=0 pressure_critical=0
+[SLIM-ARC-METRICS] expert prefetch: samples=432 issued=0.0MB hit=0.0MB waste=0.0MB hit_rate=0.00% (accounted 0.0MB)

@@ -1,0 +1,19 @@
+ggml_metal_device_init: tensor API disabled for pre-M5 and pre-A19 devices
+ggml_metal_library_init: default.metallib not found, loading from source
+ggml_metal_library_init: GGML_METAL_PATH_RESOURCES = nil
+ggml_metal_library_init: loading '/Users/bytedance/proj/competition/SLIM-ARC/src/llama-upstream/build-macos/bin/ggml-metal.metal'
+ggml_metal_library_init: loaded in 0.020 sec
+ggml_metal_rsets_init: creating a residency set collection (keep_alive = 180 s)
+ggml_metal_device_init: GPU name:   MTL0 (Apple M4 Pro)
+ggml_metal_device_init: GPU family: MTLGPUFamilyApple9  (1009)
+ggml_metal_device_init: GPU family: MTLGPUFamilyCommon3 (3003)
+ggml_metal_device_init: GPU family: MTLGPUFamilyMetal4  (5002)
+ggml_metal_device_init: simdgroup reduction   = true
+ggml_metal_device_init: simdgroup matrix mul. = true
+ggml_metal_device_init: has unified memory    = true
+ggml_metal_device_init: has bfloat            = true
+ggml_metal_device_init: has tensor            = false
+ggml_metal_device_init: use residency sets    = true
+ggml_metal_device_init: use shared buffers    = true
+ggml_metal_device_init: recommendedMaxWorkingSetSize  = 40200.90 MB
+{"build_commit": "8f9aa157", "build_number": 214, "cpu_info": "Accelerate, Apple M4 Pro", "gpu_info": "Apple M4 Pro", "backends": "MTL,BLAS", "model_filename": "data/models/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf", "model_type": "qwen3next 80B.A3B Q4_K - Medium", "model_size": 48405005312, "model_n_params": 79674391296, "n_batch": 512, "n_ubatch": 256, "n_threads": 14, "cpu_mask": "0x0", "cpu_strict": false, "poll": 50, "type_k": "f16", "type_v": "f16", "n_gpu_layers": 0, "n_cpu_moe": 0, "split_mode": "layer", "main_gpu": 0, "no_kv_offload": false, "flash_attn": 0, "devices": "auto", "tensor_split": "0.00", "tensor_buft_overrides": "none", "load_mode": "mmap", "embeddings": false, "no_op_offload": 0, "no_host": false, "fit_target": 0, "fit_min_ctx": 0, "n_prompt": 4, "n_gen": 0, "n_depth": 0, "test_time": "2026-08-20T20:37:27Z", "avg_ns": 11011304208, "stddev_ns": 0, "avg_ts": 0.363263, "stddev_ts": 0.000000, "samples_ns": [ 11011304208 ],"samples_ts": [ 0.363263 ]}
