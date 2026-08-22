@@ -3,6 +3,7 @@
 #include <cassert>
 #include <algorithm>
 #include <chrono>
+#include <cstring>
 #include <cstdint>
 #include <limits>
 #include <cstdlib>

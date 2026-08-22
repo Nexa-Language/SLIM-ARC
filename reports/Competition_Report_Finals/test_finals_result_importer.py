@@ -129,6 +129,7 @@ class FinalsResultImporterTests(unittest.TestCase):
                 IMPORTER.verify_generated(generated, expected)
 
 
+@unittest.skipUnless(shutil.which("xelatex") and shutil.which("bibtex"), "TeX toolchain is required for report build proofs")
 class FinalsBuildProofTests(unittest.TestCase):
     def isolated_report(self, temporary: Path) -> Path:
         report = temporary / "report"
