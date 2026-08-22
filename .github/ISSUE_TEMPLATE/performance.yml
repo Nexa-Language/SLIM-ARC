@@ -1,0 +1,25 @@
+name: Performance regression or optimization
+description: 报告性能回归或提出可验证的优化
+title: "[Performance] "
+labels: ["performance"]
+body:
+  - type: textarea
+    id: contract
+    attributes:
+      label: 实验合同
+      description: 模型 SHA、设备、资源限制、存储、缓存、prompt、pp/tg、线程和环境变量。
+    validations:
+      required: true
+  - type: textarea
+    id: comparison
+    attributes:
+      label: 基线与结果
+      description: 提供重复次数、每次原始结果和汇总方式。
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 原因分析或优化方案
+    validations:
+      required: true

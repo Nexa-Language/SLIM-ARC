@@ -1,0 +1,17 @@
+name: Documentation
+description: 报告文档缺失、错误或复现障碍
+title: "[Docs] "
+labels: ["documentation"]
+body:
+  - type: textarea
+    id: location
+    attributes:
+      label: 文档位置
+    validations:
+      required: true
+  - type: textarea
+    id: change
+    attributes:
+      label: 问题与建议
+    validations:
+      required: true
