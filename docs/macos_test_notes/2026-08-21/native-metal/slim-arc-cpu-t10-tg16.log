@@ -1,7 +1,7 @@
 ggml_metal_device_init: tensor API disabled for pre-M5 and pre-A19 devices
 ggml_metal_library_init: default.metallib not found, loading from source
 ggml_metal_library_init: GGML_METAL_PATH_RESOURCES = nil
-ggml_metal_library_init: loading '/Users/bytedance/proj/competition/SLIM-ARC/src/llama-upstream/build-macos/bin/ggml-metal.metal'
+ggml_metal_library_init: loading '$SLIM_ARC_ROOT/src/llama-upstream/build-macos/bin/ggml-metal.metal'
 ggml_metal_library_init: loaded in 0.038 sec
 ggml_metal_rsets_init: creating a residency set collection (keep_alive = 180 s)
 ggml_metal_device_init: GPU name:   MTL0 (Apple M4 Pro)

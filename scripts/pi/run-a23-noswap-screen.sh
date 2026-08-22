@@ -4,9 +4,9 @@ set -uo pipefail
 
 readonly SWAP_UNIT="dev-zram0.swap"
 readonly SETUP_UNIT="systemd-zram-setup@zram0.service"
-readonly BENCHMARK="${SLIM_ARC_PI_BENCHMARK:-/home/yituodabian/data/llama-a23-39c88493/build/bin/llama-bench}"
-readonly MODEL="${SLIM_ARC_PI_MODEL:-/home/yituodabian/data/Qwen3-Next-80B-A3B-Instruct-Q4_K_M.gguf}"
-readonly RESULT_ROOT="${SLIM_ARC_PI_RESULT_ROOT:-/home/yituodabian/data/slim-arc-a23-results/2026-08-14-pi5-noswap-screen-r1}"
+readonly BENCHMARK="${SLIM_ARC_PI_BENCHMARK:?Set SLIM_ARC_PI_BENCHMARK to llama-bench}"
+readonly MODEL="${SLIM_ARC_PI_MODEL:?Set SLIM_ARC_PI_MODEL to the GGUF path}"
+readonly RESULT_ROOT="${SLIM_ARC_PI_RESULT_ROOT:?Set SLIM_ARC_PI_RESULT_ROOT to an output directory}"
 readonly RESULT_OWNER="${SLIM_ARC_PI_RESULT_OWNER:-yituodabian:yituodabian}"
 readonly PP="${SLIM_ARC_PI_PP:-16}"
 readonly TG="${SLIM_ARC_PI_TG:-4}"
