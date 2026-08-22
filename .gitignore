@@ -220,12 +220,14 @@ __marimo__/
 .DS_Store
 **/.DS_Store
 .omo/
+.superpowers/
 tmp/
 
 # Reproducible report and presentation inspection outputs
 reports/Competition_Report*/main.aux
 reports/Competition_Report*/main.bbl
 reports/Competition_Report*/main.blg
+reports/Competition_Report*/main.log
 reports/Competition_Report*/main.out
 reports/Competition_Report*/main.toc
 *.pptx.inspect.ndjson
@@ -250,6 +252,7 @@ data/models/*.gguf
 data/models/*.bin
 data/models/*.safetensors
 data/models/*.pt
+data/calibration/*.gguf
 data/benchmarks/wikitext-103/
 data/benchmarks/hellaswag/
 data/benchmarks/c4/
@@ -258,6 +261,7 @@ data/benchmarks/c4/
 logs/*.log
 logs/*.txt
 reports/*.tmp
+reports/.DS_Store
 reports/Competition_Report_Finals/figures/generated/ablation_dashboard.png
 reports/Competition_Report_Finals/figures/generated/cross_device_effects.png
 reports/Competition_Report_Finals/figures/generated/implementation_module_map.png
@@ -283,6 +287,7 @@ docs/papers/llama.cpp/
 src/flexinfer/
 src/llama-upstream/
 build*/
+cmake-build-*/
 
 # Paper PDFs - too large for git, tracked separately in docs/papers/README.md
 docs/papers/*.pdf
@@ -292,3 +297,9 @@ plan/
 gitlab-clean/
 .gitlab-clean-tmp/
 scripts/profile/src/
+
+# Local service and demo state
+*.pid
+docs/macos_test_notes/*/native-demo/
+docs/macos_test_notes/*/unconstrained-agent/effective-config.txt
+docs/macos_test_notes/*/unconstrained-agent/*.jsonl.zstd
