@@ -1376,7 +1376,8 @@ void test_residency_advice_callback_can_read_expert_state_without_deadlock() {
 
 void test_expert_hot_cache_requires_stability_and_respects_budget() {
     const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
-    const size_t expert_bytes = 48 * page_size;
+    const size_t expert_bytes = 768 * 1024;
+    assert(expert_bytes % page_size == 0);
     const size_t tensor_bytes = 2 * expert_bytes;
     void * const first = mmap(nullptr, tensor_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
     void * const second = mmap(nullptr, tensor_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
@@ -1435,7 +1436,8 @@ void test_expert_hot_cache_accepts_one_gib_budget_boundary() {
 
 void test_expert_hot_lru_retains_gap_reuse_and_evicts_oldest_entry() {
     const size_t page_size = static_cast<size_t>(sysconf(_SC_PAGESIZE));
-    const size_t expert_bytes = 24 * page_size;
+    const size_t expert_bytes = 384 * 1024;
+    assert(expert_bytes % page_size == 0);
     void * const first = mmap(nullptr, expert_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
     void * const second = mmap(nullptr, expert_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
     void * const third = mmap(nullptr, expert_bytes, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANON, -1, 0);
